@@ -32,6 +32,6 @@
     "postcss": "latest",
     "prettier": "latest",
     "tailwindcss": "3",
-    "typescript": "latest"
+    "typescript": "5"
   }
 }

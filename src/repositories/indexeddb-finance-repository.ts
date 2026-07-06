@@ -30,8 +30,17 @@ export const indexedDbFinanceRepository: FinanceRepository = {
       return null;
     }
 
-    const { id: _id, updatedAt: _updatedAt, ...moneyBreakdown } = record;
-    return moneyBreakdown;
+    return {
+      monthlyIncome: record.monthlyIncome,
+      mandatoryExpenses: record.mandatoryExpenses,
+      emis: record.emis,
+      loanPayments: record.loanPayments,
+      insurance: record.insurance,
+      rent: record.rent,
+      utilityBills: record.utilityBills,
+      fixedCommitments: record.fixedCommitments,
+      emergencyBuffer: record.emergencyBuffer
+    };
   },
 
   async saveMoneyBreakdown(value: MoneyBreakdown) {
