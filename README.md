@@ -1,5 +1,7 @@
 # Finance Command Center
 
+[![CI](https://github.com/saran-devops-engineer/Finance-Command-Center/actions/workflows/ci.yml/badge.svg)](https://github.com/saran-devops-engineer/Finance-Command-Center/actions/workflows/ci.yml)
+
 A mobile-first, local-first financial decision support PWA for individuals in India.
 
 The product is not an expense tracker. It is designed to answer three questions quickly:
