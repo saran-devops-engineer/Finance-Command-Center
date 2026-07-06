@@ -1,4 +1,5 @@
 import type {
+  FinanceDataSnapshot,
   Loan,
   LoanPayment,
   MoneyBreakdown,
@@ -14,9 +15,12 @@ export interface FinanceRepository {
   listLoans(): Promise<Loan[]>;
   getLoan(id: string): Promise<Loan | null>;
   saveLoan(value: Loan): Promise<void>;
+  listAllLoanPayments(): Promise<LoanPayment[]>;
   listLoanPayments(loanId: string): Promise<LoanPayment[]>;
   saveLoanPayment(value: LoanPayment): Promise<void>;
   listUpcomingDues(): Promise<UpcomingDue[]>;
   saveUpcomingDue(value: UpcomingDue): Promise<void>;
   deleteUpcomingDue(id: string): Promise<void>;
+  createDataSnapshot(): Promise<FinanceDataSnapshot>;
+  replaceAllData(value: FinanceDataSnapshot): Promise<void>;
 }

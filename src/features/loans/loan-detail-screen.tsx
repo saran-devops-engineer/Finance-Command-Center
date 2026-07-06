@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calculator } from "lucide-react";
+import { ArrowLeft, Calculator, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatInr } from "@/lib/utils";
@@ -21,6 +21,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   const [payments, setPayments] = useState<LoanPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [prepaymentAmount, setPrepaymentAmount] = useState("50000");
+  const [showMath, setShowMath] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -68,6 +69,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 
     return simulatePrepayment(loan, toNumber(prepaymentAmount));
   }, [loan, prepaymentAmount]);
+  const attentionMessage = loan ? getLoanDetailAttention(loan) : null;
 
   if (isLoading) {
     return (
@@ -144,11 +146,32 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
         </div>
       </Card>
 
+      {attentionMessage ? (
+        <Card className="space-y-3">
+          <div className="flex gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/55">
+              <Info className="h-4 w-4" strokeWidth={1.8} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                Decision note
+              </p>
+              <h2 className="mt-1 font-display text-2xl tracking-[-0.04em]">
+                {attentionMessage.title}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {attentionMessage.description}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       <section className="grid grid-cols-2 gap-3">
         <Metric label="Monthly EMI" value={formatInr(loan.monthlyEmi)} />
         <Metric label="Interest rate" value={`${loan.annualInterestRate}% p.a.`} />
         <Metric label="Tenure left" value={`${loan.remainingTenureMonths} mo`} />
-        <Metric label="Next due" value={loan.nextDueDate} />
+        <Metric label="Next due" value={formatDueDate(loan.nextDueDate)} />
       </section>
 
       <section className="space-y-4">
@@ -221,10 +244,31 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
             </div>
           ) : null}
 
-          <Button variant="secondary" className="gap-2" type="button">
+          <Button
+            variant="secondary"
+            className="gap-2"
+            type="button"
+            onClick={() => setShowMath((current) => !current)}
+          >
             <Calculator className="h-4 w-4" />
-            See the math
+            {showMath ? "Hide the math" : "See the math"}
           </Button>
+          {simulation && showMath ? (
+            <div className="space-y-3 rounded-3xl bg-white/10 p-4 text-xs leading-5 opacity-75">
+              <p>
+                Current estimate: {simulation.originalMonths} months left at the current
+                EMI.
+              </p>
+              <p>
+                After prepaying {formatInr(simulation.prepaymentAmount)}, estimated tenure
+                becomes {simulation.revisedMonths} months.
+              </p>
+              <p>
+                Interest saved is estimated from the reduced outstanding principal while
+                keeping the EMI unchanged.
+              </p>
+            </div>
+          ) : null}
           {simulation ? (
             <p className="text-xs leading-5 opacity-60">
               Estimate assumes the EMI stays the same and the prepayment directly reduces
@@ -274,4 +318,64 @@ function Metric({ label, value }: { label: string; value: string }) {
 function toNumber(value: string) {
   const parsed = Number(value.replaceAll(",", ""));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getLoanDetailAttention(loan: Loan) {
+  const daysUntilDue = getDaysUntil(loan.nextDueDate);
+  const monthlyInterest = Math.round(loan.outstandingBalance * (loan.annualInterestRate / 12 / 100));
+
+  if (loan.isOverdue) {
+    return {
+      title: "This loan is overdue",
+      description: `Prioritize the missed EMI before making optional prepayments.`
+    };
+  }
+
+  if (daysUntilDue === 1) {
+    return {
+      title: "EMI due tomorrow",
+      description: `Keep ${formatInr(loan.monthlyEmi)} ready so this payment does not become a penalty risk.`
+    };
+  }
+
+  if (loan.annualInterestRate >= 12) {
+    return {
+      title: "High-interest loan",
+      description: `This loan is estimated to cost about ${formatInr(monthlyInterest)} in interest this month.`
+    };
+  }
+
+  return {
+    title: "Track this loan steadily",
+    description: "Regular payments and occasional prepayment simulations will show whether closing early is worth it."
+  };
+}
+
+function formatDueDate(date: string) {
+  const daysUntilDue = getDaysUntil(date);
+
+  if (daysUntilDue === 0) {
+    return "Today";
+  }
+
+  if (daysUntilDue === 1) {
+    return "Tomorrow";
+  }
+
+  if (daysUntilDue > 1 && daysUntilDue <= 7) {
+    return `In ${daysUntilDue} days`;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short"
+  }).format(new Date(`${date}T00:00:00`));
+}
+
+function getDaysUntil(date: string) {
+  const targetDate = new Date(`${date}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return Math.ceil((targetDate.getTime() - today.getTime()) / 86_400_000);
 }

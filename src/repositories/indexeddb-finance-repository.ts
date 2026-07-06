@@ -1,5 +1,6 @@
 import type { FinanceRepository } from "@/repositories/finance-repository";
 import type {
+  FinanceDataSnapshot,
   Loan,
   LoanPayment,
   MoneyBreakdown,
@@ -69,6 +70,11 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     await database.put("loans", value);
   },
 
+  async listAllLoanPayments() {
+    const database = await getFinanceDatabase();
+    return database.getAll("loanPayments");
+  },
+
   async listLoanPayments(loanId: string) {
     const database = await getFinanceDatabase();
     return database.getAllFromIndex("loanPayments", "by-loan-id", loanId);
@@ -92,5 +98,77 @@ export const indexedDbFinanceRepository: FinanceRepository = {
   async deleteUpcomingDue(id: string) {
     const database = await getFinanceDatabase();
     await database.delete("upcomingDues", id);
+  },
+
+  async createDataSnapshot() {
+    const database = await getFinanceDatabase();
+    const [profile, moneyRecord, loans, loanPayments, upcomingDues] = await Promise.all([
+      database.get("profile", PROFILE_ID),
+      database.get("moneyBreakdown", MONEY_BREAKDOWN_ID),
+      database.getAll("loans"),
+      database.getAll("loanPayments"),
+      database.getAllFromIndex("upcomingDues", "by-due-date")
+    ]);
+    const moneyBreakdown = moneyRecord
+      ? {
+          monthlyIncome: moneyRecord.monthlyIncome,
+          mandatoryExpenses: moneyRecord.mandatoryExpenses,
+          emis: moneyRecord.emis,
+          loanPayments: moneyRecord.loanPayments,
+          insurance: moneyRecord.insurance,
+          rent: moneyRecord.rent,
+          utilityBills: moneyRecord.utilityBills,
+          fixedCommitments: moneyRecord.fixedCommitments,
+          emergencyBuffer: moneyRecord.emergencyBuffer
+        }
+      : null;
+
+    return {
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      profile: profile ?? null,
+      moneyBreakdown,
+      loans,
+      loanPayments,
+      upcomingDues
+    };
+  },
+
+  async replaceAllData(value: FinanceDataSnapshot) {
+    const database = await getFinanceDatabase();
+    const transaction = database.transaction(
+      ["profile", "moneyBreakdown", "loans", "loanPayments", "upcomingDues"],
+      "readwrite"
+    );
+
+    await Promise.all([
+      transaction.objectStore("profile").clear(),
+      transaction.objectStore("moneyBreakdown").clear(),
+      transaction.objectStore("loans").clear(),
+      transaction.objectStore("loanPayments").clear(),
+      transaction.objectStore("upcomingDues").clear()
+    ]);
+
+    if (value.profile) {
+      await transaction.objectStore("profile").put(value.profile);
+    }
+
+    if (value.moneyBreakdown) {
+      await transaction.objectStore("moneyBreakdown").put({
+        ...value.moneyBreakdown,
+        id: MONEY_BREAKDOWN_ID,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    await Promise.all([
+      ...value.loans.map((loan) => transaction.objectStore("loans").put(loan)),
+      ...value.loanPayments.map((payment) =>
+        transaction.objectStore("loanPayments").put(payment)
+      ),
+      ...value.upcomingDues.map((due) => transaction.objectStore("upcomingDues").put(due))
+    ]);
+
+    await transaction.done;
   }
 };

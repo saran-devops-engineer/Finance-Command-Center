@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatInr } from "@/lib/utils";
@@ -49,6 +49,13 @@ export function LoansScreen() {
     0
   );
   const totalEmi = loans.reduce((sum, loan) => sum + loan.monthlyEmi, 0);
+  const estimatedMonthlyInterest = loans.reduce(
+    (sum, loan) => sum + estimateMonthlyInterest(loan),
+    0
+  );
+  const prioritizedLoans = [...loans].sort(compareLoanPriority);
+  const priorityLoan = prioritizedLoans[0];
+  const attentionMessage = priorityLoan ? getLoanAttentionMessage(priorityLoan) : null;
 
   if (isLoading) {
     return (
@@ -76,12 +83,12 @@ export function LoansScreen() {
         </h1>
       </header>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card className="p-5">
           <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
             Outstanding
           </p>
-          <p className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
+          <p className="mt-2 text-xl font-semibold tracking-[-0.04em]">
             {formatInr(totalOutstanding, { compact: true })}
           </p>
         </Card>
@@ -89,11 +96,41 @@ export function LoansScreen() {
           <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
             Monthly EMI
           </p>
-          <p className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
+          <p className="mt-2 text-xl font-semibold tracking-[-0.04em]">
             {formatInr(totalEmi, { compact: true })}
           </p>
         </Card>
+        <Card className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+            Interest/mo
+          </p>
+          <p className="mt-2 text-xl font-semibold tracking-[-0.04em]">
+            {formatInr(estimatedMonthlyInterest, { compact: true })}
+          </p>
+        </Card>
       </div>
+
+      {priorityLoan && attentionMessage ? (
+        <Card className="space-y-4 bg-primary text-primary-foreground">
+          <div className="flex items-start gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10">
+              <AlertTriangle className="h-5 w-5" strokeWidth={1.7} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+                Needs attention
+              </p>
+              <h2 className="font-display text-3xl leading-tight tracking-[-0.04em]">
+                {attentionMessage.title}
+              </h2>
+              <p className="text-sm leading-6 opacity-70">{attentionMessage.description}</p>
+            </div>
+          </div>
+          <Button asChild variant="secondary" size="sm">
+            <Link href={`/loans/${priorityLoan.id}`}>Review loan</Link>
+          </Button>
+        </Card>
+      ) : null}
 
       <Button asChild className="w-full gap-2">
         <Link href="/loans/new">
@@ -104,7 +141,7 @@ export function LoansScreen() {
 
       <section className="space-y-4">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-          Swipe portfolio
+          Priority portfolio
         </p>
         <div className="flex snap-y snap-mandatory flex-col gap-5 overflow-y-auto">
           {loans.length === 0 ? (
@@ -119,7 +156,7 @@ export function LoansScreen() {
             </Card>
           ) : null}
 
-          {loans.map((loan) => {
+          {prioritizedLoans.map((loan) => {
             const paidPercent = Math.min(
               Math.round((loan.principalPaid / Math.max(loan.originalAmount, 1)) * 100),
               100
@@ -170,7 +207,7 @@ export function LoansScreen() {
                     </div>
                     <div className="rounded-3xl bg-white/45 p-4">
                       <p className="text-xs text-muted-foreground">Next due</p>
-                      <p className="mt-1 font-semibold">{loan.nextDueDate}</p>
+                      <p className="mt-1 font-semibold">{formatDueDate(loan.nextDueDate)}</p>
                     </div>
                   </div>
                 </Card>
@@ -181,4 +218,86 @@ export function LoansScreen() {
       </section>
     </div>
   );
+}
+
+function compareLoanPriority(first: Loan, second: Loan) {
+  return getLoanPriorityScore(second) - getLoanPriorityScore(first);
+}
+
+function getLoanPriorityScore(loan: Loan) {
+  const dueSoonBoost = getDaysUntil(loan.nextDueDate) <= 7 ? 600 : 0;
+  const overdueBoost = loan.isOverdue ? 1_000 : 0;
+  const goldLoanBoost = loan.type === "gold" ? 250 : 0;
+
+  return overdueBoost + dueSoonBoost + goldLoanBoost + loan.annualInterestRate * 25;
+}
+
+function getLoanAttentionMessage(loan: Loan) {
+  const daysUntilDue = getDaysUntil(loan.nextDueDate);
+
+  if (loan.isOverdue) {
+    return {
+      title: `${loan.name} is overdue`,
+      description: `Clear ${formatInr(loan.monthlyEmi)} first to reduce penalty risk and stress.`
+    };
+  }
+
+  if (daysUntilDue === 1) {
+    return {
+      title: `${loan.name} EMI is due tomorrow`,
+      description: `Keep ${formatInr(loan.monthlyEmi)} ready before using money elsewhere.`
+    };
+  }
+
+  if (daysUntilDue >= 0 && daysUntilDue <= 7) {
+    return {
+      title: `${loan.name} EMI is due in ${daysUntilDue} days`,
+      description: `This commitment should be protected before discretionary spending.`
+    };
+  }
+
+  if (loan.type === "gold") {
+    return {
+      title: `${loan.name} may be dragging interest`,
+      description: `At ${loan.annualInterestRate}% p.a., this is a strong candidate for prepayment.`
+    };
+  }
+
+  return {
+    title: `${loan.name} has the highest interest rate`,
+    description: `At ${loan.annualInterestRate}% p.a., review whether a small prepayment helps.`
+  };
+}
+
+function estimateMonthlyInterest(loan: Loan) {
+  return Math.round(loan.outstandingBalance * (loan.annualInterestRate / 12 / 100));
+}
+
+function formatDueDate(date: string) {
+  const daysUntilDue = getDaysUntil(date);
+
+  if (daysUntilDue === 0) {
+    return "Today";
+  }
+
+  if (daysUntilDue === 1) {
+    return "Tomorrow";
+  }
+
+  if (daysUntilDue > 1 && daysUntilDue <= 7) {
+    return `In ${daysUntilDue} days`;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short"
+  }).format(new Date(`${date}T00:00:00`));
+}
+
+function getDaysUntil(date: string) {
+  const targetDate = new Date(`${date}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return Math.ceil((targetDate.getTime() - today.getTime()) / 86_400_000);
 }

@@ -90,3 +90,13 @@ export interface FinancialSnapshot {
   upcomingDues: UpcomingDue[];
   recommendations: Recommendation[];
 }
+
+export interface FinanceDataSnapshot {
+  schemaVersion: 1;
+  exportedAt: string;
+  profile: UserProfile | null;
+  moneyBreakdown: MoneyBreakdown | null;
+  loans: Loan[];
+  loanPayments: LoanPayment[];
+  upcomingDues: UpcomingDue[];
+}

@@ -140,30 +140,41 @@ export function EditCashFlowScreen() {
       </header>
 
       <Card className="space-y-5">
+        <SectionLabel
+          title="Income"
+          description="Money expected this month before commitments."
+        />
         <Field
           label="Monthly income"
           value={form.monthlyIncome}
           onChange={(value) => updateField("monthlyIncome", value)}
+          helperText="Use reliable monthly income, not one-time windfalls."
+        />
+
+        <SectionLabel
+          title="Debt commitments"
+          description="Payments that should be protected before flexible spending."
         />
         <Field
-          label="Mandatory expenses"
-          value={form.mandatoryExpenses}
-          onChange={(value) => updateField("mandatoryExpenses", value)}
+          label="Loan payments"
+          value={form.loanPayments}
+          onChange={(value) => updateField("loanPayments", value)}
+          helperText="Monthly loan EMIs already known to the app."
         />
         <Field
           label="Other EMIs"
           value={form.emis}
           onChange={(value) => updateField("emis", value)}
         />
-        <Field
-          label="Loan payments"
-          value={form.loanPayments}
-          onChange={(value) => updateField("loanPayments", value)}
+
+        <SectionLabel
+          title="Living commitments"
+          description="Recurring expenses that keep the month running."
         />
         <Field
-          label="Insurance"
-          value={form.insurance}
-          onChange={(value) => updateField("insurance", value)}
+          label="Mandatory expenses"
+          value={form.mandatoryExpenses}
+          onChange={(value) => updateField("mandatoryExpenses", value)}
         />
         <Field
           label="Rent"
@@ -175,6 +186,16 @@ export function EditCashFlowScreen() {
           value={form.utilityBills}
           onChange={(value) => updateField("utilityBills", value)}
         />
+
+        <SectionLabel
+          title="Protection and buffer"
+          description="Insurance, fixed obligations, and emergency money."
+        />
+        <Field
+          label="Insurance"
+          value={form.insurance}
+          onChange={(value) => updateField("insurance", value)}
+        />
         <Field
           label="Fixed commitments"
           value={form.fixedCommitments}
@@ -184,6 +205,7 @@ export function EditCashFlowScreen() {
           label="Emergency buffer"
           value={form.emergencyBuffer}
           onChange={(value) => updateField("emergencyBuffer", value)}
+          helperText="This is existing reserve money, not monthly income."
         />
       </Card>
 
@@ -199,9 +221,10 @@ interface FieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  helperText?: string;
 }
 
-function Field({ label, value, onChange }: FieldProps) {
+function Field({ label, value, onChange, helperText }: FieldProps) {
   return (
     <label className="block space-y-2">
       <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -213,6 +236,20 @@ function Field({ label, value, onChange }: FieldProps) {
         inputMode="numeric"
         className="h-12 w-full rounded-3xl border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary"
       />
+      {helperText ? (
+        <span className="block text-xs leading-5 text-muted-foreground">{helperText}</span>
+      ) : null}
     </label>
+  );
+}
+
+function SectionLabel({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="space-y-1 border-t border-border/70 pt-5 first:border-t-0 first:pt-0">
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+        {title}
+      </p>
+      <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+    </div>
   );
 }

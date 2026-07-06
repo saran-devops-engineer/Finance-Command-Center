@@ -10,21 +10,21 @@ How is my data managed?
 
 - Make local-first privacy clear.
 - Explain that V1 data stays on this device.
-- Prepare users for future backup and restore.
+- Support encrypted `.fcc` backup and restore.
 - Keep settings calm and understandable.
 
 ## Rules
 
 - Do not add auth in V1.
 - Do not add cloud sync in V1.
-- Do not imply backup exists before it is implemented.
+- Do not imply cloud backup exists before it is implemented.
 - Be explicit about local device storage.
 
 ## Good Improvements
 
 - Privacy explanation.
 - Device-only storage notice.
-- Export/import in V1.1.
+- Encrypted `.fcc` backup/restore.
 - Passcode placeholder or future plan.
 - PWA install guidance.
 

@@ -189,6 +189,9 @@ export function AddLoanScreen() {
               </option>
             ))}
           </select>
+          <span className="block text-xs leading-5 text-muted-foreground">
+            Loan type helps the app prioritize high-interest and urgent commitments.
+          </span>
         </label>
 
         {form.type === "custom" ? (
@@ -226,6 +229,7 @@ export function AddLoanScreen() {
           onChange={(value) => updateField("annualInterestRate", value)}
           placeholder="13.9"
           inputMode="decimal"
+          helperText="Use annual rate. Higher-interest loans will be reviewed first."
         />
         <Field
           label="Monthly EMI"
@@ -257,6 +261,7 @@ interface FieldProps {
   placeholder?: string;
   inputMode?: "numeric" | "decimal";
   type?: "text" | "date";
+  helperText?: string;
 }
 
 function Field({
@@ -265,7 +270,8 @@ function Field({
   onChange,
   placeholder,
   inputMode,
-  type = "text"
+  type = "text",
+  helperText
 }: FieldProps) {
   return (
     <label className="block space-y-2">
@@ -280,6 +286,9 @@ function Field({
         type={type}
         className="h-12 w-full rounded-3xl border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary"
       />
+      {helperText ? (
+        <span className="block text-xs leading-5 text-muted-foreground">{helperText}</span>
+      ) : null}
     </label>
   );
 }

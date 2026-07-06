@@ -73,15 +73,18 @@ Active Portfolio on Home should show at most three loans:
 - otherwise highest-priority loans
 - always include View All Loans
 
-## Export / Import
+## Backup / Restore
 
-Not required in V1.
+V1.1 uses encrypted manual backup and restore.
 
-Plan for V1.1:
+Implemented direction:
 
-- JSON export
-- JSON import
-- backup and restore
+- `.fcc` encrypted backup file
+- password-based encryption
+- IndexedDB remains the live source of truth
+- backup file is only for recovery and migration
+- no backend required
+- no cloud account required
 
 ## Investments
 
