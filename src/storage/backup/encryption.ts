@@ -3,6 +3,10 @@ const decoder = new TextDecoder();
 
 export const DEFAULT_PBKDF2_ITERATIONS = 600_000;
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+}
+
 export function utf8ToBytes(value: string) {
   return encoder.encode(value);
 }
@@ -24,7 +28,7 @@ export async function deriveAesGcmKey(params: {
 }) {
   const baseKey = await crypto.subtle.importKey(
     "raw",
-    utf8ToBytes(params.password),
+    toArrayBuffer(utf8ToBytes(params.password)),
     "PBKDF2",
     false,
     ["deriveKey"]
@@ -33,7 +37,7 @@ export async function deriveAesGcmKey(params: {
   return crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
-      salt: params.salt,
+      salt: toArrayBuffer(params.salt),
       iterations: params.iterations,
       hash: "SHA-256"
     },
@@ -63,10 +67,10 @@ export async function encryptBytes(params: {
   return crypto.subtle.encrypt(
     {
       name: "AES-GCM",
-      iv: params.iv
+      iv: toArrayBuffer(params.iv)
     },
     key,
-    params.bytes
+    toArrayBuffer(params.bytes)
   );
 }
 
@@ -86,15 +90,15 @@ export async function decryptBytes(params: {
   return crypto.subtle.decrypt(
     {
       name: "AES-GCM",
-      iv: params.iv
+      iv: toArrayBuffer(params.iv)
     },
     key,
-    params.encryptedBytes
+    toArrayBuffer(params.encryptedBytes)
   );
 }
 
 export async function sha256Base64(bytes: Uint8Array) {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digest = await crypto.subtle.digest("SHA-256", toArrayBuffer(bytes));
   return bytesToBase64(new Uint8Array(digest));
 }
 
