@@ -1,0 +1,19 @@
+{
+  "name": "Finance Command Center",
+  "short_name": "Finance",
+  "description": "A private, local-first financial decision support system.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2eee5",
+  "theme_color": "#f2eee5",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

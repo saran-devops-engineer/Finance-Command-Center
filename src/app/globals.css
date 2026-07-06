@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 42 33% 94%;
+  --foreground: 32 18% 10%;
+  --card: 44 35% 96%;
+  --card-foreground: 32 18% 10%;
+  --muted: 40 18% 88%;
+  --muted-foreground: 32 9% 42%;
+  --border: 38 18% 82%;
+  --primary: 32 18% 10%;
+  --primary-foreground: 42 33% 94%;
+  --destructive: 4 62% 42%;
+  --success: 142 43% 31%;
+  --warning: 37 74% 42%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: hsl(var(--background));
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  color: hsl(var(--foreground));
+  background:
+    radial-gradient(circle at 18% 12%, rgb(255 255 255 / 0.72), transparent 32rem),
+    linear-gradient(135deg, #f2eee5 0%, #e9e1d4 100%);
+  font-family: var(--font-sans), Inter, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+}
+
+.safe-area-shell {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+}
