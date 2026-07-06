@@ -26,7 +26,7 @@ interface OnboardingFormState {
 }
 
 const initialState: OnboardingFormState = {
-  displayName: "Arjun",
+  displayName: "",
   monthlyIncome: "",
   fixedExpenses: "",
   emis: "",
@@ -63,6 +63,20 @@ const steps = [
 function toNumber(value: string) {
   const parsed = Number(value.replaceAll(",", ""));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeDisplayName(value: string) {
+  const displayName = value.trim();
+
+  if (!displayName) {
+    return "Arjun";
+  }
+
+  if (displayName.toLowerCase() === "arjun") {
+    return "Arjun";
+  }
+
+  return displayName;
 }
 
 function buildLoan(form: OnboardingFormState): Loan | null {
@@ -151,7 +165,7 @@ export function OnboardingScreen() {
 
     const profile: UserProfile = {
       id: "primary",
-      displayName: form.displayName.trim() || "Arjun",
+      displayName: normalizeDisplayName(form.displayName),
       onboardingCompleted: true,
       createdAt: now,
       updatedAt: now
