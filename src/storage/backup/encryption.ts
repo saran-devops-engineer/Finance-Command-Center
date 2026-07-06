@@ -4,7 +4,9 @@ const decoder = new TextDecoder();
 export const DEFAULT_PBKDF2_ITERATIONS = 600_000;
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
 }
 
 export function utf8ToBytes(value: string) {
