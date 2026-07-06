@@ -1,5 +1,12 @@
 import type { FinanceRepository } from "@/repositories/finance-repository";
-import type { FinanceDataSnapshot } from "@/shared/domain/finance";
+import type {
+  FinanceDataSnapshot,
+  Loan,
+  LoanPayment,
+  MoneyBreakdown,
+  UpcomingDue,
+  UserProfile
+} from "@/shared/domain/finance";
 import {
   BACKUP_APP_VERSION,
   BACKUP_PLATFORM,
@@ -151,29 +158,15 @@ function validateBackupData(value: unknown): FinanceDataSnapshot {
     throw new Error("Unsupported backup data schema.");
   }
 
-  if (!Array.isArray(value.loans)) {
-    throw new Error("Backup is missing loans data.");
-  }
-
-  if (!Array.isArray(value.loanPayments)) {
-    throw new Error("Backup is missing payment history.");
-  }
-
-  if (!Array.isArray(value.upcomingDues)) {
-    throw new Error("Backup is missing upcoming dues.");
-  }
-
   return {
     schemaVersion: 1,
     exportedAt:
       typeof value.exportedAt === "string" ? value.exportedAt : new Date().toISOString(),
-    profile: isRecord(value.profile) ? (value.profile as FinanceDataSnapshot["profile"]) : null,
-    moneyBreakdown: isRecord(value.moneyBreakdown)
-      ? (value.moneyBreakdown as FinanceDataSnapshot["moneyBreakdown"])
-      : null,
-    loans: value.loans as FinanceDataSnapshot["loans"],
-    loanPayments: value.loanPayments as FinanceDataSnapshot["loanPayments"],
-    upcomingDues: value.upcomingDues as FinanceDataSnapshot["upcomingDues"]
+    profile: isUserProfile(value.profile) ? value.profile : null,
+    moneyBreakdown: isMoneyBreakdown(value.moneyBreakdown) ? value.moneyBreakdown : null,
+    loans: readLoanArray(value.loans),
+    loanPayments: readLoanPaymentArray(value.loanPayments),
+    upcomingDues: readUpcomingDueArray(value.upcomingDues)
   };
 }
 
@@ -261,6 +254,117 @@ function bytesToHex(bytes: Uint8Array) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUserProfile(value: unknown): value is UserProfile {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.displayName === "string" &&
+    typeof value.onboardingCompleted === "boolean" &&
+    typeof value.createdAt === "string" &&
+    typeof value.updatedAt === "string"
+  );
+}
+
+function isMoneyBreakdown(value: unknown): value is MoneyBreakdown {
+  return (
+    isRecord(value) &&
+    typeof value.monthlyIncome === "number" &&
+    typeof value.mandatoryExpenses === "number" &&
+    typeof value.emis === "number" &&
+    typeof value.loanPayments === "number" &&
+    typeof value.insurance === "number" &&
+    typeof value.rent === "number" &&
+    typeof value.utilityBills === "number" &&
+    typeof value.fixedCommitments === "number" &&
+    typeof value.emergencyBuffer === "number"
+  );
+}
+
+function isLoan(value: unknown): value is Loan {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.type === "string" &&
+    typeof value.lender === "string" &&
+    typeof value.originalAmount === "number" &&
+    typeof value.outstandingBalance === "number" &&
+    typeof value.annualInterestRate === "number" &&
+    typeof value.monthlyEmi === "number" &&
+    typeof value.principalPaid === "number" &&
+    typeof value.interestPaid === "number" &&
+    typeof value.remainingTenureMonths === "number" &&
+    typeof value.estimatedClosureDate === "string" &&
+    typeof value.nextDueDate === "string"
+  );
+}
+
+function isLoanPayment(value: unknown): value is LoanPayment {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.loanId === "string" &&
+    typeof value.kind === "string" &&
+    typeof value.amount === "number" &&
+    typeof value.principalAmount === "number" &&
+    typeof value.interestAmount === "number" &&
+    typeof value.paidOn === "string"
+  );
+}
+
+function isUpcomingDue(value: unknown): value is UpcomingDue {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.title === "string" &&
+    typeof value.dueDate === "string" &&
+    typeof value.amount === "number" &&
+    typeof value.source === "string"
+  );
+}
+
+function readLoanArray(value: unknown): Loan[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Backup is missing loans data.");
+  }
+
+  return value.map((item, index) => {
+    if (!isLoan(item)) {
+      throw new Error(`Invalid loan at index ${index}.`);
+    }
+
+    return item;
+  });
+}
+
+function readLoanPaymentArray(value: unknown): LoanPayment[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Backup is missing payment history.");
+  }
+
+  return value.map((item, index) => {
+    if (!isLoanPayment(item)) {
+      throw new Error(`Invalid loan payment at index ${index}.`);
+    }
+
+    return item;
+  });
+}
+
+function readUpcomingDueArray(value: unknown): UpcomingDue[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Backup is missing upcoming dues.");
+  }
+
+  return value.map((item, index) => {
+    if (!isUpcomingDue(item)) {
+      throw new Error(`Invalid upcoming due at index ${index}.`);
+    }
+
+    return item;
+  });
 }
 
 function readNumber(value: unknown) {
