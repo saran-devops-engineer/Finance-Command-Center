@@ -322,11 +322,14 @@ export function HomeScreen() {
 }
 
 function getDisplayName(profile: UserProfile) {
-  if (profile.displayName === "Vikram" || profile.displayName === "Friend") {
+  const displayName = profile.displayName.trim();
+  const normalizedName = displayName.toLowerCase();
+
+  if (!displayName || normalizedName === "vikram" || normalizedName === "friend") {
     return "Arjun";
   }
 
-  return profile.displayName;
+  return displayName;
 }
 
 function getPortfolioLoans(loans: HomeLoan[]) {

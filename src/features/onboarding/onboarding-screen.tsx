@@ -26,7 +26,7 @@ interface OnboardingFormState {
 }
 
 const initialState: OnboardingFormState = {
-  displayName: "",
+  displayName: "Arjun",
   monthlyIncome: "",
   fixedExpenses: "",
   emis: "",
@@ -151,7 +151,7 @@ export function OnboardingScreen() {
 
     const profile: UserProfile = {
       id: "primary",
-      displayName: form.displayName.trim() || "Friend",
+      displayName: form.displayName.trim() || "Arjun",
       onboardingCompleted: true,
       createdAt: now,
       updatedAt: now
@@ -192,7 +192,7 @@ export function OnboardingScreen() {
               label="Name"
               value={form.displayName}
               onChange={(value) => updateField("displayName", value)}
-              placeholder="Vikram"
+              placeholder="Arjun"
             />
             <Field
               label="Monthly income"

@@ -44,7 +44,7 @@ export default function ProfilePage() {
     };
   }, [router]);
 
-  const displayName = profile?.displayName ?? "Friend";
+  const displayName = getDisplayName(profile);
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
@@ -87,4 +87,15 @@ export default function ProfilePage() {
       </div>
     </MobileShell>
   );
+}
+
+function getDisplayName(profile: UserProfile | null) {
+  const displayName = profile?.displayName.trim() ?? "";
+  const normalizedName = displayName.toLowerCase();
+
+  if (!displayName || normalizedName === "vikram" || normalizedName === "friend") {
+    return "Arjun";
+  }
+
+  return displayName;
 }
