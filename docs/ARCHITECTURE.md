@@ -88,6 +88,15 @@ IndexedDB schema and persistence setup.
 
 IndexedDB is the V1 source of truth.
 
+## Backup Format
+
+Manual backup uses a locked JSON schema documented in `docs/BACKUP_SCHEMA.md`.
+
+- `src/storage/backup/backup-format.ts` defines the on-disk contract.
+- `src/storage/backup/backup-service.ts` owns create, validate, checksum, and restore.
+- IndexedDB remains live storage; backup files are for recovery and migration only.
+- Schema changes require explicit product owner approval and a version bump.
+
 ## Local-First Rule
 
 All user data must remain local in V1.

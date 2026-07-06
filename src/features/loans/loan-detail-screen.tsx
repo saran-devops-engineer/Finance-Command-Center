@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
-import { simulatePrepayment } from "@/services/loan-projection/prepayment";
+import { simulateLoanPrepayment } from "@/services/home-loan-simulation";
+import type { LoanPrepaymentStrategy } from "@/services/home-loan-simulation/presenters/loan-prepayment";
 import type { Loan, LoanPayment } from "@/shared/domain/finance";
+
+type PrepaymentStrategy = LoanPrepaymentStrategy;
 
 interface LoanDetailScreenProps {
   loanId: string;
@@ -21,6 +24,8 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   const [payments, setPayments] = useState<LoanPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [prepaymentAmount, setPrepaymentAmount] = useState("50000");
+  const [prepaymentStrategy, setPrepaymentStrategy] =
+    useState<PrepaymentStrategy>("reduce-tenure");
   const [showMath, setShowMath] = useState(false);
 
   useEffect(() => {
@@ -67,8 +72,12 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
       return null;
     }
 
-    return simulatePrepayment(loan, toNumber(prepaymentAmount));
-  }, [loan, prepaymentAmount]);
+    return simulateLoanPrepayment(
+      loan,
+      toNumber(prepaymentAmount),
+      prepaymentStrategy
+    );
+  }, [loan, prepaymentAmount, prepaymentStrategy]);
   const attentionMessage = loan ? getLoanDetailAttention(loan) : null;
 
   if (isLoading) {
@@ -229,6 +238,35 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
             />
           </label>
 
+          {loan.type === "home" ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant={prepaymentStrategy === "reduce-tenure" ? "secondary" : "ghost"}
+                className={
+                  prepaymentStrategy === "reduce-tenure"
+                    ? ""
+                    : "border border-white/20 bg-white/5 text-primary-foreground hover:bg-white/10"
+                }
+                onClick={() => setPrepaymentStrategy("reduce-tenure")}
+              >
+                Reduce tenure
+              </Button>
+              <Button
+                type="button"
+                variant={prepaymentStrategy === "reduce-emi" ? "secondary" : "ghost"}
+                className={
+                  prepaymentStrategy === "reduce-emi"
+                    ? ""
+                    : "border border-white/20 bg-white/5 text-primary-foreground hover:bg-white/10"
+                }
+                onClick={() => setPrepaymentStrategy("reduce-emi")}
+              >
+                Reduce EMI
+              </Button>
+            </div>
+          ) : null}
+
           {simulation ? (
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-3xl bg-white/10 p-4">
@@ -238,8 +276,14 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
                 </p>
               </div>
               <div className="rounded-3xl bg-white/10 p-4">
-                <p className="opacity-60">Months saved</p>
-                <p className="mt-1 font-semibold">{simulation.estimatedMonthsSaved}</p>
+                <p className="opacity-60">
+                  {simulation.strategy === "reduce-emi" ? "Revised EMI" : "Months saved"}
+                </p>
+                <p className="mt-1 font-semibold">
+                  {simulation.strategy === "reduce-emi" && simulation.revisedEmi
+                    ? formatInr(simulation.revisedEmi)
+                    : simulation.estimatedMonthsSaved}
+                </p>
               </div>
             </div>
           ) : null}
@@ -259,20 +303,29 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
                 Current estimate: {simulation.originalMonths} months left at the current
                 EMI.
               </p>
+              {simulation.strategy === "reduce-tenure" ? (
+                <p>
+                  After prepaying {formatInr(simulation.prepaymentAmount)}, estimated tenure
+                  becomes {simulation.revisedMonths} months.
+                </p>
+              ) : (
+                <p>
+                  After prepaying {formatInr(simulation.prepaymentAmount)}, estimated EMI
+                  becomes {formatInr(simulation.revisedEmi ?? 0)} while keeping the same
+                  tenure.
+                </p>
+              )}
               <p>
-                After prepaying {formatInr(simulation.prepaymentAmount)}, estimated tenure
-                becomes {simulation.revisedMonths} months.
-              </p>
-              <p>
-                Interest saved is estimated from the reduced outstanding principal while
-                keeping the EMI unchanged.
+                Interest saved is estimated from the reduced outstanding principal using
+                month-by-month amortization.
               </p>
             </div>
           ) : null}
           {simulation ? (
             <p className="text-xs leading-5 opacity-60">
-              Estimate assumes the EMI stays the same and the prepayment directly reduces
-              outstanding principal. Actual bank calculations can differ.
+              {simulation.isHomeLoan
+                ? "Home loan estimate uses amortization-based simulation. Actual bank calculations can differ."
+                : "Estimate assumes the EMI stays the same and the prepayment directly reduces outstanding principal. Actual bank calculations can differ."}
             </p>
           ) : null}
         </Card>

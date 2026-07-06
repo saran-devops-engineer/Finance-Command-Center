@@ -9,6 +9,10 @@ import { Card } from "@/components/ui/card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
+import {
+  homeLoanSimulationEngine,
+  tryFromLoan
+} from "@/services/home-loan-simulation";
 import type {
   FinancialSnapshot,
   Loan,
@@ -422,6 +426,17 @@ function getHighestInterestLoan(loans: HomeLoan[]) {
 }
 
 function estimateInterestSaved(loan: HomeLoan, amount: number) {
+  const homeLoanInput = tryFromLoan(loan);
+
+  if (homeLoanInput) {
+    const result = homeLoanSimulationEngine.simulate(homeLoanInput, {
+      kind: "prepay-reduce-tenure",
+      prepaymentAmount: amount
+    });
+
+    return result.outcome.interestSaved;
+  }
+
   const yearsRemaining = Math.max(loan.remainingTenureMonths / 12, 0.5);
   return Math.round(amount * (loan.annualInterestRate / 100) * Math.min(yearsRemaining, 5));
 }

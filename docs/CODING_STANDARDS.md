@@ -40,6 +40,13 @@
 - Return `null` instead of `undefined` from repository methods where interfaces expect missing data.
 - Version IndexedDB schema changes carefully.
 
+## Backup Format
+
+- The JSON backup schema is **locked**. Read `docs/BACKUP_SCHEMA.md` before touching backup code.
+- Do not change `BACKUP_SIGNATURE`, `BACKUP_VERSION`, top-level fields, checksum rules, or `FinanceDataSnapshot` without explicit product owner approval.
+- Allowed without approval: bug fixes, validation hardening, and UI copy — as long as on-disk V1.0 compatibility is preserved.
+- Future encryption/compression must use new `backupVersion` values and documented migrations.
+
 ## CI Expectations
 
 The GitHub Actions pipeline runs:

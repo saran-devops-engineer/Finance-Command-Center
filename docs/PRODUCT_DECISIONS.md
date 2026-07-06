@@ -77,6 +77,8 @@ Active Portfolio on Home should show at most three loans:
 
 V1.1 uses structured JSON manual backup and restore.
 
+**The backup file schema is locked.** See `docs/BACKUP_SCHEMA.md`. Do not change field names, versions, checksum rules, or the `FinanceDataSnapshot` shape without explicit product owner approval.
+
 Implemented direction:
 
 - readable JSON backup file
@@ -87,6 +89,12 @@ Implemented direction:
 - no backend required
 - no cloud account required
 - encryption, compression, and cloud backup are future extension points
+
+Canonical constants:
+
+- `signature`: `FinanceCommandCenter`
+- `backupVersion`: `1.0`
+- `data.schemaVersion`: `1`
 
 ## Investments
 

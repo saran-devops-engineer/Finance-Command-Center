@@ -1,3 +1,9 @@
+/**
+ * Finance Command Center backup format (V1.0).
+ *
+ * LOCKED SCHEMA — do not change field names, versions, or structure without
+ * explicit product owner approval. See docs/BACKUP_SCHEMA.md.
+ */
 import type { FinanceDataSnapshot } from "@/shared/domain/finance";
 
 export const BACKUP_SIGNATURE = "FinanceCommandCenter";

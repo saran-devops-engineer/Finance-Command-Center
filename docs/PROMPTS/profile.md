@@ -19,6 +19,7 @@ How is my data managed?
 - Do not add cloud sync in V1.
 - Do not imply cloud backup exists before it is implemented.
 - Be explicit about local device storage.
+- Do not change the backup JSON schema without explicit product owner approval. See `docs/BACKUP_SCHEMA.md`.
 
 ## Good Improvements
 

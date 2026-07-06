@@ -65,6 +65,7 @@ Read this file first, then open the most relevant supporting document before mak
 - `docs/ROADMAP.md` for phased delivery.
 - `docs/ARCHITECTURE.md` for system structure and boundaries.
 - `docs/CODING_STANDARDS.md` for implementation rules.
+- `docs/BACKUP_SCHEMA.md` for the locked backup file format (do not change without approval).
 - `docs/PROMPTS/*.md` for feature-specific agent instructions.
 
 Default behavior for AI agents:
@@ -74,4 +75,5 @@ Default behavior for AI agents:
 3. Preserve existing visual language.
 4. Keep changes scoped.
 5. Explain tradeoffs before major structural changes.
-6. After edits, summarize files changed, behavior changed, and risks.
+6. Do not change the backup file schema without explicit product owner approval. See `docs/BACKUP_SCHEMA.md`.
+7. After edits, summarize files changed, behavior changed, and risks.
