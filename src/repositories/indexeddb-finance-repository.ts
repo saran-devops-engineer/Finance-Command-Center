@@ -14,7 +14,8 @@ const PROFILE_ID = "primary";
 export const indexedDbFinanceRepository: FinanceRepository = {
   async getProfile() {
     const database = await getFinanceDatabase();
-    return database.get("profile", PROFILE_ID);
+    const profile = await database.get("profile", PROFILE_ID);
+    return profile ?? null;
   },
 
   async saveProfile(value: UserProfile) {
