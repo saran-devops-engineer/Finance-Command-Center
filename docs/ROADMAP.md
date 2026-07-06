@@ -52,9 +52,9 @@ V1 should not try to become a complete personal finance suite.
 
 ## V1.1
 
-- Encrypted `.fcc` export.
-- Encrypted `.fcc` restore.
-- Backup and restore UX.
+- Structured JSON export.
+- Structured JSON restore.
+- Backup validation and restore preview.
 - Edit/delete loans.
 - Better onboarding validation.
 - Recent activity on Home.

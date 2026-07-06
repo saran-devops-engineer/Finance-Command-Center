@@ -1,185 +1,268 @@
 import type { FinanceRepository } from "@/repositories/finance-repository";
 import type { FinanceDataSnapshot } from "@/shared/domain/finance";
 import {
-  FCC_BACKUP_APP_VERSION,
-  FCC_BACKUP_FILE_VERSION,
-  FCC_BACKUP_MAGIC,
-  FCC_BACKUP_SCHEMA_VERSION,
-  type FccBackupEnvelopeV1,
+  BACKUP_APP_VERSION,
+  BACKUP_PLATFORM,
+  BACKUP_SIGNATURE,
+  BACKUP_VERSION,
+  type BackupMetadata,
+  type BackupPreview,
+  type FinanceCommandCenterBackupV1,
   type RestoredBackupSummary
 } from "@/storage/backup/backup-format";
-import {
-  base64ToBytes,
-  bytesToBase64,
-  bytesToUtf8,
-  DEFAULT_PBKDF2_ITERATIONS,
-  decryptBytes,
-  encryptBytes,
-  randomBytes,
-  sha256Base64,
-  utf8ToBytes
-} from "@/storage/backup/encryption";
 
-export async function createEncryptedBackup(params: {
-  repository: FinanceRepository;
-  password: string;
-}) {
-  assertPassword(params.password);
-
+export async function createJsonBackup(params: { repository: FinanceRepository }) {
   const snapshot = await params.repository.createDataSnapshot();
-  const payloadBytes = utf8ToBytes(JSON.stringify(snapshot));
-  const salt = randomBytes(16);
-  const iv = randomBytes(12);
-  const encryptedPayload = new Uint8Array(
-    await encryptBytes({
-      bytes: payloadBytes,
-      password: params.password,
-      salt,
-      iv,
-      iterations: DEFAULT_PBKDF2_ITERATIONS
-    })
-  );
-
   const createdAt = new Date().toISOString();
-  const envelope: FccBackupEnvelopeV1 = {
-    magic: FCC_BACKUP_MAGIC,
-    fileVersion: FCC_BACKUP_FILE_VERSION,
-    appVersion: FCC_BACKUP_APP_VERSION,
+  const checksum = await createChecksum(snapshot);
+  const backup: FinanceCommandCenterBackupV1 = {
+    signature: BACKUP_SIGNATURE,
+    backupVersion: BACKUP_VERSION,
+    appVersion: BACKUP_APP_VERSION,
     createdAt,
-    backupId: crypto.randomUUID(),
-    schemaVersion: FCC_BACKUP_SCHEMA_VERSION,
-    compression: "none",
-    encryption: {
-      algorithm: "AES-GCM",
-      keyLength: 256,
-      iv: bytesToBase64(iv),
-      kdf: "PBKDF2",
-      salt: bytesToBase64(salt),
-      iterations: DEFAULT_PBKDF2_ITERATIONS,
-      hash: "SHA-256"
-    },
-    payload: bytesToBase64(encryptedPayload),
-    integrity: {
-      payloadHash: await sha256Base64(encryptedPayload)
-    },
-    metadata: {
-      recordCounts: {
-        loans: snapshot.loans.length,
-        loanPayments: snapshot.loanPayments.length,
-        upcomingDues: snapshot.upcomingDues.length
-      }
+    platform: BACKUP_PLATFORM,
+    encrypted: false,
+    checksum,
+    metadata: createMetadata(snapshot),
+    data: snapshot,
+    future: {
+      encryption: "none",
+      compression: "none",
+      migrationPath: "direct"
     }
   };
 
   return {
-    blob: new Blob([JSON.stringify(envelope, null, 2)], {
-      type: "application/vnd.finance-command-center.backup"
+    blob: new Blob([JSON.stringify(backup, null, 2)], {
+      type: "application/json"
     }),
-    filename: `finance-command-center-${createdAt.slice(0, 10)}.fcc`,
-    envelope
+    filename: `finance-command-center-backup-${createdAt.slice(0, 10)}.json`,
+    backup
   };
 }
 
-export async function inspectEncryptedBackup(file: File): Promise<FccBackupEnvelopeV1> {
-  const envelope = parseEnvelope(await file.text());
-  await verifyEnvelopeIntegrity(envelope);
-  return envelope;
+export async function inspectJsonBackup(file: File): Promise<BackupPreview> {
+  const backup = await readAndValidateBackup(file);
+  return createPreview(backup);
 }
 
-export async function restoreEncryptedBackup(params: {
+export async function restoreJsonBackup(params: {
   file: File;
-  password: string;
   repository: FinanceRepository;
 }): Promise<RestoredBackupSummary> {
-  assertPassword(params.password);
-
-  const envelope = parseEnvelope(await params.file.text());
-  await verifyEnvelopeIntegrity(envelope);
-
-  const decryptedBytes = await decryptBytes({
-    encryptedBytes: base64ToBytes(envelope.payload),
-    password: params.password,
-    salt: base64ToBytes(envelope.encryption.salt),
-    iv: base64ToBytes(envelope.encryption.iv),
-    iterations: envelope.encryption.iterations
-  });
-  const snapshot = parseSnapshot(bytesToUtf8(decryptedBytes));
+  const backup = await readAndValidateBackup(params.file);
+  const snapshot = migrateBackupData(backup);
 
   await params.repository.replaceAllData(snapshot);
 
   return {
-    backupId: envelope.backupId,
-    createdAt: envelope.createdAt,
-    appVersion: envelope.appVersion,
-    recordCounts: envelope.metadata.recordCounts,
+    ...createPreview(backup),
     snapshot
   };
 }
 
-function assertPassword(password: string) {
-  if (password.trim().length < 8) {
-    throw new Error("Use a backup password with at least 8 characters.");
+async function readAndValidateBackup(file: File) {
+  if (file.size === 0) {
+    throw new Error("Backup file is empty.");
   }
+
+  const rawText = await file.text();
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    throw new Error("Invalid JSON backup file.");
+  }
+
+  const backup = validateBackupShape(parsed);
+  await validateChecksum(backup);
+
+  return backup;
 }
 
-function parseEnvelope(value: string): FccBackupEnvelopeV1 {
-  const parsed = JSON.parse(value) as Partial<FccBackupEnvelopeV1>;
-
-  if (parsed.magic !== FCC_BACKUP_MAGIC) {
-    throw new Error("This is not a Finance Command Center backup file.");
+function validateBackupShape(value: unknown): FinanceCommandCenterBackupV1 {
+  if (!isRecord(value)) {
+    throw new Error("Invalid backup file.");
   }
 
-  if (parsed.fileVersion !== FCC_BACKUP_FILE_VERSION) {
-    throw new Error("This backup file version is not supported yet.");
+  if (value.signature !== BACKUP_SIGNATURE) {
+    throw new Error("Invalid backup file.");
   }
 
-  if (parsed.schemaVersion !== FCC_BACKUP_SCHEMA_VERSION) {
-    throw new Error("This backup schema version is not supported yet.");
+  if (value.backupVersion !== BACKUP_VERSION) {
+    if (typeof value.backupVersion === "string" && value.backupVersion > BACKUP_VERSION) {
+      throw new Error("Backup belongs to a newer app version.");
+    }
+
+    throw new Error("Unsupported backup version.");
   }
 
-  if (
-    parsed.encryption?.algorithm !== "AES-GCM" ||
-    parsed.encryption.kdf !== "PBKDF2" ||
-    !parsed.payload ||
-    !parsed.integrity?.payloadHash
-  ) {
-    throw new Error("This backup file is missing required encryption metadata.");
+  if (value.appVersion !== undefined && typeof value.appVersion !== "string") {
+    throw new Error("Backup app version is invalid.");
   }
 
-  return parsed as FccBackupEnvelopeV1;
+  if (typeof value.createdAt !== "string" || Number.isNaN(Date.parse(value.createdAt))) {
+    throw new Error("Backup timestamp is missing or invalid.");
+  }
+
+  if (value.platform !== BACKUP_PLATFORM) {
+    throw new Error("Unsupported backup platform.");
+  }
+
+  if (value.encrypted !== false) {
+    throw new Error("Encrypted backups are not supported in this version.");
+  }
+
+  if (typeof value.checksum !== "string" || !value.checksum) {
+    throw new Error("Backup checksum is missing.");
+  }
+
+  if (!isRecord(value.metadata)) {
+    throw new Error("Backup metadata is missing.");
+  }
+
+  const data = validateBackupData(value.data);
+
+  return {
+    signature: BACKUP_SIGNATURE,
+    backupVersion: BACKUP_VERSION,
+    appVersion: typeof value.appVersion === "string" ? value.appVersion : "unknown",
+    createdAt: value.createdAt,
+    platform: BACKUP_PLATFORM,
+    encrypted: false,
+    checksum: value.checksum,
+    metadata: validateMetadata(value.metadata),
+    data,
+    future: {
+      encryption: "none",
+      compression: "none",
+      migrationPath: "direct"
+    }
+  };
 }
 
-async function verifyEnvelopeIntegrity(envelope: FccBackupEnvelopeV1) {
-  const payloadBytes = base64ToBytes(envelope.payload);
-  const payloadHash = await sha256Base64(payloadBytes);
-
-  if (payloadHash !== envelope.integrity.payloadHash) {
-    throw new Error("Backup file appears corrupted or incomplete.");
+function validateBackupData(value: unknown): FinanceDataSnapshot {
+  if (!isRecord(value)) {
+    throw new Error("Backup data is missing.");
   }
-}
 
-function parseSnapshot(value: string): FinanceDataSnapshot {
-  const snapshot = JSON.parse(value) as Partial<FinanceDataSnapshot>;
-
-  if (snapshot.schemaVersion !== FCC_BACKUP_SCHEMA_VERSION) {
+  if (value.schemaVersion !== 1) {
     throw new Error("Unsupported backup data schema.");
   }
 
-  if (
-    !Array.isArray(snapshot.loans) ||
-    !Array.isArray(snapshot.loanPayments) ||
-    !Array.isArray(snapshot.upcomingDues)
-  ) {
-    throw new Error("Backup data is incomplete.");
+  if (!Array.isArray(value.loans)) {
+    throw new Error("Backup is missing loans data.");
+  }
+
+  if (!Array.isArray(value.loanPayments)) {
+    throw new Error("Backup is missing payment history.");
+  }
+
+  if (!Array.isArray(value.upcomingDues)) {
+    throw new Error("Backup is missing upcoming dues.");
   }
 
   return {
-    schemaVersion: FCC_BACKUP_SCHEMA_VERSION,
-    exportedAt: snapshot.exportedAt ?? new Date().toISOString(),
-    profile: snapshot.profile ?? null,
-    moneyBreakdown: snapshot.moneyBreakdown ?? null,
-    loans: snapshot.loans,
-    loanPayments: snapshot.loanPayments,
-    upcomingDues: snapshot.upcomingDues
+    schemaVersion: 1,
+    exportedAt:
+      typeof value.exportedAt === "string" ? value.exportedAt : new Date().toISOString(),
+    profile: isRecord(value.profile) ? (value.profile as FinanceDataSnapshot["profile"]) : null,
+    moneyBreakdown: isRecord(value.moneyBreakdown)
+      ? (value.moneyBreakdown as FinanceDataSnapshot["moneyBreakdown"])
+      : null,
+    loans: value.loans as FinanceDataSnapshot["loans"],
+    loanPayments: value.loanPayments as FinanceDataSnapshot["loanPayments"],
+    upcomingDues: value.upcomingDues as FinanceDataSnapshot["upcomingDues"]
   };
+}
+
+function validateMetadata(value: Record<string, unknown>): BackupMetadata {
+  return {
+    loanCount: readNumber(value.loanCount),
+    loanPaymentCount: readNumber(value.loanPaymentCount),
+    upcomingDueCount: readNumber(value.upcomingDueCount),
+    incomeSources: readNumber(value.incomeSources),
+    expenseCategories: readNumber(value.expenseCategories),
+    hasProfile: Boolean(value.hasProfile),
+    hasMoneyBreakdown: Boolean(value.hasMoneyBreakdown)
+  };
+}
+
+async function validateChecksum(backup: FinanceCommandCenterBackupV1) {
+  const checksum = await createChecksum(backup.data);
+
+  if (checksum !== backup.checksum) {
+    throw new Error("Corrupted backup. Checksum does not match.");
+  }
+}
+
+function migrateBackupData(backup: FinanceCommandCenterBackupV1): FinanceDataSnapshot {
+  if (backup.backupVersion === "1.0") {
+    return backup.data;
+  }
+
+  throw new Error("Unsupported backup version.");
+}
+
+function createPreview(backup: FinanceCommandCenterBackupV1): BackupPreview {
+  return {
+    signature: backup.signature,
+    backupVersion: backup.backupVersion,
+    createdAt: backup.createdAt,
+    appVersion: backup.appVersion,
+    platform: backup.platform,
+    encrypted: backup.encrypted,
+    metadata: backup.metadata
+  };
+}
+
+function createMetadata(snapshot: FinanceDataSnapshot): BackupMetadata {
+  return {
+    loanCount: snapshot.loans.length,
+    loanPaymentCount: snapshot.loanPayments.length,
+    upcomingDueCount: snapshot.upcomingDues.length,
+    incomeSources: snapshot.moneyBreakdown?.monthlyIncome ? 1 : 0,
+    expenseCategories: countExpenseCategories(snapshot),
+    hasProfile: Boolean(snapshot.profile),
+    hasMoneyBreakdown: Boolean(snapshot.moneyBreakdown)
+  };
+}
+
+function countExpenseCategories(snapshot: FinanceDataSnapshot) {
+  const breakdown = snapshot.moneyBreakdown;
+
+  if (!breakdown) {
+    return 0;
+  }
+
+  return [
+    breakdown.mandatoryExpenses,
+    breakdown.emis,
+    breakdown.loanPayments,
+    breakdown.insurance,
+    breakdown.rent,
+    breakdown.utilityBills,
+    breakdown.fixedCommitments
+  ].filter((value) => value > 0).length;
+}
+
+async function createChecksum(snapshot: FinanceDataSnapshot) {
+  const bytes = new TextEncoder().encode(JSON.stringify(snapshot));
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  return bytesToHex(new Uint8Array(digest));
+}
+
+function bytesToHex(bytes: Uint8Array) {
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }

@@ -1,44 +1,47 @@
 import type { FinanceDataSnapshot } from "@/shared/domain/finance";
 
-export const FCC_BACKUP_MAGIC = "FCC_BACKUP";
-export const FCC_BACKUP_FILE_VERSION = 1;
-export const FCC_BACKUP_SCHEMA_VERSION = 1;
-export const FCC_BACKUP_APP_VERSION = "0.1.0";
+export const BACKUP_SIGNATURE = "FinanceCommandCenter";
+export const BACKUP_VERSION = "1.0";
+export const BACKUP_APP_VERSION = "0.1.0";
+export const BACKUP_PLATFORM = "PWA";
 
-export interface FccBackupEnvelopeV1 {
-  magic: typeof FCC_BACKUP_MAGIC;
-  fileVersion: typeof FCC_BACKUP_FILE_VERSION;
+export interface FinanceCommandCenterBackupV1 {
+  signature: typeof BACKUP_SIGNATURE;
+  backupVersion: typeof BACKUP_VERSION;
   appVersion: string;
   createdAt: string;
-  backupId: string;
-  schemaVersion: typeof FCC_BACKUP_SCHEMA_VERSION;
-  compression: "none";
-  encryption: {
-    algorithm: "AES-GCM";
-    keyLength: 256;
-    iv: string;
-    kdf: "PBKDF2";
-    salt: string;
-    iterations: number;
-    hash: "SHA-256";
-  };
-  payload: string;
-  integrity: {
-    payloadHash: string;
-  };
-  metadata: {
-    recordCounts: {
-      loans: number;
-      loanPayments: number;
-      upcomingDues: number;
-    };
+  platform: typeof BACKUP_PLATFORM;
+  encrypted: false;
+  checksum: string;
+  metadata: BackupMetadata;
+  data: FinanceDataSnapshot;
+  future: {
+    encryption: "none";
+    compression: "none";
+    migrationPath: "direct";
   };
 }
 
-export interface RestoredBackupSummary {
-  backupId: string;
+export interface BackupMetadata {
+  loanCount: number;
+  loanPaymentCount: number;
+  upcomingDueCount: number;
+  incomeSources: number;
+  expenseCategories: number;
+  hasProfile: boolean;
+  hasMoneyBreakdown: boolean;
+}
+
+export interface BackupPreview {
+  signature: typeof BACKUP_SIGNATURE;
+  backupVersion: typeof BACKUP_VERSION;
   createdAt: string;
   appVersion: string;
-  recordCounts: FccBackupEnvelopeV1["metadata"]["recordCounts"];
+  platform: typeof BACKUP_PLATFORM;
+  encrypted: false;
+  metadata: BackupMetadata;
+}
+
+export interface RestoredBackupSummary extends BackupPreview {
   snapshot: FinanceDataSnapshot;
 }

@@ -75,16 +75,18 @@ Active Portfolio on Home should show at most three loans:
 
 ## Backup / Restore
 
-V1.1 uses encrypted manual backup and restore.
+V1.1 uses structured JSON manual backup and restore.
 
 Implemented direction:
 
-- `.fcc` encrypted backup file
-- password-based encryption
+- readable JSON backup file
+- checksum validation
+- restore preview before overwrite
 - IndexedDB remains the live source of truth
 - backup file is only for recovery and migration
 - no backend required
 - no cloud account required
+- encryption, compression, and cloud backup are future extension points
 
 ## Investments
 

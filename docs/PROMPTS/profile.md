@@ -10,7 +10,7 @@ How is my data managed?
 
 - Make local-first privacy clear.
 - Explain that V1 data stays on this device.
-- Support encrypted `.fcc` backup and restore.
+- Support structured JSON backup and restore.
 - Keep settings calm and understandable.
 
 ## Rules
@@ -24,7 +24,7 @@ How is my data managed?
 
 - Privacy explanation.
 - Device-only storage notice.
-- Encrypted `.fcc` backup/restore.
+- JSON backup/restore with future encryption extension points.
 - Passcode placeholder or future plan.
 - PWA install guidance.
 

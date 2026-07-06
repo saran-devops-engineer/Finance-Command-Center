@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import {
-  createEncryptedBackup,
-  restoreEncryptedBackup
+  createJsonBackup,
+  inspectJsonBackup,
+  restoreJsonBackup
 } from "@/storage/backup/backup-service";
+import type { BackupPreview } from "@/storage/backup/backup-format";
 import type { UserProfile } from "@/shared/domain/finance";
 
 const preferences = [
   ["Currency", "INR ₹"],
   ["Storage", "On-device only"],
-  ["Backup", "Encrypted .fcc file"],
+  ["Backup", "Readable JSON file"],
   ["Appearance", "Automatic"],
   ["Passcode", "Planned"]
 ] as const;
@@ -31,7 +33,7 @@ const privacyPrinciples = [
   },
   {
     title: "Portable recovery",
-    description: "Encrypted .fcc files are for backup, restore, and migration."
+    description: "Structured JSON files are for backup, restore, and migration."
   }
 ] as const;
 
@@ -39,7 +41,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [backupPassword, setBackupPassword] = useState("");
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [lastRestoreAt, setLastRestoreAt] = useState<string | null>(null);
@@ -80,9 +81,8 @@ export default function ProfilePage() {
     setBackupStatus(null);
 
     try {
-      const backup = await createEncryptedBackup({
-        repository: indexedDbFinanceRepository,
-        password: backupPassword
+      const backup = await createJsonBackup({
+        repository: indexedDbFinanceRepository
       });
       const url = URL.createObjectURL(backup.blob);
       const link = document.createElement("a");
@@ -90,9 +90,9 @@ export default function ProfilePage() {
       link.download = backup.filename;
       link.click();
       URL.revokeObjectURL(url);
-      localStorage.setItem("fcc:lastBackupAt", backup.envelope.createdAt);
-      setLastBackupAt(backup.envelope.createdAt);
-      setBackupStatus("Encrypted backup created. Store the .fcc file somewhere safe.");
+      localStorage.setItem("fcc:lastBackupAt", backup.backup.createdAt);
+      setLastBackupAt(backup.backup.createdAt);
+      setBackupStatus("JSON backup created. Store the file somewhere safe.");
     } catch (error) {
       setBackupStatus(getErrorMessage(error));
     } finally {
@@ -105,28 +105,27 @@ export default function ProfilePage() {
       return;
     }
 
-    const shouldRestore = window.confirm(
-      "Restore will replace the current on-device data with this backup. Continue?"
-    );
-
-    if (!shouldRestore) {
-      return;
-    }
-
     setIsWorking(true);
     setBackupStatus(null);
 
     try {
-      const restored = await restoreEncryptedBackup({
+      const preview = await inspectJsonBackup(file);
+      const shouldRestore = window.confirm(createRestoreSummary(preview));
+
+      if (!shouldRestore) {
+        setBackupStatus("Restore cancelled.");
+        return;
+      }
+
+      const restored = await restoreJsonBackup({
         file,
-        password: backupPassword,
         repository: indexedDbFinanceRepository
       });
       const restoredAt = new Date().toISOString();
       localStorage.setItem("fcc:lastRestoreAt", restoredAt);
       setLastRestoreAt(restoredAt);
       setBackupStatus(
-        `Restored backup from ${new Date(restored.createdAt).toLocaleDateString("en-IN")}.`
+        `Restored JSON backup from ${new Date(restored.createdAt).toLocaleDateString("en-IN")}.`
       );
       router.refresh();
     } catch (error) {
@@ -173,7 +172,7 @@ export default function ProfilePage() {
             </h2>
             <p className="text-sm leading-6 text-muted-foreground">
               Finance Command Center reads and writes from this device first. Backups
-              are encrypted files you control.
+              are portable files you control.
             </p>
             <div className="space-y-3">
               {privacyPrinciples.map((principle) => (
@@ -204,16 +203,16 @@ export default function ProfilePage() {
 
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Secure backup
+            Backup & restore
           </p>
           <Card className="space-y-5">
             <div className="space-y-2">
               <h2 className="font-display text-3xl tracking-[-0.04em]">
-                Own your recovery file.
+                Create Backup
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                Create an encrypted `.fcc` backup for restore or device migration.
-                The app still reads and writes from IndexedDB.
+                Save a copy of your financial data so you can restore it if you
+                change devices or lose your browser data.
               </p>
             </div>
 
@@ -222,41 +221,35 @@ export default function ProfilePage() {
               <StatusMetric label="Last restore" value={formatStoredDate(lastRestoreAt)} />
             </div>
 
-            <label className="block space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                Backup password
-              </span>
-              <input
-                value={backupPassword}
-                onChange={(event) => setBackupPassword(event.target.value)}
-                type="password"
-                placeholder="Minimum 8 characters"
-                className="h-12 w-full rounded-3xl border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary"
-              />
-            </label>
-
             <div className="grid grid-cols-2 gap-3">
               <Button
                 type="button"
-                disabled={isWorking || backupPassword.trim().length < 8}
+                disabled={isWorking}
                 onClick={() => void handleCreateBackup()}
               >
-                {isWorking ? "Working..." : "Export .fcc"}
+                {isWorking ? "Working..." : "Create Backup"}
               </Button>
               <Button
                 type="button"
                 variant="secondary"
-                disabled={isWorking || backupPassword.trim().length < 8}
+                disabled={isWorking}
                 onClick={() => fileInputRef.current?.click()}
               >
-                Restore
+                Restore Backup
               </Button>
+            </div>
+
+            <div className="rounded-3xl bg-white/45 p-4">
+              <p className="font-medium">Restore Backup</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Restore your previously saved financial data from a backup file.
+              </p>
             </div>
 
             <input
               ref={fileInputRef}
               type="file"
-              accept=".fcc,application/vnd.finance-command-center.backup"
+              accept=".json,application/json"
               className="hidden"
               onChange={(event) => void handleRestoreBackup(event.target.files?.[0])}
             />
@@ -268,8 +261,8 @@ export default function ProfilePage() {
             ) : null}
 
             <p className="text-xs leading-5 text-muted-foreground">
-              If you forget this password, the backup cannot be recovered. Finance
-              Command Center does not store the password.
+              JSON backups are readable files. Keep them somewhere private. Future
+              versions can add password encryption using the same backup service.
             </p>
           </Card>
         </section>
@@ -307,6 +300,21 @@ function formatStoredDate(value: string | null) {
     day: "numeric",
     month: "short"
   }).format(new Date(value));
+}
+
+function createRestoreSummary(preview: BackupPreview) {
+  return [
+    "Restore this backup?",
+    "",
+    `Backup date: ${new Date(preview.createdAt).toLocaleString("en-IN")}`,
+    `App version: ${preview.appVersion}`,
+    `Loans: ${preview.metadata.loanCount}`,
+    `Payment records: ${preview.metadata.loanPaymentCount}`,
+    `Income sources: ${preview.metadata.incomeSources}`,
+    `Expense categories: ${preview.metadata.expenseCategories}`,
+    "",
+    "This will replace the current on-device data."
+  ].join("\n");
 }
 
 function getErrorMessage(error: unknown) {
