@@ -77,3 +77,18 @@ Default behavior for AI agents:
 5. Explain tradeoffs before major structural changes.
 6. Do not change the backup file schema without explicit product owner approval. See `docs/BACKUP_SCHEMA.md`.
 7. After edits, summarize files changed, behavior changed, and risks.
+
+## UI Foundation V1.0 (Frozen)
+
+**Status:** FROZEN — July 2026  
+**Changelog:** `CHANGELOG.md`
+
+The entire UI Foundation is complete. Approved screens: Onboarding, Home, Loans, Loan Details, Money, Insights, Profile, Backup & Restore, navigation, and the design system / component library.
+
+**Do not redesign** any screen unless explicitly instructed. Do not change layout, navigation, card hierarchy, colors, typography, spacing, component styling, or information architecture.
+
+**Only modify existing screens for:** bug fixes, accessibility, performance, responsiveness, requested functionality, or calculation errors.
+
+**New features** must integrate into the existing design language. New components must follow `src/lib/design-tokens.ts` and the handbook component library. Never redesign existing components without explicit approval.
+
+**Next phase:** Version 2.0 — Financial Intelligence (engines and business logic, not UI redesign). See `CHANGELOG.md` and `docs/ROADMAP.md`.

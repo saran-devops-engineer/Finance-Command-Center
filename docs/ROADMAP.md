@@ -1,5 +1,23 @@
 # Roadmap
 
+## V1.0 — UI Foundation (Complete, Frozen)
+
+Finance Command Center UI Foundation reached **Version 1.0** in July 2026. All core screens, navigation, design system, loan CRUD, archive, profile management, and backup flows are approved and frozen.
+
+See `CHANGELOG.md` for the release record.
+
+**Priority shift:** Phase 2 focuses on **Financial Intelligence** — accurate engines and business logic, not UI redesign.
+
+### Phase 2 — Financial Intelligence (V2.0 direction)
+
+- Home Loan Engine
+- Cash Flow Engine
+- Recommendation Engine
+- Financial Health Engine
+- Gold Loan Engine
+- Personal Loan Engine
+- Simulation Engine improvements
+
 ## V1 Goal
 
 Validate the product vision, core navigation, local-first privacy model, and decision-support flow.

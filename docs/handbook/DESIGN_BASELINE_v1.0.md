@@ -10,12 +10,17 @@ This document marks the UI stabilization baseline for Finance Command Center.
 
 The following must not change without explicit approval:
 
+- All approved screens (Onboarding, Home, Loans, Loan Details, Money, Insights, Profile)
+- Navigation and information architecture
 - Spacing scale and section rhythm
 - Card sizes, padding, and border radius
 - Typography hierarchy
-- Component layouts (`MetricCard`, `Card`, `Button`, `ExpandableCard`)
+- Component layouts (`MetricCard`, `Card`, `Button`, `ExpandableCard`, `LoanProgressSummary`, etc.)
 - Button sizes and touch targets
 - Visual hierarchy across screens
+- Colors and mobile-first responsive layout
+
+**Release:** UI Foundation V1.0 — see `CHANGELOG.md`
 
 ## Implementation source
 
