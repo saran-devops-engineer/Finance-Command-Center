@@ -7,6 +7,7 @@ import { ArrowLeft, Info, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { getPinnedLoanId, setPinnedLoanId } from "@/lib/pinned-loan";
@@ -57,9 +58,6 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
     };
   }, [loanId, router]);
 
-  const paidPercent = loan
-    ? Math.min(Math.round((loan.principalPaid / Math.max(loan.originalAmount, 1)) * 100), 100)
-    : 0;
   const interestShare = loan
     ? Math.round((loan.interestPaid / Math.max(loan.interestPaid + loan.principalPaid, 1)) * 100)
     : 0;
@@ -157,15 +155,10 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <div className="h-2 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary" style={{ width: `${paidPercent}%` }} />
-          </div>
-          <div className="flex justify-between text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            <span>{paidPercent}% principal paid</span>
-            <span>{formatInr(loan.principalPaid)} of {formatInr(loan.originalAmount)}</span>
-          </div>
-        </div>
+        <LoanProgressSummary
+          principalPaid={loan.principalPaid}
+          originalAmount={loan.originalAmount}
+        />
       </Card>
 
       {attentionMessage ? (

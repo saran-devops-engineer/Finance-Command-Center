@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DynamicGreeting } from "@/components/ui/dynamic-greeting";
+import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
 import { formatInr, cn } from "@/lib/utils";
 import { card, spacing } from "@/lib/design-tokens";
 import { getPinnedLoanId } from "@/lib/pinned-loan";
@@ -233,27 +234,15 @@ export function HomeScreen() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{
-                      width: `${Math.min(
-                        Math.round(
-                          (priorityLoan.principalPaid /
-                            Math.max(priorityLoan.originalAmount, 1)) *
-                            100
-                        ),
-                        100
-                      )}%`
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
+              <LoanProgressSummary
+                principalPaid={priorityLoan.principalPaid}
+                originalAmount={priorityLoan.originalAmount}
+              />
+
+              <p className="text-xs text-muted-foreground">
                   {priorityLoan.annualInterestRate}% p.a. · EMI{" "}
                   {formatInr(priorityLoan.monthlyEmi)}
-                </p>
-              </div>
+              </p>
             </Card>
           </Link>
         ) : (

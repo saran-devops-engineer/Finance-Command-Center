@@ -7,6 +7,7 @@ import { AlertTriangle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
 import { formatInr, cn } from "@/lib/utils";
 import { card, spacing } from "@/lib/design-tokens";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
@@ -144,11 +145,6 @@ export function LoansScreen() {
           ) : null}
 
           {prioritizedLoans.map((loan) => {
-            const paidPercent = Math.min(
-              Math.round((loan.principalPaid / Math.max(loan.originalAmount, 1)) * 100),
-              100
-            );
-
             return (
               <Link key={loan.id} href={`/loans/${loan.id}`} className="block">
                 <Card className={cn("space-y-4", card.paddingCompact)}>
@@ -167,17 +163,10 @@ export function LoansScreen() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${paidPercent}%` }}
-                      />
-                    </div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      {paidPercent}% principal paid
-                    </p>
-                  </div>
+                  <LoanProgressSummary
+                    principalPaid={loan.principalPaid}
+                    originalAmount={loan.originalAmount}
+                  />
 
                   <MetricCardGrid>
                     <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
