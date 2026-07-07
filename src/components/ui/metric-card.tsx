@@ -15,7 +15,6 @@ interface MetricCardProps {
   helper?: string;
   variant?: "light" | "dark";
   valueKind?: MetricValueKind;
-  className?: string;
 }
 
 export function MetricCard({
@@ -23,64 +22,62 @@ export function MetricCard({
   value,
   helper,
   variant = "light",
-  valueKind = "number",
-  className
+  valueKind = "number"
 }: MetricCardProps) {
   const columns = useContext(MetricCardGridContext);
 
   return (
     <div
       className={cn(
-        "flex w-full min-w-0 flex-col overflow-hidden",
+        "w-full min-w-0 overflow-hidden",
         metric.height,
         metric.minHeight,
         metric.maxHeight,
         card.paddingMetric,
         radius.card,
-        variant === "dark" ? "bg-white/10 text-inherit" : "bg-white/45 text-foreground",
-        className
+        variant === "dark" ? "bg-white/10 text-inherit" : "bg-white/45 text-foreground"
       )}
     >
-      <p
-        className={cn(
-          metric.labelHeight,
-          "shrink-0 truncate text-xs font-medium leading-none",
-          variant === "dark" ? "opacity-60" : "text-muted-foreground"
-        )}
-      >
-        {label}
-      </p>
+      <div className="flex h-full w-full flex-col items-start justify-center">
+        <div className={cn("flex w-full min-w-0 flex-col", metric.contentGap)}>
+          <p
+            className={cn(
+              "truncate text-xs font-medium leading-none",
+              variant === "dark" ? "opacity-60" : "text-muted-foreground"
+            )}
+          >
+            {label}
+          </p>
 
-      <div className="flex min-h-0 flex-1 items-center">
-        <p
-          className={cn(
-            "w-full min-w-0 font-semibold tracking-[-0.02em]",
-            valueKind === "number"
-              ? cn(
-                  "overflow-hidden text-ellipsis whitespace-nowrap tabular-nums leading-none",
-                  columns === 3 ? metric.value3Col : metric.value2Col
-                )
-              : cn(
-                  "line-clamp-2 leading-snug",
-                  columns === 3 ? metric.textValue3Col : metric.textValue2Col
-                )
-          )}
-        >
-          {value}
-        </p>
+          <p
+            className={cn(
+              "w-full min-w-0 font-semibold tracking-[-0.02em]",
+              valueKind === "number"
+                ? cn(
+                    "overflow-hidden text-ellipsis whitespace-nowrap tabular-nums leading-none",
+                    columns === 3 ? metric.value3Col : metric.value2Col
+                  )
+                : cn(
+                    "line-clamp-2 leading-snug",
+                    columns === 3 ? metric.textValue3Col : metric.textValue2Col
+                  )
+            )}
+          >
+            {value}
+          </p>
+
+          {helper ? (
+            <p
+              className={cn(
+                "truncate text-[10px] leading-none",
+                variant === "dark" ? "opacity-50" : "text-muted-foreground/80"
+              )}
+            >
+              {helper}
+            </p>
+          ) : null}
+        </div>
       </div>
-
-      {helper ? (
-        <p
-          className={cn(
-            metric.helperHeight,
-            "shrink-0 truncate text-[10px] leading-none",
-            variant === "dark" ? "opacity-50" : "text-muted-foreground/80"
-          )}
-        >
-          {helper}
-        </p>
-      ) : null}
     </div>
   );
 }
