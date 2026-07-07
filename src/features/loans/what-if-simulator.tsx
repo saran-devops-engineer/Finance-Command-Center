@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ExpandableCard } from "@/components/ui/expandable-card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { cn } from "@/lib/utils";
-import { card, radius, spacing } from "@/lib/design-tokens";
+import { card, radius } from "@/lib/design-tokens";
 import {
   homeLoanSimulationEngine,
   simulateLoanPrepayment,
