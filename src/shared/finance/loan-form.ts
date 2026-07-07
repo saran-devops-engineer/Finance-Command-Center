@@ -112,8 +112,9 @@ export function buildLoanFromForm(form: LoanFormState, existing?: Loan): Loan {
     nextDueDate: form.nextDueDate || new Date().toISOString().slice(0, 10),
     notes: form.notes.trim() || undefined,
     status: existing?.status ?? "active",
-    deletedAt: existing?.deletedAt,
     archivedAt: existing?.archivedAt,
+    archiveReason: existing?.archiveReason,
+    deletedAt: existing?.deletedAt,
     isOverdue: existing?.isOverdue
   };
 }

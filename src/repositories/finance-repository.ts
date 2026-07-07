@@ -13,9 +13,11 @@ export interface FinanceRepository {
   getMoneyBreakdown(): Promise<MoneyBreakdown | null>;
   saveMoneyBreakdown(value: MoneyBreakdown): Promise<void>;
   listLoans(): Promise<Loan[]>;
+  listArchivedLoans(): Promise<Loan[]>;
   getLoan(id: string): Promise<Loan | null>;
   saveLoan(value: Loan): Promise<void>;
   softDeleteLoan(id: string): Promise<void>;
+  archiveLoan(id: string, archiveReason?: string): Promise<void>;
   listAllLoanPayments(): Promise<LoanPayment[]>;
   listLoanPayments(loanId: string): Promise<LoanPayment[]>;
   saveLoanPayment(value: LoanPayment): Promise<void>;

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { Copy, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Archive, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { radius } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
@@ -10,10 +10,16 @@ import { cn } from "@/lib/utils";
 interface LoanActionsMenuProps {
   loanId: string;
   loanName: string;
+  onArchive: () => void;
   onDelete: () => void;
 }
 
-export function LoanActionsMenu({ loanId, loanName, onDelete }: LoanActionsMenuProps) {
+export function LoanActionsMenu({
+  loanId,
+  loanName,
+  onArchive,
+  onDelete
+}: LoanActionsMenuProps) {
   const menuId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,12 +88,14 @@ export function LoanActionsMenu({ loanId, loanName, onDelete }: LoanActionsMenuP
           <button
             type="button"
             role="menuitem"
-            disabled
-            className="flex min-h-12 w-full items-center gap-3 px-4 text-left text-sm font-medium text-muted-foreground"
+            className="flex min-h-12 w-full items-center gap-3 px-4 text-left text-sm font-medium transition hover:bg-white/55"
+            onClick={() => {
+              setIsOpen(false);
+              onArchive();
+            }}
           >
-            <Copy className="h-4 w-4" aria-hidden="true" />
-            Duplicate loan
-            <span className="ml-auto text-[10px] uppercase tracking-[0.16em]">Soon</span>
+            <Archive className="h-4 w-4" aria-hidden="true" />
+            Archive loan
           </button>
           <button
             type="button"

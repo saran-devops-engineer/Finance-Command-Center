@@ -68,3 +68,34 @@ export async function softDeleteLoanRecord(
   notifyFinanceDataUpdated("loan");
   return true;
 }
+
+export async function archiveLoanRecord(
+  repository: FinanceRepository,
+  loanId: string,
+  archiveReason?: string
+) {
+  const loan = await repository.getLoan(loanId);
+
+  if (!loan || !isActiveLoan(loan)) {
+    return false;
+  }
+
+  const moneyBreakdown = await repository.getMoneyBreakdown();
+
+  if (moneyBreakdown) {
+    await repository.saveMoneyBreakdown({
+      ...moneyBreakdown,
+      loanPayments: Math.max(moneyBreakdown.loanPayments - loan.monthlyEmi, 0)
+    });
+  }
+
+  await repository.deleteUpcomingDue(`due-${loan.id}`);
+  await repository.archiveLoan(loan.id, archiveReason);
+
+  if (getPinnedLoanId() === loan.id) {
+    setPinnedLoanId(null);
+  }
+
+  notifyFinanceDataUpdated("loan");
+  return true;
+}

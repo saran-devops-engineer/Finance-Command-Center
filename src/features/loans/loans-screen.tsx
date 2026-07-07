@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,19 +10,31 @@ import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { formatInr, cn } from "@/lib/utils";
-import { card, spacing } from "@/lib/design-tokens";
+import {
+  formatLoanTypeLabel,
+  getArchiveDateLabel,
+  getCompletionDateLabel,
+  getOutstandingLabel
+} from "@/lib/loan-display";
+import { card, radius, spacing } from "@/lib/design-tokens";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { Loan } from "@/shared/domain/finance";
 
+type LoansView = "active" | "archived";
+
 export function LoansScreen() {
   const router = useRouter();
-  const [loans, setLoans] = useState<Loan[]>([]);
+  const searchParams = useSearchParams();
+  const [activeLoans, setActiveLoans] = useState<Loan[]>([]);
+  const [archivedLoans, setArchivedLoans] = useState<Loan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [view, setView] = useState<LoansView>("active");
 
   const loadLoans = useCallback(async () => {
-    const [profile, localLoans] = await Promise.all([
+    const [profile, localActiveLoans, localArchivedLoans] = await Promise.all([
       indexedDbFinanceRepository.getProfile(),
-      indexedDbFinanceRepository.listLoans()
+      indexedDbFinanceRepository.listLoans(),
+      indexedDbFinanceRepository.listArchivedLoans()
     ]);
 
     if (!profile?.onboardingCompleted) {
@@ -30,9 +42,17 @@ export function LoansScreen() {
       return;
     }
 
-    setLoans(localLoans);
+    setActiveLoans(localActiveLoans);
+    setArchivedLoans(localArchivedLoans);
     setIsLoading(false);
   }, [router]);
+
+  useEffect(() => {
+    const requestedView = searchParams.get("view");
+    if (requestedView === "archived") {
+      setView("archived");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     void loadLoans();
@@ -42,16 +62,16 @@ export function LoansScreen() {
     void loadLoans();
   });
 
-  const totalOutstanding = loans.reduce(
+  const totalOutstanding = activeLoans.reduce(
     (sum, loan) => sum + loan.outstandingBalance,
     0
   );
-  const totalEmi = loans.reduce((sum, loan) => sum + loan.monthlyEmi, 0);
-  const estimatedMonthlyInterest = loans.reduce(
+  const totalEmi = activeLoans.reduce((sum, loan) => sum + loan.monthlyEmi, 0);
+  const estimatedMonthlyInterest = activeLoans.reduce(
     (sum, loan) => sum + estimateMonthlyInterest(loan),
     0
   );
-  const prioritizedLoans = [...loans].sort(compareLoanPriority);
+  const prioritizedLoans = [...activeLoans].sort(compareLoanPriority);
   const priorityLoan = prioritizedLoans[0];
   const attentionMessage = priorityLoan ? getLoanAttentionMessage(priorityLoan) : null;
 
@@ -81,100 +101,192 @@ export function LoansScreen() {
         </h1>
       </header>
 
-      <MetricCardGrid columns={3}>
-        <MetricCard
-          label="Outstanding"
-          value={formatInr(totalOutstanding, { compact: true })}
-        />
-        <MetricCard label="EMI" value={formatInr(totalEmi, { compact: true })} />
-        <MetricCard
-          label="Int./mo"
-          value={formatInr(estimatedMonthlyInterest, { compact: true })}
-        />
-      </MetricCardGrid>
+      <LoanViewTabs view={view} onChange={setView} />
 
-      {priorityLoan && attentionMessage ? (
-        <Card className="space-y-3 bg-primary text-primary-foreground">
-          <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10">
-              <AlertTriangle className="h-5 w-5" strokeWidth={1.7} />
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
-                Needs attention
-              </p>
-              <h2 className="font-display text-3xl leading-tight tracking-[-0.04em]">
-                {attentionMessage.title}
-              </h2>
-              <p className="text-sm leading-6 opacity-70">{attentionMessage.description}</p>
-            </div>
-          </div>
-          <Button asChild variant="secondary" size="sm" className="w-full">
-            <Link href={`/loans/${priorityLoan.id}`}>Review loan</Link>
-          </Button>
-        </Card>
-      ) : null}
+      {view === "active" ? (
+        <>
+          <MetricCardGrid columns={3}>
+            <MetricCard
+              label="Outstanding"
+              value={formatInr(totalOutstanding, { compact: true })}
+            />
+            <MetricCard label="EMI" value={formatInr(totalEmi, { compact: true })} />
+            <MetricCard
+              label="Int./mo"
+              value={formatInr(estimatedMonthlyInterest, { compact: true })}
+            />
+          </MetricCardGrid>
 
-      <Button asChild className="w-full gap-2">
-        <Link href="/loans/new">
-          <Plus className="h-4 w-4" />
-          Add loan
-        </Link>
-      </Button>
-
-      <section className={spacing.section}>
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-          Priority portfolio
-        </p>
-        <div className={cn("flex flex-col", spacing.cardStack)}>
-          {loans.length === 0 ? (
-            <Card className={cn("space-y-2", card.paddingCompact)}>
-              <h2 className="font-display text-3xl tracking-[-0.04em]">
-                No loans added yet.
-              </h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Add your first loan from onboarding or the Home quick action to see a
-                premium loan card here.
-              </p>
+          {priorityLoan && attentionMessage ? (
+            <Card className="space-y-3 bg-primary text-primary-foreground">
+              <div className="flex items-start gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10">
+                  <AlertTriangle className="h-5 w-5" strokeWidth={1.7} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+                    Needs attention
+                  </p>
+                  <h2 className="font-display text-3xl leading-tight tracking-[-0.04em]">
+                    {attentionMessage.title}
+                  </h2>
+                  <p className="text-sm leading-6 opacity-70">{attentionMessage.description}</p>
+                </div>
+              </div>
+              <Button asChild variant="secondary" size="sm" className="w-full">
+                <Link href={`/loans/${priorityLoan.id}`}>Review loan</Link>
+              </Button>
             </Card>
           ) : null}
 
-          {prioritizedLoans.map((loan) => {
-            return (
+          <Button asChild className="w-full gap-2">
+            <Link href="/loans/new">
+              <Plus className="h-4 w-4" />
+              Add loan
+            </Link>
+          </Button>
+
+          <section className={spacing.section}>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              Priority portfolio
+            </p>
+            <div className={cn("flex flex-col", spacing.cardStack)}>
+              {activeLoans.length === 0 ? (
+                <Card className={cn("space-y-2", card.paddingCompact)}>
+                  <h2 className="font-display text-3xl tracking-[-0.04em]">
+                    No loans added yet.
+                  </h2>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Add your first loan from onboarding or the Home quick action to see a
+                    premium loan card here.
+                  </p>
+                </Card>
+              ) : null}
+
+              {prioritizedLoans.map((loan) => (
+                <Link key={loan.id} href={`/loans/${loan.id}`} className="block">
+                  <Card className={cn("space-y-4", card.paddingCompact)}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          {formatLoanTypeLabel(loan)} loan · {loan.lender}
+                        </p>
+                        <h2 className="mt-1 font-display text-3xl leading-tight tracking-[-0.04em]">
+                          {loan.name}
+                        </h2>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Remaining</p>
+                        <p className="font-semibold">{formatInr(loan.outstandingBalance)}</p>
+                      </div>
+                    </div>
+
+                    <LoanProgressSummary
+                      principalPaid={loan.principalPaid}
+                      originalAmount={loan.originalAmount}
+                    />
+
+                    <MetricCardGrid>
+                      <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
+                      <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
+                      <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
+                      <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
+                    </MetricCardGrid>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className={spacing.section}>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Archived portfolio
+          </p>
+          <div className={cn("flex flex-col", spacing.cardStack)}>
+            {archivedLoans.length === 0 ? (
+              <Card className={cn("space-y-2", card.paddingCompact)}>
+                <h2 className="font-display text-3xl tracking-[-0.04em]">
+                  No archived loans yet.
+                </h2>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  When you archive completed loans, they will appear here.
+                </p>
+              </Card>
+            ) : null}
+
+            {archivedLoans.map((loan) => (
               <Link key={loan.id} href={`/loans/${loan.id}`} className="block">
                 <Card className={cn("space-y-4", card.paddingCompact)}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                        {loan.type} loan · {loan.lender}
+                        {formatLoanTypeLabel(loan)} loan · {loan.lender}
                       </p>
                       <h2 className="mt-1 font-display text-3xl leading-tight tracking-[-0.04em]">
                         {loan.name}
                       </h2>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Remaining</p>
-                      <p className="font-semibold">{formatInr(loan.outstandingBalance)}</p>
-                    </div>
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Archived
+                    </span>
                   </div>
 
-                  <LoanProgressSummary
-                    principalPaid={loan.principalPaid}
-                    originalAmount={loan.originalAmount}
-                  />
-
-                  <MetricCardGrid>
-                    <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
-                    <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
-                    <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
-                    <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
-                  </MetricCardGrid>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Completion date</p>
+                      <p className="font-semibold">{getCompletionDateLabel(loan)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Archive date</p>
+                      <p className="font-semibold">{getArchiveDateLabel(loan)}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Outstanding balance</p>
+                      <p className="font-semibold">{getOutstandingLabel(loan)}</p>
+                    </div>
+                  </div>
                 </Card>
               </Link>
-            );
-          })}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function LoanViewTabs({
+  view,
+  onChange
+}: {
+  view: LoansView;
+  onChange: (view: LoansView) => void;
+}) {
+  return (
+    <div className={cn("grid grid-cols-2 gap-2 rounded-full bg-white/45 p-1", radius.pill)}>
+      <button
+        type="button"
+        className={cn(
+          "min-h-11 rounded-full px-4 text-sm font-medium transition",
+          view === "active" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+        )}
+        aria-pressed={view === "active"}
+        onClick={() => onChange("active")}
+      >
+        Active
+      </button>
+      <button
+        type="button"
+        className={cn(
+          "min-h-11 rounded-full px-4 text-sm font-medium transition",
+          view === "archived" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+        )}
+        aria-pressed={view === "archived"}
+        onClick={() => onChange("archived")}
+      >
+        Archived
+      </button>
     </div>
   );
 }

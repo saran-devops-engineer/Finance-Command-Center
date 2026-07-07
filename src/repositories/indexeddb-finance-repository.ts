@@ -8,7 +8,7 @@ import type {
   UserProfile
 } from "@/shared/domain/finance";
 import { getFinanceDatabase } from "@/storage/indexeddb/database";
-import { filterActiveLoans, normalizeLoan } from "@/lib/loan-status";
+import { filterActiveLoans, filterArchivedLoans, normalizeLoan } from "@/lib/loan-status";
 
 const MONEY_BREAKDOWN_ID = "current-month";
 const PROFILE_ID = "primary";
@@ -61,6 +61,12 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     return filterActiveLoans(loans.map(normalizeLoan));
   },
 
+  async listArchivedLoans() {
+    const database = await getFinanceDatabase();
+    const loans = await database.getAll("loans");
+    return filterArchivedLoans(loans.map(normalizeLoan));
+  },
+
   async getLoan(id: string) {
     const database = await getFinanceDatabase();
     const loan = await database.get("loans", id);
@@ -86,6 +92,25 @@ export const indexedDbFinanceRepository: FinanceRepository = {
         ...loan,
         status: "deleted",
         deletedAt: new Date().toISOString()
+      })
+    );
+  },
+
+  async archiveLoan(id: string, archiveReason?: string) {
+    const database = await getFinanceDatabase();
+    const loan = await database.get("loans", id);
+
+    if (!loan) {
+      return;
+    }
+
+    await database.put(
+      "loans",
+      normalizeLoan({
+        ...loan,
+        status: "archived",
+        archivedAt: new Date().toISOString(),
+        archiveReason: archiveReason?.trim() || undefined
       })
     );
   },

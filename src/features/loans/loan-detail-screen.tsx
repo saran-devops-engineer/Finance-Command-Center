@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Info, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ArchiveLoanDialog } from "@/components/ui/archive-loan-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
@@ -15,10 +16,18 @@ import { WhatIfSimulator } from "@/features/loans/what-if-simulator";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { cn, formatInr } from "@/lib/utils";
-import { isActiveLoan } from "@/lib/loan-status";
+import { getLoanStatus, isActiveLoan, isArchivedLoan } from "@/lib/loan-status";
+import {
+  formatLoanTypeLabel,
+  getArchiveDateLabel,
+  getCompletionDateLabel
+} from "@/lib/loan-display";
 import { getPinnedLoanId, setPinnedLoanId } from "@/lib/pinned-loan";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
-import { softDeleteLoanRecord } from "@/services/loan-management/loan-lifecycle";
+import {
+  archiveLoanRecord,
+  softDeleteLoanRecord
+} from "@/services/loan-management/loan-lifecycle";
 import type { Loan, LoanPayment } from "@/shared/domain/finance";
 
 interface LoanDetailScreenProps {
@@ -33,7 +42,9 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   const [isPinned, setIsPinned] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const showSavedBanner = searchParams.get("saved") === "1";
 
@@ -49,7 +60,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
       return;
     }
 
-    if (!localLoan || !isActiveLoan(localLoan)) {
+    if (!localLoan || getLoanStatus(localLoan) === "deleted") {
       setLoan(null);
       setPayments([]);
       setIsLoading(false);
@@ -58,7 +69,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 
     setLoan(localLoan);
     setPayments(localPayments);
-    setIsPinned(getPinnedLoanId() === loanId);
+    setIsPinned(isActiveLoan(localLoan) && getPinnedLoanId() === loanId);
     setIsLoading(false);
   }, [loanId, router]);
 
@@ -76,7 +87,9 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
     : 0;
   const principalShare = 100 - interestShare;
 
-  const attentionMessage = loan ? getLoanDetailAttention(loan) : null;
+  const attentionMessage =
+    loan && isActiveLoan(loan) ? getLoanDetailAttention(loan) : null;
+  const isArchived = loan ? isArchivedLoan(loan) : false;
 
   function togglePinnedLoan() {
     if (!loan) {
@@ -102,6 +115,22 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 
     await softDeleteLoanRecord(indexedDbFinanceRepository, loan.id);
     router.replace("/loans");
+  }
+
+  async function confirmArchiveLoan(archiveReason?: string) {
+    if (!loan) {
+      return;
+    }
+
+    setIsArchiving(true);
+    setIsFadingOut(true);
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 220);
+    });
+
+    await archiveLoanRecord(indexedDbFinanceRepository, loan.id, archiveReason);
+    router.replace("/loans?view=archived");
   }
 
   if (isLoading) {
@@ -161,34 +190,44 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
           </Link>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                {loan.type} loan · {loan.lender}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                  {formatLoanTypeLabel(loan)} loan · {loan.lender}
+                </p>
+                {isArchived ? (
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Archived
+                  </span>
+                ) : null}
+              </div>
               <h1 className="font-display text-4xl leading-tight tracking-[-0.05em]">
                 {loan.name}
               </h1>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="gap-1.5"
-                onClick={togglePinnedLoan}
-                aria-pressed={isPinned}
-              >
-                <Star
-                  className={`h-4 w-4 ${isPinned ? "fill-current" : ""}`}
-                  strokeWidth={1.8}
+            {isActiveLoan(loan) ? (
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={togglePinnedLoan}
+                  aria-pressed={isPinned}
+                >
+                  <Star
+                    className={`h-4 w-4 ${isPinned ? "fill-current" : ""}`}
+                    strokeWidth={1.8}
+                  />
+                  {isPinned ? "Pinned" : "Pin"}
+                </Button>
+                <LoanActionsMenu
+                  loanId={loan.id}
+                  loanName={loan.name}
+                  onArchive={() => setShowArchiveDialog(true)}
+                  onDelete={() => setShowDeleteDialog(true)}
                 />
-                {isPinned ? "Pinned" : "Pin"}
-              </Button>
-              <LoanActionsMenu
-                loanId={loan.id}
-                loanName={loan.name}
-                onDelete={() => setShowDeleteDialog(true)}
-              />
-            </div>
+              </div>
+            ) : null}
           </div>
         </header>
 
@@ -207,6 +246,27 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
             originalAmount={loan.originalAmount}
           />
         </Card>
+
+        {isArchived ? (
+          <Card className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Completion date</p>
+                <p className="font-semibold">{getCompletionDateLabel(loan)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Archive date</p>
+                <p className="font-semibold">{getArchiveDateLabel(loan)}</p>
+              </div>
+            </div>
+            {loan.archiveReason ? (
+              <p className="text-sm leading-6 text-muted-foreground">{loan.archiveReason}</p>
+            ) : null}
+            <Button type="button" variant="secondary" className="w-full" disabled>
+              Restore loan (soon)
+            </Button>
+          </Card>
+        ) : null}
 
         {attentionMessage ? (
           <Card className="space-y-3">
@@ -267,11 +327,13 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
           </Card>
         </section>
 
-        <Button asChild className="w-full">
-          <Link href={`/loans/${loan.id}/payment`}>Log payment</Link>
-        </Button>
+        {isActiveLoan(loan) ? (
+          <Button asChild className="w-full">
+            <Link href={`/loans/${loan.id}/payment`}>Log payment</Link>
+          </Button>
+        ) : null}
 
-        <WhatIfSimulator loan={loan} />
+        {isActiveLoan(loan) ? <WhatIfSimulator loan={loan} /> : null}
 
         {payments.length > 0 ? (
           <section className="space-y-4">
@@ -298,6 +360,13 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
           </section>
         ) : null}
       </div>
+
+      <ArchiveLoanDialog
+        open={showArchiveDialog}
+        isWorking={isArchiving}
+        onCancel={() => setShowArchiveDialog(false)}
+        onConfirm={(archiveReason) => void confirmArchiveLoan(archiveReason)}
+      />
 
       <ConfirmDialog
         open={showDeleteDialog}

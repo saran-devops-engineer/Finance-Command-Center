@@ -54,6 +54,7 @@ export interface Loan {
   notes?: string;
   status?: LoanStatus;
   archivedAt?: string;
+  archiveReason?: string;
   deletedAt?: string;
   isOverdue?: boolean;
 }
