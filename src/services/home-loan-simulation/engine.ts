@@ -37,8 +37,9 @@ export const homeLoanSimulationEngine: HomeLoanSimulationEngine = {
   simulate(
     input: HomeLoanSimulationInput,
     scenario: HomeLoanSimulationScenario,
-    _options?: HomeLoanSimulationOptions
+    options?: HomeLoanSimulationOptions
   ): HomeLoanSimulationResult {
+    void options;
     assertValidScenario(input, scenario);
     const snapshot = snapshotFromLegacyInput(input);
 
@@ -104,8 +105,9 @@ export const homeLoanSimulationEngine: HomeLoanSimulationEngine = {
 
   projectBaseline(
     input: HomeLoanSimulationInput,
-    _options?: HomeLoanSimulationOptions
+    options?: HomeLoanSimulationOptions
   ): HomeLoanSimulationResult {
+    void options;
     return homeLoanSimulationEngine.simulate(input, { kind: "baseline-projection" });
   }
 };

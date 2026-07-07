@@ -24,7 +24,6 @@ export {
   trySnapshotFromPersistedLoan as tryHomeLoanSnapshotFromPersistedLoan
 } from "@/engines/loan/home-loan/adapters/from-persisted-loan";
 
-export * from "@/engines/loan/home-loan/types";
 export * from "@/engines/loan/home-loan/calculators";
 export * from "@/engines/loan/home-loan/simulators";
 export * from "@/engines/loan/home-loan/validators";
