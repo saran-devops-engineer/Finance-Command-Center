@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import {
   createJsonBackup,
@@ -216,10 +217,10 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <StatusMetric label="Last backup" value={formatStoredDate(lastBackupAt)} />
-              <StatusMetric label="Last restore" value={formatStoredDate(lastRestoreAt)} />
-            </div>
+            <MetricCardGrid>
+              <MetricCard label="Backup" value={formatStoredDate(lastBackupAt)} />
+              <MetricCard label="Restore" value={formatStoredDate(lastRestoreAt)} />
+            </MetricCardGrid>
 
             <div className="grid grid-cols-2 gap-3">
               <Button
@@ -280,15 +281,6 @@ function getDisplayName(profile: UserProfile | null) {
   }
 
   return displayName;
-}
-
-function StatusMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-3xl bg-white/45 p-4">
-      <p className="text-muted-foreground">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
-    </div>
-  );
 }
 
 function formatStoredDate(value: string | null) {

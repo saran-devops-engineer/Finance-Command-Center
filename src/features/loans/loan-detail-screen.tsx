@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { WhatIfSimulator } from "@/features/loans/what-if-simulator";
@@ -158,12 +159,12 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
         </Card>
       ) : null}
 
-      <section className="grid grid-cols-2 gap-3">
-        <Metric label="Monthly EMI" value={formatInr(loan.monthlyEmi)} />
-        <Metric label="Interest rate" value={`${loan.annualInterestRate}% p.a.`} />
-        <Metric label="Tenure left" value={`${loan.remainingTenureMonths} mo`} />
-        <Metric label="Next due" value={formatDueDate(loan.nextDueDate)} />
-      </section>
+      <MetricCardGrid>
+        <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
+        <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
+        <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
+        <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
+      </MetricCardGrid>
 
       <section className="space-y-4">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
@@ -218,15 +219,6 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
         </section>
       ) : null}
     </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="p-5">
-      <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
-      <p className="mt-2 font-semibold">{value}</p>
-    </Card>
   );
 }
 

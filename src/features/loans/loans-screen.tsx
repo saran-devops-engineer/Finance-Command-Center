@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AlertTriangle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { Loan } from "@/shared/domain/finance";
@@ -83,32 +84,17 @@ export function LoansScreen() {
         </h1>
       </header>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-            Outstanding
-          </p>
-          <p className="mt-2 text-xl font-semibold tracking-[-0.04em]">
-            {formatInr(totalOutstanding, { compact: true })}
-          </p>
-        </Card>
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-            Monthly EMI
-          </p>
-          <p className="mt-2 text-xl font-semibold tracking-[-0.04em]">
-            {formatInr(totalEmi, { compact: true })}
-          </p>
-        </Card>
-        <Card className="p-5">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-            Interest/mo
-          </p>
-          <p className="mt-2 text-xl font-semibold tracking-[-0.04em]">
-            {formatInr(estimatedMonthlyInterest, { compact: true })}
-          </p>
-        </Card>
-      </div>
+      <MetricCardGrid columns={3}>
+        <MetricCard
+          label="Outstanding"
+          value={formatInr(totalOutstanding, { compact: true })}
+        />
+        <MetricCard label="EMI" value={formatInr(totalEmi, { compact: true })} />
+        <MetricCard
+          label="Int./mo"
+          value={formatInr(estimatedMonthlyInterest, { compact: true })}
+        />
+      </MetricCardGrid>
 
       {priorityLoan && attentionMessage ? (
         <Card className="space-y-4 bg-primary text-primary-foreground">
@@ -192,24 +178,12 @@ export function LoansScreen() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-3xl bg-white/45 p-4">
-                      <p className="text-xs text-muted-foreground">Monthly EMI</p>
-                      <p className="mt-1 font-semibold">{formatInr(loan.monthlyEmi)}</p>
-                    </div>
-                    <div className="rounded-3xl bg-white/45 p-4">
-                      <p className="text-xs text-muted-foreground">Interest rate</p>
-                      <p className="mt-1 font-semibold">{loan.annualInterestRate}% p.a.</p>
-                    </div>
-                    <div className="rounded-3xl bg-white/45 p-4">
-                      <p className="text-xs text-muted-foreground">Tenure left</p>
-                      <p className="mt-1 font-semibold">{loan.remainingTenureMonths} mo</p>
-                    </div>
-                    <div className="rounded-3xl bg-white/45 p-4">
-                      <p className="text-xs text-muted-foreground">Next due</p>
-                      <p className="mt-1 font-semibold">{formatDueDate(loan.nextDueDate)}</p>
-                    </div>
-                  </div>
+                  <MetricCardGrid>
+                    <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
+                    <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
+                    <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
+                    <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
+                  </MetricCardGrid>
                 </Card>
               </Link>
             );

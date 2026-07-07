@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
@@ -113,10 +114,10 @@ export default function InsightsPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <DarkMetric label="Why now" value={primaryInsight.why} />
-                <DarkMetric label="Impact" value={primaryInsight.impactLabel} />
-              </div>
+              <MetricCardGrid>
+                <MetricCard label="Why now" value={primaryInsight.why} variant="dark" />
+                <MetricCard label="Impact" value={primaryInsight.impactLabel} variant="dark" />
+              </MetricCardGrid>
 
               <Button asChild variant="secondary" size="sm">
                 <Link href={primaryInsight.href}>
@@ -149,10 +150,10 @@ export default function InsightsPage() {
               <p className="text-sm leading-6 text-muted-foreground">
                 {insight.recommendation.description}
               </p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <MiniMetric label="Why it matters" value={insight.why} />
-                <MiniMetric label="Impact" value={insight.impactLabel} />
-              </div>
+              <MetricCardGrid>
+                <MetricCard label="Why" value={insight.why} />
+                <MetricCard label="Impact" value={insight.impactLabel} />
+              </MetricCardGrid>
               <Button asChild variant="secondary" size="sm">
                 <Link href={insight.href}>
                   {insight.recommendation.actionLabel ?? "Review"}
@@ -192,10 +193,10 @@ export default function InsightsPage() {
               <p className="text-sm leading-6 text-muted-foreground">
                 {weeklyReview.description}
               </p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <MiniMetric label="Available" value={formatInr(weeklyReview.availableMoney)} />
-                <MiniMetric label="Due soon" value={String(weeklyReview.dueSoonCount)} />
-              </div>
+              <MetricCardGrid>
+                <MetricCard label="Available" value={formatInr(weeklyReview.availableMoney)} />
+                <MetricCard label="Due soon" value={String(weeklyReview.dueSoonCount)} />
+              </MetricCardGrid>
             </Card>
           </section>
         ) : null}
@@ -302,24 +303,6 @@ function getWeeklyReview(state: InsightsState) {
     availableMoney: state.snapshot.availableMoney,
     dueSoonCount
   };
-}
-
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-3xl bg-white/45 p-4">
-      <p className="text-muted-foreground">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function DarkMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-3xl bg-white/10 p-4">
-      <p className="opacity-60">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
-    </div>
-  );
 }
 
 function getHighestInterestLoan(loans: Loan[]) {

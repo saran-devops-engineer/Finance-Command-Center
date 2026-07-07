@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { MoneyBreakdown } from "@/shared/domain/finance";
@@ -118,20 +119,17 @@ export default function MoneyPage() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3 text-sm">
-            <MiniMetric
+          <MetricCardGrid columns={3}>
+            <MetricCard
               label="Income"
               value={formatInr(moneyBreakdown?.monthlyIncome ?? 0, { compact: true })}
             />
-            <MiniMetric
+            <MetricCard
               label="Committed"
               value={formatInr(mandatoryCommitments, { compact: true })}
             />
-            <MiniMetric
-              label="Used"
-              value={`${Math.round(commitmentRatio * 100)}%`}
-            />
-          </div>
+            <MetricCard label="Used" value={`${Math.round(commitmentRatio * 100)}%`} />
+          </MetricCardGrid>
         </Card>
 
         <section className="space-y-4">
@@ -163,11 +161,11 @@ export default function MoneyPage() {
               <p className="text-sm leading-6 opacity-70">
                 This is not a rule. It is a starting point to keep decisions balanced.
               </p>
-              <div className="grid grid-cols-3 gap-3 text-sm">
-                <DarkMetric label="Save" value={formatInr(allocation.save)} />
-                <DarkMetric label="Prepay" value={formatInr(allocation.prepay)} />
-                <DarkMetric label="Flexible" value={formatInr(allocation.flexible)} />
-              </div>
+              <MetricCardGrid columns={3}>
+                <MetricCard label="Save" value={formatInr(allocation.save)} variant="dark" />
+                <MetricCard label="Prepay" value={formatInr(allocation.prepay)} variant="dark" />
+                <MetricCard label="Flexible" value={formatInr(allocation.flexible)} variant="dark" />
+              </MetricCardGrid>
             </Card>
           </section>
         ) : null}
@@ -190,10 +188,10 @@ export default function MoneyPage() {
                 {formatInr(moneyBreakdown?.emergencyBuffer ?? 0)}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <MiniMetric label="Target" value={formatInr(emergencyTarget)} />
-              <MiniMetric label="Gap" value={formatInr(emergencyGap)} />
-            </div>
+            <MetricCardGrid>
+              <MetricCard label="Target" value={formatInr(emergencyTarget)} />
+              <MetricCard label="Gap" value={formatInr(emergencyGap)} />
+            </MetricCardGrid>
           </Card>
         </section>
 
@@ -202,24 +200,6 @@ export default function MoneyPage() {
         </Button>
       </div>
     </MobileShell>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-3xl bg-white/45 p-4">
-      <p className="text-muted-foreground">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function DarkMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-3xl bg-white/10 p-4">
-      <p className="opacity-60">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
-    </div>
   );
 }
 

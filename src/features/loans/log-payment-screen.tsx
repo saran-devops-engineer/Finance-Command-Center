@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MetricCard } from "@/components/ui/metric-card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { applyLoanPayment } from "@/services/loan-payment/apply-payment";
@@ -223,14 +224,7 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
           onChange={(value) => updateField("interestAmount", value)}
         />
 
-        <div className="rounded-3xl bg-white/45 p-4">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-            Principal reduction
-          </p>
-          <p className="mt-1 text-2xl font-semibold tracking-[-0.04em]">
-            {formatInr(principalAmount)}
-          </p>
-        </div>
+        <MetricCard label="Principal" value={formatInr(principalAmount)} />
 
         <Field
           label="Paid on"

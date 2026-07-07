@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Calculator, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpandableCard } from "@/components/ui/expandable-card";
+import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { formatInr } from "@/lib/utils";
 import {
   homeLoanSimulationEngine,
@@ -337,16 +338,14 @@ function RecommendationCard({
         <p className="text-sm leading-6 opacity-75">{recommendedStrategy.reason}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-3xl bg-white/10 p-4">
-          <p className="opacity-60">Interest Saved</p>
-          <p className="mt-1 font-semibold">{formatInr(result.estimatedInterestSaved)}</p>
-        </div>
-        <div className="rounded-3xl bg-white/10 p-4">
-          <p className="opacity-60">Loan closes</p>
-          <p className="mt-1 font-semibold">{getLoanClosesLabel(result)}</p>
-        </div>
-      </div>
+      <MetricCardGrid>
+        <MetricCard
+          label="Int. saved"
+          value={formatInr(result.estimatedInterestSaved)}
+          variant="dark"
+        />
+        <MetricCard label="Closes" value={getLoanClosesLabel(result)} variant="dark" />
+      </MetricCardGrid>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {compareResult ? (

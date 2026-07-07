@@ -6,6 +6,7 @@ import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
@@ -148,18 +149,10 @@ export function HomeScreen() {
           like EMIs, insurance, rent, utilities, and fixed payments.
         </p>
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-3xl bg-white/45 p-4">
-            <p className="text-muted-foreground">Commitments</p>
-            <p className="mt-1 font-semibold">{formatInr(snapshot.mandatoryCommitments)}</p>
-          </div>
-          <div className="rounded-3xl bg-white/45 p-4">
-            <p className="text-muted-foreground">Debt ratio</p>
-            <p className="mt-1 font-semibold">
-              {Math.round(snapshot.debtToIncomeRatio * 100)}%
-            </p>
-          </div>
-        </div>
+        <MetricCardGrid>
+          <MetricCard label="Commitments" value={formatInr(snapshot.mandatoryCommitments)} />
+          <MetricCard label="Debt %" value={`${Math.round(snapshot.debtToIncomeRatio * 100)}%`} />
+        </MetricCardGrid>
 
         <p className="text-sm leading-6 text-muted-foreground">{healthMessage}</p>
       </Card>
@@ -195,16 +188,10 @@ export function HomeScreen() {
               <p className="text-sm leading-6 opacity-70">{bestDecision.description}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-3xl bg-white/10 p-4">
-                <p className="opacity-60">Pay today</p>
-                <p className="mt-1 font-semibold">{bestDecision.amountLabel}</p>
-              </div>
-              <div className="rounded-3xl bg-white/10 p-4">
-                <p className="opacity-60">Estimated interest saved</p>
-                <p className="mt-1 font-semibold">{bestDecision.savedLabel}</p>
-              </div>
-            </div>
+            <MetricCardGrid>
+              <MetricCard label="Pay today" value={bestDecision.amountLabel} variant="dark" />
+              <MetricCard label="Int. saved" value={bestDecision.savedLabel} variant="dark" />
+            </MetricCardGrid>
 
             <Button asChild variant="secondary" size="sm" className="gap-2">
               <Link href={bestDecision.href}>
