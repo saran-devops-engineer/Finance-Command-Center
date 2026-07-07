@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { card, radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
+import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import {
   createJsonBackup,
   inspectJsonBackup,
