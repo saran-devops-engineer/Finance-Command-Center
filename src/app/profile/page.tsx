@@ -47,7 +47,6 @@ const privacyPrinciples = [
 
 export default function ProfilePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);

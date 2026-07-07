@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LoanFormFields } from "@/features/loans/loan-form-fields";
 import { spacing } from "@/lib/design-tokens";
-import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { isActiveLoan } from "@/lib/loan-status";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import {

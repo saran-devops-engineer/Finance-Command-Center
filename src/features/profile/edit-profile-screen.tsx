@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { toNumber } from "@/shared/finance/loan-form";
-import type { MoneyBreakdown, UserProfile } from "@/shared/domain/finance";
+import type { UserProfile } from "@/shared/domain/finance";
 
 const currencyOptions = [{ value: "INR", label: "INR ₹" }] as const;
 
