@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Info, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { formatInr } from "@/lib/utils";
+import { getPinnedLoanId, setPinnedLoanId } from "@/lib/pinned-loan";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { WhatIfSimulator } from "@/features/loans/what-if-simulator";
 import type { Loan, LoanPayment } from "@/shared/domain/finance";
@@ -20,6 +21,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   const router = useRouter();
   const [loan, setLoan] = useState<Loan | null>(null);
   const [payments, setPayments] = useState<LoanPayment[]>([]);
+  const [isPinned, setIsPinned] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +45,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 
       setLoan(localLoan);
       setPayments(localPayments);
+      setIsPinned(getPinnedLoanId() === loanId);
       setIsLoading(false);
     }
 
@@ -62,6 +65,16 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   const principalShare = 100 - interestShare;
 
   const attentionMessage = loan ? getLoanDetailAttention(loan) : null;
+
+  function togglePinnedLoan() {
+    if (!loan) {
+      return;
+    }
+
+    const nextPinned = !isPinned;
+    setPinnedLoanId(nextPinned ? loan.id : null);
+    setIsPinned(nextPinned);
+  }
 
   if (isLoading) {
     return (
@@ -107,13 +120,29 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
           <ArrowLeft className="h-4 w-4" />
           Loans
         </Link>
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            {loan.type} loan · {loan.lender}
-          </p>
-          <h1 className="font-display text-4xl leading-tight tracking-[-0.05em]">
-            {loan.name}
-          </h1>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              {loan.type} loan · {loan.lender}
+            </p>
+            <h1 className="font-display text-4xl leading-tight tracking-[-0.05em]">
+              {loan.name}
+            </h1>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            onClick={togglePinnedLoan}
+            aria-pressed={isPinned}
+          >
+            <Star
+              className={`h-4 w-4 ${isPinned ? "fill-current" : ""}`}
+              strokeWidth={1.8}
+            />
+            {isPinned ? "Pinned" : "Pin"}
+          </Button>
         </div>
       </header>
 
