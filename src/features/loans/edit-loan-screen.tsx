@@ -6,17 +6,26 @@ import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { HomeLoanFormFields } from "@/features/loans/home-loan-form-fields";
 import { LoanFormFields } from "@/features/loans/loan-form-fields";
 import { spacing } from "@/lib/design-tokens";
 import { isActiveLoan } from "@/lib/loan-status";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import {
+  applyHomeLoanAutoCalculations,
+  buildHomeLoanFromForm,
+  homeLoanToFormState,
+  isHomeLoan,
+  validateHomeLoanForm
+} from "@/shared/finance/home-loan-form";
+import type { HomeLoanFormState } from "@/shared/finance/home-loan-form";
+import {
   buildLoanFromForm,
   loanToFormState,
   validateLoanForm
 } from "@/shared/finance/loan-form";
-import { saveLoanUpdate } from "@/services/loan-management/loan-lifecycle";
 import type { LoanFormState } from "@/shared/finance/loan-form";
+import { saveLoanUpdate } from "@/services/loan-management/loan-lifecycle";
 import type { Loan } from "@/shared/domain/finance";
 
 interface EditLoanScreenProps {
@@ -26,7 +35,8 @@ interface EditLoanScreenProps {
 export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
   const router = useRouter();
   const [existingLoan, setExistingLoan] = useState<Loan | null>(null);
-  const [form, setForm] = useState<LoanFormState | null>(null);
+  const [homeForm, setHomeForm] = useState<HomeLoanFormState | null>(null);
+  const [otherForm, setOtherForm] = useState<LoanFormState | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -54,7 +64,12 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
       }
 
       setExistingLoan(loan);
-      setForm(loanToFormState(loan));
+
+      if (isHomeLoan(loan)) {
+        setHomeForm(homeLoanToFormState(loan));
+      } else {
+        setOtherForm(loanToFormState(loan));
+      }
     }
 
     void loadLoan();
@@ -64,20 +79,54 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
     };
   }, [loanId, router]);
 
-  function updateField<Key extends keyof LoanFormState>(
+  function updateHomeField<Key extends keyof HomeLoanFormState>(
+    field: Key,
+    value: HomeLoanFormState[Key]
+  ) {
+    setHomeForm((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const next = { ...current, [field]: value };
+      return applyHomeLoanAutoCalculations(next, current);
+    });
+    setErrors([]);
+  }
+
+  function updateOtherField<Key extends keyof LoanFormState>(
     field: Key,
     value: LoanFormState[Key]
   ) {
-    setForm((current) => (current ? { ...current, [field]: value } : current));
+    setOtherForm((current) => (current ? { ...current, [field]: value } : current));
     setErrors([]);
   }
 
   async function saveChanges() {
-    if (!form || !existingLoan) {
+    if (!existingLoan) {
       return;
     }
 
-    const validationErrors = validateLoanForm(form);
+    if (isHomeLoan(existingLoan) && homeForm) {
+      const validationErrors = validateHomeLoanForm(homeForm);
+
+      if (validationErrors.length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+
+      setIsSaving(true);
+      const updatedLoan = buildHomeLoanFromForm(homeForm, existingLoan);
+      await saveLoanUpdate(indexedDbFinanceRepository, existingLoan, updatedLoan);
+      router.replace(`/loans/${loanId}?saved=1`);
+      return;
+    }
+
+    if (!otherForm) {
+      return;
+    }
+
+    const validationErrors = validateLoanForm(otherForm);
 
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -85,13 +134,12 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
     }
 
     setIsSaving(true);
-
-    const updatedLoan = buildLoanFromForm(form, existingLoan);
+    const updatedLoan = buildLoanFromForm(otherForm, existingLoan);
     await saveLoanUpdate(indexedDbFinanceRepository, existingLoan, updatedLoan);
     router.replace(`/loans/${loanId}?saved=1`);
   }
 
-  if (!form) {
+  if (!existingLoan || (!homeForm && !otherForm)) {
     return (
       <div className={spacing.page}>
         <header className="space-y-2 pt-4">
@@ -121,7 +169,7 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
             Edit loan
           </p>
           <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">
-            {existingLoan?.name}
+            {existingLoan.name}
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
             Updates flow automatically to your dashboard, recommendations, and simulations.
@@ -130,7 +178,11 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
       </header>
 
       <Card>
-        <LoanFormFields form={form} errors={errors} onChange={updateField} />
+        {homeForm ? (
+          <HomeLoanFormFields form={homeForm} errors={errors} onChange={updateHomeField} />
+        ) : (
+          <LoanFormFields form={otherForm!} errors={errors} onChange={updateOtherField} />
+        )}
       </Card>
 
       <Button

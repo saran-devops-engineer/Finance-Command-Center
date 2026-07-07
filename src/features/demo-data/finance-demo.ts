@@ -59,7 +59,11 @@ export const demoLoans: Loan[] = [
     remainingTenureMonths: 214,
     status: "active",
     estimatedClosureDate: "2045-12-01",
-    nextDueDate: "2028-03-05"
+    nextDueDate: "2028-03-05",
+    loanStartDate: "2018-03-05",
+    originalLoanTenureMonths: 360,
+    emiPaymentDay: 5,
+    remainingTenureManuallyOverridden: true
   }
 ];
 

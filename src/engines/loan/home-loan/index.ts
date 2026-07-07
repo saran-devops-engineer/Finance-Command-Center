@@ -12,3 +12,8 @@ export * from "@/engines/loan/home-loan/calculators";
 export * from "@/engines/loan/home-loan/simulators";
 export * from "@/engines/loan/home-loan/recommendations";
 export * from "@/engines/loan/home-loan/services";
+
+export {
+  homeLoanSnapshotFromPersistedLoan,
+  tryHomeLoanSnapshotFromPersistedLoan
+} from "@/engines/loan/home-loan/adapters/from-persisted-loan";

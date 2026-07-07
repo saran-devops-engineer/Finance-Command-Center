@@ -1,4 +1,5 @@
 import type { Loan, LoanStatus } from "@/shared/domain/finance";
+import { migrateLegacyHomeLoan } from "@/shared/finance/home-loan-form";
 
 export function getLoanStatus(loan: Loan): LoanStatus {
   return loan.status ?? "active";
@@ -17,10 +18,10 @@ export function isVisibleLoan(loan: Loan) {
 }
 
 export function normalizeLoan(loan: Loan): Loan {
-  return {
+  return migrateLegacyHomeLoan({
     ...loan,
     status: getLoanStatus(loan)
-  };
+  });
 }
 
 export function filterActiveLoans(loans: Loan[]) {

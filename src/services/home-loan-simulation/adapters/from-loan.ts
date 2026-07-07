@@ -1,6 +1,10 @@
 import type { Loan } from "@/shared/domain/finance";
 import type { HomeLoanSimulationInput } from "@/services/home-loan-simulation/types";
 
+/**
+ * Maps a persisted home loan to a simulation snapshot.
+ * Uses ONLY current snapshot fields — never original loan amount.
+ */
 function toSimulationInput(loan: Loan): HomeLoanSimulationInput {
   return {
     loanId: loan.id,
@@ -8,8 +12,7 @@ function toSimulationInput(loan: Loan): HomeLoanSimulationInput {
     annualInterestRate: loan.annualInterestRate,
     monthlyEmi: loan.monthlyEmi,
     remainingTenureMonths: loan.remainingTenureMonths,
-    originalAmount: loan.originalAmount,
-    asOfDate: new Date().toISOString()
+    asOfDate: new Date().toISOString().slice(0, 10)
   };
 }
 

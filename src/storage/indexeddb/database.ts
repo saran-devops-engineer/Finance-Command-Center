@@ -6,6 +6,7 @@ import type {
   UpcomingDue,
   UserProfile
 } from "@/shared/domain/finance";
+import { migrateLegacyHomeLoan } from "@/shared/finance/home-loan-form";
 
 interface FinanceCommandCenterDb extends DBSchema {
   profile: {
@@ -37,8 +38,8 @@ let databasePromise: Promise<IDBPDatabase<FinanceCommandCenterDb>> | null = null
 
 export function getFinanceDatabase() {
   if (!databasePromise) {
-    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 2, {
-      upgrade(database) {
+    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 3, {
+      upgrade: async (database, oldVersion, _newVersion, transaction) => {
         if (!database.objectStoreNames.contains("profile")) {
           database.createObjectStore("profile", { keyPath: "id" });
         }
@@ -65,6 +66,17 @@ export function getFinanceDatabase() {
             keyPath: "id"
           });
           upcomingDues.createIndex("by-due-date", "dueDate");
+        }
+
+        if (oldVersion < 3) {
+          const loanStore = transaction.objectStore("loans");
+          const loans = await loanStore.getAll();
+
+          for (const loan of loans) {
+            if (loan.type === "home") {
+              await loanStore.put(migrateLegacyHomeLoan(loan));
+            }
+          }
         }
       }
     });

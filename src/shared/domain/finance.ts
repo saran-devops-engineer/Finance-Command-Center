@@ -51,6 +51,14 @@ export interface Loan {
   remainingTenureMonths: number;
   estimatedClosureDate: string;
   nextDueDate: string;
+  /** Home Loan V1 — loan start date (`YYYY-MM-DD`). Required when `type === "home"`. */
+  loanStartDate?: string;
+  /** Home Loan V1 — original tenure in whole months. Required when `type === "home"`. */
+  originalLoanTenureMonths?: number;
+  /** Home Loan V1 — day of month (1–31) when EMI is paid. Required when `type === "home"`. */
+  emiPaymentDay?: number;
+  /** Home Loan V1 — when true, auto tenure estimate must not overwrite `remainingTenureMonths`. */
+  remainingTenureManuallyOverridden?: boolean;
   notes?: string;
   status?: LoanStatus;
   archivedAt?: string;
