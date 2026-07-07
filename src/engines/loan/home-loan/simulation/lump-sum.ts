@@ -75,8 +75,12 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
       upfrontPrincipalReduction: request.paymentAmount,
       fixedTenureMonths: request.snapshot.remainingTenureMonths
     });
+    const simulatedWithUpfrontPayment = includeUpfrontPaymentInTotals(
+      simulated,
+      request.paymentAmount
+    );
 
-    const comparison = compareSchedules(baseline, simulated);
+    const comparison = compareSchedules(baseline, simulatedWithUpfrontPayment);
 
     return {
       kind: "lump-sum",
@@ -101,7 +105,7 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
               newOutstanding
             },
             baseline,
-            simulated
+            simulatedWithUpfrontPayment
           )
         : undefined
     };
@@ -118,10 +122,15 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
     monthlyEmi: request.snapshot.monthlyEmi,
     annualInterestRate: request.snapshot.annualInterestRate,
     snapshot: request.snapshot,
-    upfrontPrincipalReduction: request.paymentAmount
+    upfrontPrincipalReduction: request.paymentAmount,
+    fixedTenureMonths: newTenureMonths
   });
+  const simulatedWithUpfrontPayment = includeUpfrontPaymentInTotals(
+    simulated,
+    request.paymentAmount
+  );
 
-  const comparison = compareSchedules(baseline, simulated);
+  const comparison = compareSchedules(baseline, simulatedWithUpfrontPayment);
 
   return {
     kind: "lump-sum",
@@ -146,9 +155,20 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
             newOutstanding
           },
           baseline,
-          simulated
+          simulatedWithUpfrontPayment
         )
       : undefined
+  };
+}
+
+function includeUpfrontPaymentInTotals<T extends ReturnType<typeof buildAmortizationSchedule>>(
+  schedule: T,
+  upfrontPayment: number
+): T {
+  return {
+    ...schedule,
+    totalPrincipal: schedule.totalPrincipal + upfrontPayment,
+    totalPayments: schedule.totalPayments + upfrontPayment
   };
 }
 

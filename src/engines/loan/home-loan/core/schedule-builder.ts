@@ -12,7 +12,10 @@ export interface BuildScheduleOptions {
   openingPrincipal: number;
   monthlyEmi: number;
   annualInterestRate: number;
-  snapshot: Pick<HomeLoanSimulationSnapshot, "asOfDate" | "emiPaymentDay" | "loanStartDate">;
+  snapshot: Pick<
+    HomeLoanSimulationSnapshot,
+    "asOfDate" | "emiPaymentDay" | "loanStartDate" | "remainingTenureMonths"
+  >;
   /** Lump sum applied before the first EMI month */
   upfrontPrincipalReduction?: number;
   /** Extra principal applied after EMI each month (0-based index) */
@@ -65,10 +68,13 @@ export function buildAmortizationSchedule(options: BuildScheduleOptions): Amorti
       monthlyEmi = calculateEmiForRemaining(openingBalance, r, remainingMonths);
     }
 
+    const isFinalPlannedMonth =
+      options.fixedTenureMonths !== undefined &&
+      monthIndex === options.fixedTenureMonths - 1;
     const interest = openingBalance * r;
     let principal = monthlyEmi - interest;
 
-    if (principal >= openingBalance) {
+    if (isFinalPlannedMonth || principal >= openingBalance) {
       principal = openingBalance;
     }
 
@@ -124,7 +130,8 @@ export function buildBaselineSchedule(
     openingPrincipal: snapshot.outstandingPrincipal,
     monthlyEmi: snapshot.monthlyEmi,
     annualInterestRate: snapshot.annualInterestRate,
-    snapshot
+    snapshot,
+    fixedTenureMonths: snapshot.remainingTenureMonths
   });
 }
 

@@ -310,9 +310,9 @@ function StrategyGoalButton({
           <span className="mt-1 block text-xs text-muted-foreground">{description}</span>
         </span>
         {isSelected ? (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-primary-foreground">
+          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-            Selected
+            <span className="sr-only">Selected</span>
           </span>
         ) : null}
       </span>
@@ -457,10 +457,18 @@ function FullCalculationPanel({
   engineResult: HomeLoanSimulationResult;
 }) {
   const rows = [
-    ["Original Loan", formatInr(loan.originalAmount)],
     ["Outstanding Principal", formatInr(loan.outstandingBalance)],
+    ["Current EMI", formatInr(loan.monthlyEmi)],
+    ["Remaining Tenure", `${loan.remainingTenureMonths} months`],
     ["Prepayment Applied", formatInr(loan.outstandingBalance - engineResult.outcome.revisedOutstanding)],
     ["New Outstanding", formatInr(engineResult.outcome.revisedOutstanding)],
+    [
+      "New EMI",
+      engineResult.outcome.revisedEmi
+        ? formatInr(engineResult.outcome.revisedEmi)
+        : formatInr(loan.monthlyEmi)
+    ],
+    ["New Tenure", `${engineResult.outcome.remainingMonths} months`],
     ["Original Interest", formatInr(engineResult.baseline.totalInterestRemaining)],
     [
       "Revised Interest",
