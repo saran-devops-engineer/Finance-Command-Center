@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { DynamicGreeting } from "@/components/ui/dynamic-greeting";
 import { formatInr, cn } from "@/lib/utils";
 import { card, spacing } from "@/lib/design-tokens";
+import { getPinnedLoanId } from "@/lib/pinned-loan";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
 import {
