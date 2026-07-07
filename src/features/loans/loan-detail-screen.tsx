@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calculator, Info } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
-import { simulateLoanPrepayment } from "@/services/home-loan-simulation";
-import type { LoanPrepaymentStrategy } from "@/services/home-loan-simulation/presenters/loan-prepayment";
+import { WhatIfSimulator } from "@/features/loans/what-if-simulator";
 import type { Loan, LoanPayment } from "@/shared/domain/finance";
-
-type PrepaymentStrategy = LoanPrepaymentStrategy;
 
 interface LoanDetailScreenProps {
   loanId: string;
@@ -23,10 +20,6 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   const [loan, setLoan] = useState<Loan | null>(null);
   const [payments, setPayments] = useState<LoanPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [prepaymentAmount, setPrepaymentAmount] = useState("50000");
-  const [prepaymentStrategy, setPrepaymentStrategy] =
-    useState<PrepaymentStrategy>("reduce-tenure");
-  const [showMath, setShowMath] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -67,17 +60,6 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
     : 0;
   const principalShare = 100 - interestShare;
 
-  const simulation = useMemo(() => {
-    if (!loan) {
-      return null;
-    }
-
-    return simulateLoanPrepayment(
-      loan,
-      toNumber(prepaymentAmount),
-      prepaymentStrategy
-    );
-  }, [loan, prepaymentAmount, prepaymentStrategy]);
   const attentionMessage = loan ? getLoanDetailAttention(loan) : null;
 
   if (isLoading) {
@@ -209,139 +191,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
         <Link href={`/loans/${loan.id}/payment`}>Log payment</Link>
       </Button>
 
-      <section className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-          Prepayment planner
-        </p>
-        <Card className="space-y-5 bg-primary text-primary-foreground">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
-              Estimate only
-            </p>
-            <h2 className="font-display text-3xl leading-tight tracking-[-0.04em]">
-              Try a one-time extra payment.
-            </h2>
-            <p className="text-sm leading-6 opacity-70">
-              {getSimulationIntro(loan)}
-            </p>
-          </div>
-
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.22em] opacity-60">
-              One-time extra payment
-            </span>
-            <input
-              value={prepaymentAmount}
-              onChange={(event) => setPrepaymentAmount(event.target.value)}
-              inputMode="numeric"
-              placeholder="50000"
-              className="h-12 w-full rounded-3xl border border-white/20 bg-white/10 px-4 text-base outline-none placeholder:text-white/45"
-            />
-          </label>
-
-          {loan.type === "home" ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant={prepaymentStrategy === "reduce-tenure" ? "secondary" : "ghost"}
-                  className={
-                    prepaymentStrategy === "reduce-tenure"
-                      ? ""
-                      : "border border-white/20 bg-white/5 text-primary-foreground hover:bg-white/10"
-                  }
-                  onClick={() => setPrepaymentStrategy("reduce-tenure")}
-                >
-                  Reduce tenure
-                </Button>
-                <Button
-                  type="button"
-                  variant={prepaymentStrategy === "reduce-emi" ? "secondary" : "ghost"}
-                  className={
-                    prepaymentStrategy === "reduce-emi"
-                      ? ""
-                      : "border border-white/20 bg-white/5 text-primary-foreground hover:bg-white/10"
-                  }
-                  onClick={() => setPrepaymentStrategy("reduce-emi")}
-                >
-                  Reduce EMI
-                </Button>
-              </div>
-              <p className="text-xs leading-5 opacity-65">
-                {getStrategyDescription(prepaymentStrategy)}
-              </p>
-            </div>
-          ) : null}
-
-          {simulation ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-3xl bg-white/10 p-4">
-                  <p className="opacity-60">Estimated interest saved</p>
-                  <p className="mt-1 font-semibold">
-                    {formatInr(simulation.estimatedInterestSaved)}
-                  </p>
-                </div>
-                <div className="rounded-3xl bg-white/10 p-4">
-                  <p className="opacity-60">
-                    {simulation.strategy === "reduce-emi" ? "Revised EMI" : "Time saved"}
-                  </p>
-                  <p className="mt-1 font-semibold">
-                    {simulation.strategy === "reduce-emi" && simulation.revisedEmi
-                      ? formatInr(simulation.revisedEmi)
-                      : formatMonthsSaved(simulation.estimatedMonthsSaved)}
-                  </p>
-                </div>
-              </div>
-              <div className="rounded-3xl bg-white/10 p-4 text-xs leading-5 opacity-75">
-                <p>{getBeforeAfterSummary(simulation, loan)}</p>
-                <p className="mt-1">{getClosureSummary(simulation)}</p>
-              </div>
-            </div>
-          ) : null}
-
-          <Button
-            variant="secondary"
-            className="gap-2"
-            type="button"
-            onClick={() => setShowMath((current) => !current)}
-          >
-            <Calculator className="h-4 w-4" />
-            {showMath ? "Hide the math" : "See the math"}
-          </Button>
-          {simulation && showMath ? (
-            <div className="space-y-3 rounded-3xl bg-white/10 p-4 text-xs leading-5 opacity-75">
-              <p>
-                Current estimate: {simulation.originalMonths} months left at the current
-                EMI.
-              </p>
-              {simulation.strategy === "reduce-tenure" ? (
-                <p>
-                  After prepaying {formatInr(simulation.prepaymentAmount)}, estimated tenure
-                  becomes {simulation.revisedMonths} months.
-                </p>
-              ) : (
-                <p>
-                  After prepaying {formatInr(simulation.prepaymentAmount)}, estimated EMI
-                  becomes {formatInr(simulation.revisedEmi ?? 0)} while keeping the same
-                  tenure.
-                </p>
-              )}
-              <p>
-                Interest saved is estimated from the reduced outstanding principal using
-                month-by-month amortization.
-              </p>
-            </div>
-          ) : null}
-          {simulation ? (
-            <p className="text-xs leading-5 opacity-60">
-              {simulation.isHomeLoan
-                ? "Home loan estimate uses amortization-based simulation. Actual bank calculations can differ."
-                : "Estimate assumes the EMI stays the same and the prepayment directly reduces outstanding principal. Actual bank calculations can differ."}
-            </p>
-          ) : null}
-        </Card>
-      </section>
+      <WhatIfSimulator loan={loan} />
 
       {payments.length > 0 ? (
         <section className="space-y-4">
@@ -378,73 +228,6 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="mt-2 font-semibold">{value}</p>
     </Card>
   );
-}
-
-function toNumber(value: string) {
-  const parsed = Number(value.replaceAll(",", ""));
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function getSimulationIntro(loan: Loan) {
-  if (loan.type === "home") {
-    return "Compare how an extra payment can either close the loan sooner or lower your monthly EMI.";
-  }
-
-  return "Estimate how an extra payment could reduce outstanding balance and interest.";
-}
-
-function getStrategyDescription(strategy: PrepaymentStrategy) {
-  if (strategy === "reduce-emi") {
-    return "Lower EMI keeps the loan length similar and gives more monthly breathing room.";
-  }
-
-  return "Reduce tenure keeps your EMI the same and helps close the loan sooner.";
-}
-
-function formatMonthsSaved(months: number) {
-  if (months <= 0) {
-    return "No change";
-  }
-
-  if (months < 12) {
-    return `${months} mo`;
-  }
-
-  const years = Math.floor(months / 12);
-  const remainingMonths = months % 12;
-
-  if (remainingMonths === 0) {
-    return `${years} yr`;
-  }
-
-  return `${years} yr ${remainingMonths} mo`;
-}
-
-function getBeforeAfterSummary(
-  simulation: ReturnType<typeof simulateLoanPrepayment>,
-  loan: Loan
-) {
-  if (simulation.strategy === "reduce-emi" && simulation.revisedEmi) {
-    return `EMI: ${formatInr(loan.monthlyEmi)} to ${formatInr(
-      simulation.revisedEmi
-    )}. Loan length stays about ${simulation.originalMonths} months.`;
-  }
-
-  return `Tenure: ${simulation.originalMonths} mo to ${simulation.revisedMonths} mo.`;
-}
-
-function getClosureSummary(
-  simulation: ReturnType<typeof simulateLoanPrepayment>
-) {
-  if (simulation.strategy === "reduce-emi") {
-    return "Best when you want lower monthly pressure.";
-  }
-
-  if (simulation.estimatedMonthsSaved <= 0) {
-    return "This amount may not materially change the closure timeline.";
-  }
-
-  return `That is about ${formatMonthsSaved(simulation.estimatedMonthsSaved)} sooner.`;
 }
 
 function getLoanDetailAttention(loan: Loan) {
