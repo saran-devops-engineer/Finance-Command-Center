@@ -96,7 +96,7 @@ export const homeLoanSimulationEngine: HomeLoanSimulationEngine = {
       prepaymentAmount,
       {
         emiAffordable: true,
-        prioritizeCashFlow: !options?.recommendationContext?.hasStrongCashBuffer
+        prioritizeCashFlow: options?.recommendationContext?.hasStrongCashBuffer === false
       }
     );
 

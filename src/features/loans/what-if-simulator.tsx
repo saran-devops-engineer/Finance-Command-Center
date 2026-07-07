@@ -91,19 +91,22 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
       return null;
     }
 
-    return simulateLoanPrepayment(loan, amount, goal);
+    const activeGoal = selectedStrategy === "compare" ? "reduce-tenure" : goal;
+    return simulateLoanPrepayment(loan, amount, activeGoal);
   }, [amount, goal, hasRunSimulation, loan, selectedStrategy]);
 
   const engineResult = useMemo(() => {
-    if (!hasRunSimulation || !homeLoanInput || !amount) {
+    if (!hasRunSimulation || !selectedStrategy || !homeLoanInput || !amount) {
       return null;
     }
 
+    const activeGoal = selectedStrategy === "compare" ? "reduce-tenure" : goal;
+
     return homeLoanSimulationEngine.simulate(homeLoanInput, {
-      kind: goal === "reduce-tenure" ? "prepay-reduce-tenure" : "prepay-reduce-emi",
+      kind: activeGoal === "reduce-tenure" ? "prepay-reduce-tenure" : "prepay-reduce-emi",
       prepaymentAmount: amount
     });
-  }, [amount, goal, hasRunSimulation, homeLoanInput]);
+  }, [amount, goal, hasRunSimulation, homeLoanInput, selectedStrategy]);
 
   const compareResult = useMemo(() => {
     if (!hasRunSimulation || !homeLoanInput || !amount) {
@@ -269,6 +272,7 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
           <RecommendationCard
             loan={loan}
             result={selectedResult}
+            selectedStrategy={selectedStrategy}
             engineResult={engineResult}
             compareResult={compareResult}
             showComparison={showComparison}
@@ -300,8 +304,18 @@ function StrategyGoalButton({
       onClick={onClick}
       className={getStrategyCardClassName(isSelected)}
     >
-      <span className="block font-medium">{label}</span>
-      <span className="mt-1 block text-xs text-muted-foreground">{description}</span>
+      <span className="flex items-start justify-between gap-3">
+        <span>
+          <span className="block font-medium">{label}</span>
+          <span className="mt-1 block text-xs text-muted-foreground">{description}</span>
+        </span>
+        {isSelected ? (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-primary-foreground">
+            <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+            Selected
+          </span>
+        ) : null}
+      </span>
     </button>
   );
 }
@@ -309,6 +323,7 @@ function StrategyGoalButton({
 function RecommendationCard({
   loan,
   result,
+  selectedStrategy,
   engineResult,
   compareResult,
   showComparison,
@@ -318,6 +333,7 @@ function RecommendationCard({
 }: {
   loan: Loan;
   result: ReturnType<typeof simulateLoanPrepayment>;
+  selectedStrategy: SimulatorStrategy | null;
   engineResult: HomeLoanSimulationResult | null;
   compareResult: HomeLoanCompareResult | null;
   showComparison: boolean;
@@ -325,7 +341,7 @@ function RecommendationCard({
   onShowComparison: () => void;
   onShowFullCalculation: () => void;
 }) {
-  const recommendedStrategy = getRecommendedStrategy(result, compareResult);
+  const recommendedStrategy = getRecommendedStrategy(result, compareResult, selectedStrategy);
 
   return (
     <div className={cn("space-y-4 bg-primary text-primary-foreground", radius.card, card.paddingCompact)}>
@@ -490,13 +506,23 @@ function getSelectedStrategyTitle(strategy: SimulatorStrategy) {
 
 function getRecommendedStrategy(
   result: ReturnType<typeof simulateLoanPrepayment>,
-  compareResult: HomeLoanCompareResult | null
+  compareResult: HomeLoanCompareResult | null,
+  selectedStrategy: SimulatorStrategy | null
 ) {
-  if (compareResult?.recommendation.preferredStrategy === "reduce-emi") {
+  if (
+    selectedStrategy === "compare" &&
+    compareResult?.recommendation.preferredStrategy
+  ) {
+    if (compareResult.recommendation.preferredStrategy === "reduce-tenure") {
+      return {
+        title: "Reduce Tenure",
+        reason: compareResult.recommendation.reason
+      };
+    }
+
     return {
       title: "Reduce EMI",
-      reason:
-        "This option lowers monthly pressure while keeping the loan duration broadly unchanged."
+      reason: compareResult.recommendation.reason
     };
   }
 
