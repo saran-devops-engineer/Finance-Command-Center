@@ -21,14 +21,20 @@ export const spacing = {
 export const card = {
   padding: "p-6",
   paddingCompact: "p-5",
-  paddingMetric: "p-[18px]",
+  paddingMetric: "p-3",
   paddingRow: "p-5"
 } as const;
 
 export const metric = {
-  height: "h-[110px]",
-  labelHeight: "h-8",
-  labelToValue: "mt-2"
+  height: "h-[80px]",
+  minHeight: "min-h-[80px]",
+  maxHeight: "max-h-[80px]",
+  labelHeight: "h-4",
+  helperHeight: "h-3",
+  value2Col: "text-base",
+  value3Col: "text-[clamp(0.6875rem,2.8vw,0.875rem)]",
+  textValue2Col: "text-xs",
+  textValue3Col: "text-[11px]"
 } as const;
 
 export const shell = {

@@ -113,7 +113,7 @@ export function LoansScreen() {
               <p className="text-sm leading-6 opacity-70">{attentionMessage.description}</p>
             </div>
           </div>
-          <Button asChild variant="secondary" size="sm">
+          <Button asChild variant="secondary" size="sm" className="w-full">
             <Link href={`/loans/${priorityLoan.id}`}>Review loan</Link>
           </Button>
         </Card>

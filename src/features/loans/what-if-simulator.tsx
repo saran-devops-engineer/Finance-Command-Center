@@ -348,14 +348,14 @@ function RecommendationCard({
         <MetricCard label="Closes" value={getLoanClosesLabel(result)} variant="dark" />
       </MetricCardGrid>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3">
         {compareResult ? (
-          <Button type="button" variant="secondary" onClick={onShowComparison}>
+          <Button type="button" variant="secondary" className="w-full" onClick={onShowComparison}>
             {showComparison ? "Hide Comparison" : "Compare Both"}
           </Button>
         ) : null}
         {engineResult ? (
-          <Button type="button" variant="secondary" onClick={onShowFullCalculation}>
+          <Button type="button" variant="secondary" className="w-full" onClick={onShowFullCalculation}>
             {showFullCalculation ? "Hide Calculation" : "See Full Calculation"}
           </Button>
         ) : null}

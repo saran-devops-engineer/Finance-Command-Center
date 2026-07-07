@@ -116,11 +116,21 @@ export default function InsightsPage() {
               </div>
 
               <MetricCardGrid>
-                <MetricCard label="Why now" value={primaryInsight.why} variant="dark" />
-                <MetricCard label="Impact" value={primaryInsight.impactLabel} variant="dark" />
+                <MetricCard
+                  label="Why now"
+                  value={primaryInsight.why}
+                  valueKind="text"
+                  variant="dark"
+                />
+                <MetricCard
+                  label="Impact"
+                  value={primaryInsight.impactLabel}
+                  valueKind="text"
+                  variant="dark"
+                />
               </MetricCardGrid>
 
-              <Button asChild variant="secondary" size="sm">
+              <Button asChild variant="secondary" size="sm" className="w-full">
                 <Link href={primaryInsight.href}>
                   {primaryInsight.recommendation.actionLabel ?? "Review"}
                 </Link>
@@ -152,10 +162,10 @@ export default function InsightsPage() {
                 {insight.recommendation.description}
               </p>
               <MetricCardGrid>
-                <MetricCard label="Why" value={insight.why} />
-                <MetricCard label="Impact" value={insight.impactLabel} />
+                <MetricCard label="Why" value={insight.why} valueKind="text" />
+                <MetricCard label="Impact" value={insight.impactLabel} valueKind="text" />
               </MetricCardGrid>
-              <Button asChild variant="secondary" size="sm">
+              <Button asChild variant="secondary" size="sm" className="w-full">
                 <Link href={insight.href}>
                   {insight.recommendation.actionLabel ?? "Review"}
                 </Link>
