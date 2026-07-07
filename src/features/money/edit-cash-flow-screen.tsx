@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
+import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { MoneyBreakdown } from "@/shared/domain/finance";
 
@@ -100,6 +101,7 @@ export function EditCashFlowScreen() {
 
     setIsSaving(true);
     await indexedDbFinanceRepository.saveMoneyBreakdown(toMoneyBreakdown(form));
+    notifyFinanceDataUpdated("money");
     router.replace("/");
   }
 

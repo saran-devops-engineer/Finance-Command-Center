@@ -25,6 +25,7 @@ export const demoLoans: Loan[] = [
     principalPaid: 310500,
     interestPaid: 73500,
     remainingTenureMonths: 18,
+    status: "active",
     estimatedClosureDate: "2028-10-01",
     nextDueDate: "2028-03-22"
   },
@@ -40,6 +41,7 @@ export const demoLoans: Loan[] = [
     principalPaid: 72000,
     interestPaid: 28200,
     remainingTenureMonths: 36,
+    status: "active",
     estimatedClosureDate: "2029-09-01",
     nextDueDate: "2028-03-18"
   },
@@ -55,6 +57,7 @@ export const demoLoans: Loan[] = [
     principalPaid: 380000,
     interestPaid: 620000,
     remainingTenureMonths: 214,
+    status: "active",
     estimatedClosureDate: "2045-12-01",
     nextDueDate: "2028-03-05"
   }

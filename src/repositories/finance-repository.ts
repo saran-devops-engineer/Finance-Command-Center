@@ -15,6 +15,7 @@ export interface FinanceRepository {
   listLoans(): Promise<Loan[]>;
   getLoan(id: string): Promise<Loan | null>;
   saveLoan(value: Loan): Promise<void>;
+  softDeleteLoan(id: string): Promise<void>;
   listAllLoanPayments(): Promise<LoanPayment[]>;
   listLoanPayments(loanId: string): Promise<LoanPayment[]>;
   saveLoanPayment(value: LoanPayment): Promise<void>;

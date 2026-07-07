@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
@@ -21,34 +22,28 @@ export default function MoneyPage() {
   const [moneyBreakdown, setMoneyBreakdown] = useState<MoneyBreakdown | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadMoney = useCallback(async () => {
+    const [profile, localMoneyBreakdown] = await Promise.all([
+      indexedDbFinanceRepository.getProfile(),
+      indexedDbFinanceRepository.getMoneyBreakdown()
+    ]);
 
-    async function loadMoney() {
-      const [profile, localMoneyBreakdown] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.getMoneyBreakdown()
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (!profile?.onboardingCompleted || !localMoneyBreakdown) {
-        router.replace("/onboarding");
-        return;
-      }
-
-      setMoneyBreakdown(localMoneyBreakdown);
-      setIsLoading(false);
+    if (!profile?.onboardingCompleted || !localMoneyBreakdown) {
+      router.replace("/onboarding");
+      return;
     }
 
-    void loadMoney();
-
-    return () => {
-      isMounted = false;
-    };
+    setMoneyBreakdown(localMoneyBreakdown);
+    setIsLoading(false);
   }, [router]);
+
+  useEffect(() => {
+    void loadMoney();
+  }, [loadMoney]);
+
+  useFinanceDataReload(() => {
+    void loadMoney();
+  });
 
   const mandatoryCommitments = moneyBreakdown
     ? calculateMandatoryCommitments(moneyBreakdown)

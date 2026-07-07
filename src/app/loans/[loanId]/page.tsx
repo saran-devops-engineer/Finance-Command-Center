@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { LoanDetailScreen } from "@/features/loans/loan-detail-screen";
 
@@ -12,7 +13,9 @@ export default async function LoanDetailPage({ params }: LoanDetailPageProps) {
 
   return (
     <MobileShell>
-      <LoanDetailScreen loanId={loanId} />
+      <Suspense fallback={null}>
+        <LoanDetailScreen loanId={loanId} />
+      </Suspense>
     </MobileShell>
   );
 }

@@ -24,9 +24,13 @@ export interface MoneyBreakdown {
   emergencyBuffer: number;
 }
 
+export type LoanStatus = "active" | "archived" | "deleted";
+
 export interface UserProfile {
   id: string;
   displayName: string;
+  currency?: string;
+  avatarUrl?: string | null;
   onboardingCompleted: boolean;
   createdAt: string;
   updatedAt: string;
@@ -47,6 +51,10 @@ export interface Loan {
   remainingTenureMonths: number;
   estimatedClosureDate: string;
   nextDueDate: string;
+  notes?: string;
+  status?: LoanStatus;
+  archivedAt?: string;
+  deletedAt?: string;
   isOverdue?: boolean;
 }
 

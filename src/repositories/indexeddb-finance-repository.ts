@@ -8,6 +8,7 @@ import type {
   UserProfile
 } from "@/shared/domain/finance";
 import { getFinanceDatabase } from "@/storage/indexeddb/database";
+import { filterActiveLoans, normalizeLoan } from "@/lib/loan-status";
 
 const MONEY_BREAKDOWN_ID = "current-month";
 const PROFILE_ID = "primary";
@@ -56,18 +57,37 @@ export const indexedDbFinanceRepository: FinanceRepository = {
 
   async listLoans() {
     const database = await getFinanceDatabase();
-    return database.getAll("loans");
+    const loans = await database.getAll("loans");
+    return filterActiveLoans(loans.map(normalizeLoan));
   },
 
   async getLoan(id: string) {
     const database = await getFinanceDatabase();
     const loan = await database.get("loans", id);
-    return loan ?? null;
+    return loan ? normalizeLoan(loan) : null;
   },
 
   async saveLoan(value: Loan) {
     const database = await getFinanceDatabase();
-    await database.put("loans", value);
+    await database.put("loans", normalizeLoan(value));
+  },
+
+  async softDeleteLoan(id: string) {
+    const database = await getFinanceDatabase();
+    const loan = await database.get("loans", id);
+
+    if (!loan) {
+      return;
+    }
+
+    await database.put(
+      "loans",
+      normalizeLoan({
+        ...loan,
+        status: "deleted",
+        deletedAt: new Date().toISOString()
+      })
+    );
   },
 
   async listAllLoanPayments() {
@@ -162,7 +182,9 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     }
 
     await Promise.all([
-      ...value.loans.map((loan) => transaction.objectStore("loans").put(loan)),
+      ...value.loans.map((loan) =>
+        transaction.objectStore("loans").put(normalizeLoan(loan))
+      ),
       ...value.loanPayments.map((payment) =>
         transaction.objectStore("loanPayments").put(payment)
       ),

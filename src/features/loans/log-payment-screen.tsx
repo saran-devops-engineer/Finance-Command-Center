@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { MetricCard } from "@/components/ui/metric-card";
 import { radius, spacing } from "@/lib/design-tokens";
 import { formatInr, cn } from "@/lib/utils";
+import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { applyLoanPayment } from "@/services/loan-payment/apply-payment";
 import type { Loan, LoanPaymentKind } from "@/shared/domain/finance";
@@ -136,6 +137,7 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
       await indexedDbFinanceRepository.deleteUpcomingDue(`due-${loan.id}`);
     }
 
+    notifyFinanceDataUpdated("payment");
     router.replace(`/loans/${loan.id}`);
   }
 

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
@@ -38,44 +39,38 @@ export default function InsightsPage() {
   const router = useRouter();
   const [state, setState] = useState<InsightsState | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadInsights = useCallback(async () => {
+    const [profile, moneyBreakdown, loans, upcomingDues] = await Promise.all([
+      indexedDbFinanceRepository.getProfile(),
+      indexedDbFinanceRepository.getMoneyBreakdown(),
+      indexedDbFinanceRepository.listLoans(),
+      indexedDbFinanceRepository.listUpcomingDues()
+    ]);
 
-    async function loadInsights() {
-      const [profile, moneyBreakdown, loans, upcomingDues] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.getMoneyBreakdown(),
-        indexedDbFinanceRepository.listLoans(),
-        indexedDbFinanceRepository.listUpcomingDues()
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (!profile?.onboardingCompleted || !moneyBreakdown) {
-        router.replace("/onboarding");
-        return;
-      }
-
-      setState({
-        moneyBreakdown,
-        loans,
-        upcomingDues,
-        snapshot: createFinancialSnapshot({
-          money: moneyBreakdown,
-          loans,
-          upcomingDues
-        })
-      });
+    if (!profile?.onboardingCompleted || !moneyBreakdown) {
+      router.replace("/onboarding");
+      return;
     }
 
-    void loadInsights();
-
-    return () => {
-      isMounted = false;
-    };
+    setState({
+      moneyBreakdown,
+      loans,
+      upcomingDues,
+      snapshot: createFinancialSnapshot({
+        money: moneyBreakdown,
+        loans,
+        upcomingDues
+      })
+    });
   }, [router]);
+
+  useEffect(() => {
+    void loadInsights();
+  }, [loadInsights]);
+
+  useFinanceDataReload(() => {
+    void loadInsights();
+  });
 
   const rankedInsights = state ? rankInsights(state) : [];
   const primaryInsight = rankedInsights[0];

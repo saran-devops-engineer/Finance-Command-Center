@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Info, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
+import { SaveSuccessBanner } from "@/components/ui/save-success-banner";
+import { LoanActionsMenu } from "@/features/loans/loan-actions-menu";
+import { WhatIfSimulator } from "@/features/loans/what-if-simulator";
+import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
-import { formatInr } from "@/lib/utils";
+import { cn, formatInr } from "@/lib/utils";
+import { isActiveLoan } from "@/lib/loan-status";
 import { getPinnedLoanId, setPinnedLoanId } from "@/lib/pinned-loan";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
-import { WhatIfSimulator } from "@/features/loans/what-if-simulator";
+import { softDeleteLoanRecord } from "@/services/loan-management/loan-lifecycle";
 import type { Loan, LoanPayment } from "@/shared/domain/finance";
 
 interface LoanDetailScreenProps {
@@ -21,42 +27,49 @@ interface LoanDetailScreenProps {
 
 export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loan, setLoan] = useState<Loan | null>(null);
   const [payments, setPayments] = useState<LoanPayment[]>([]);
   const [isPinned, setIsPinned] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  const showSavedBanner = searchParams.get("saved") === "1";
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadLoan = useCallback(async () => {
+    const [profile, localLoan, localPayments] = await Promise.all([
+      indexedDbFinanceRepository.getProfile(),
+      indexedDbFinanceRepository.getLoan(loanId),
+      indexedDbFinanceRepository.listLoanPayments(loanId)
+    ]);
 
-    async function loadLoan() {
-      const [profile, localLoan, localPayments] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.getLoan(loanId),
-        indexedDbFinanceRepository.listLoanPayments(loanId)
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (!profile?.onboardingCompleted) {
-        router.replace("/onboarding");
-        return;
-      }
-
-      setLoan(localLoan);
-      setPayments(localPayments);
-      setIsPinned(getPinnedLoanId() === loanId);
-      setIsLoading(false);
+    if (!profile?.onboardingCompleted) {
+      router.replace("/onboarding");
+      return;
     }
 
-    void loadLoan();
+    if (!localLoan || !isActiveLoan(localLoan)) {
+      setLoan(null);
+      setPayments([]);
+      setIsLoading(false);
+      return;
+    }
 
-    return () => {
-      isMounted = false;
-    };
+    setLoan(localLoan);
+    setPayments(localPayments);
+    setIsPinned(getPinnedLoanId() === loanId);
+    setIsLoading(false);
   }, [loanId, router]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    void loadLoan();
+  }, [loadLoan]);
+
+  useFinanceDataReload(() => {
+    void loadLoan();
+  });
 
   const interestShare = loan
     ? Math.round((loan.interestPaid / Math.max(loan.interestPaid + loan.principalPaid, 1)) * 100)
@@ -73,6 +86,22 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
     const nextPinned = !isPinned;
     setPinnedLoanId(nextPinned ? loan.id : null);
     setIsPinned(nextPinned);
+  }
+
+  async function confirmDeleteLoan() {
+    if (!loan) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setIsFadingOut(true);
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 220);
+    });
+
+    await softDeleteLoanRecord(indexedDbFinanceRepository, loan.id);
+    router.replace("/loans");
   }
 
   if (isLoading) {
@@ -110,138 +139,177 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   }
 
   return (
-    <div className={spacing.page}>
-      <header className="space-y-4 pt-4">
-        <Link
-          href="/loans"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Loans
-        </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              {loan.type} loan · {loan.lender}
-            </p>
-            <h1 className="font-display text-4xl leading-tight tracking-[-0.05em]">
-              {loan.name}
-            </h1>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="shrink-0 gap-1.5"
-            onClick={togglePinnedLoan}
-            aria-pressed={isPinned}
+    <>
+      <div
+        className={cn(
+          spacing.page,
+          "transition-opacity duration-300",
+          isFadingOut ? "opacity-0" : "opacity-100"
+        )}
+      >
+        {showSavedBanner ? (
+          <SaveSuccessBanner message="Loan updated. Calculations refreshed across your command center." />
+        ) : null}
+
+        <header className="space-y-4 pt-4">
+          <Link
+            href="/loans"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground"
           >
-            <Star
-              className={`h-4 w-4 ${isPinned ? "fill-current" : ""}`}
-              strokeWidth={1.8}
-            />
-            {isPinned ? "Pinned" : "Pin"}
-          </Button>
-        </div>
-      </header>
-
-      <Card className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-            Outstanding
-          </p>
-          <p className="mt-2 text-4xl font-semibold tracking-[-0.05em]">
-            {formatInr(loan.outstandingBalance)}
-          </p>
-        </div>
-
-        <LoanProgressSummary
-          principalPaid={loan.principalPaid}
-          originalAmount={loan.originalAmount}
-        />
-      </Card>
-
-      {attentionMessage ? (
-        <Card className="space-y-3">
-          <div className="flex gap-3">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/55">
-              <Info className="h-4 w-4" strokeWidth={1.8} />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                Decision note
+            <ArrowLeft className="h-4 w-4" />
+            Loans
+          </Link>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                {loan.type} loan · {loan.lender}
               </p>
-              <h2 className="mt-1 font-display text-2xl tracking-[-0.04em]">
-                {attentionMessage.title}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {attentionMessage.description}
-              </p>
+              <h1 className="font-display text-4xl leading-tight tracking-[-0.05em]">
+                {loan.name}
+              </h1>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="gap-1.5"
+                onClick={togglePinnedLoan}
+                aria-pressed={isPinned}
+              >
+                <Star
+                  className={`h-4 w-4 ${isPinned ? "fill-current" : ""}`}
+                  strokeWidth={1.8}
+                />
+                {isPinned ? "Pinned" : "Pin"}
+              </Button>
+              <LoanActionsMenu
+                loanId={loan.id}
+                loanName={loan.name}
+                onDelete={() => setShowDeleteDialog(true)}
+              />
             </div>
           </div>
+        </header>
+
+        <Card className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Outstanding
+            </p>
+            <p className="mt-2 text-4xl font-semibold tracking-[-0.05em]">
+              {formatInr(loan.outstandingBalance)}
+            </p>
+          </div>
+
+          <LoanProgressSummary
+            principalPaid={loan.principalPaid}
+            originalAmount={loan.originalAmount}
+          />
         </Card>
-      ) : null}
 
-      <MetricCardGrid>
-        <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
-        <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
-        <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
-        <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
-      </MetricCardGrid>
-
-      <section className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-          Paid so far
-        </p>
-        <Card className="divide-y divide-border/70 p-0">
-          <div className="flex items-center justify-between p-5">
-            <div>
-              <p className="font-semibold">Interest paid</p>
-              <p className="text-xs text-muted-foreground">{interestShare}% of tracked repayment</p>
+        {attentionMessage ? (
+          <Card className="space-y-3">
+            <div className="flex gap-3">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/55">
+                <Info className="h-4 w-4" strokeWidth={1.8} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                  Decision note
+                </p>
+                <h2 className="mt-1 font-display text-2xl tracking-[-0.04em]">
+                  {attentionMessage.title}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {attentionMessage.description}
+                </p>
+              </div>
             </div>
-            <p className="font-semibold">{formatInr(loan.interestPaid)}</p>
-          </div>
-          <div className="flex items-center justify-between p-5">
-            <div>
-              <p className="font-semibold">Principal reduced</p>
-              <p className="text-xs text-muted-foreground">{principalShare}% of tracked repayment</p>
-            </div>
-            <p className="font-semibold">{formatInr(loan.principalPaid)}</p>
-          </div>
-        </Card>
-      </section>
+          </Card>
+        ) : null}
 
-      <Button asChild className="w-full">
-        <Link href={`/loans/${loan.id}/payment`}>Log payment</Link>
-      </Button>
+        <MetricCardGrid>
+          <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
+          <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
+          <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
+          <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
+        </MetricCardGrid>
 
-      <WhatIfSimulator loan={loan} />
+        {loan.notes ? (
+          <Card className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Notes
+            </p>
+            <p className="text-sm leading-6 text-muted-foreground">{loan.notes}</p>
+          </Card>
+        ) : null}
 
-      {payments.length > 0 ? (
         <section className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Recent payments
+            Paid so far
           </p>
           <Card className="divide-y divide-border/70 p-0">
-            {payments
-              .slice()
-              .sort((first, second) => second.paidOn.localeCompare(first.paidOn))
-              .slice(0, 4)
-              .map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between gap-4 p-5">
-                  <div>
-                    <p className="font-semibold capitalize">
-                      {payment.kind.replace("-", " ")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{payment.paidOn}</p>
-                  </div>
-                  <p className="font-semibold">{formatInr(payment.amount)}</p>
-                </div>
-              ))}
+            <div className="flex items-center justify-between p-5">
+              <div>
+                <p className="font-semibold">Interest paid</p>
+                <p className="text-xs text-muted-foreground">{interestShare}% of tracked repayment</p>
+              </div>
+              <p className="font-semibold">{formatInr(loan.interestPaid)}</p>
+            </div>
+            <div className="flex items-center justify-between p-5">
+              <div>
+                <p className="font-semibold">Principal reduced</p>
+                <p className="text-xs text-muted-foreground">{principalShare}% of tracked repayment</p>
+              </div>
+              <p className="font-semibold">{formatInr(loan.principalPaid)}</p>
+            </div>
           </Card>
         </section>
-      ) : null}
-    </div>
+
+        <Button asChild className="w-full">
+          <Link href={`/loans/${loan.id}/payment`}>Log payment</Link>
+        </Button>
+
+        <WhatIfSimulator loan={loan} />
+
+        {payments.length > 0 ? (
+          <section className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              Recent payments
+            </p>
+            <Card className="divide-y divide-border/70 p-0">
+              {payments
+                .slice()
+                .sort((first, second) => second.paidOn.localeCompare(first.paidOn))
+                .slice(0, 4)
+                .map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between gap-4 p-5">
+                    <div>
+                      <p className="font-semibold capitalize">
+                        {payment.kind.replace("-", " ")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{payment.paidOn}</p>
+                    </div>
+                    <p className="font-semibold">{formatInr(payment.amount)}</p>
+                  </div>
+                ))}
+            </Card>
+          </section>
+        ) : null}
+      </div>
+
+      <ConfirmDialog
+        open={showDeleteDialog}
+        title={`Delete ${loan.name}?`}
+        description="This action permanently removes this loan from your command center and hides all associated payment history. Future versions may support restore."
+        confirmLabel="Delete"
+        isDestructive
+        isWorking={isDeleting}
+        onCancel={() => setShowDeleteDialog(false)}
+        onConfirm={() => void confirmDeleteLoan()}
+      />
+    </>
   );
 }
 

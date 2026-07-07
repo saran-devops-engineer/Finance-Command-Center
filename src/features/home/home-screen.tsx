@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DynamicGreeting } from "@/components/ui/dynamic-greeting";
 import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
+import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { formatInr, cn } from "@/lib/utils";
 import { card, spacing } from "@/lib/design-tokens";
 import { getPinnedLoanId } from "@/lib/pinned-loan";
@@ -46,46 +47,40 @@ export function HomeScreen() {
   const [pinnedLoanId, setPinnedLoanIdState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadSnapshot = useCallback(async () => {
+    const [profile, moneyBreakdown, loans, upcomingDues] = await Promise.all([
+      indexedDbFinanceRepository.getProfile(),
+      indexedDbFinanceRepository.getMoneyBreakdown(),
+      indexedDbFinanceRepository.listLoans(),
+      indexedDbFinanceRepository.listUpcomingDues()
+    ]);
 
-    async function loadSnapshot() {
-      const [profile, moneyBreakdown, loans, upcomingDues] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.getMoneyBreakdown(),
-        indexedDbFinanceRepository.listLoans(),
-        indexedDbFinanceRepository.listUpcomingDues()
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (!profile?.onboardingCompleted || !moneyBreakdown) {
-        router.replace("/onboarding");
-        return;
-      }
-
-      setState({
-        profile,
-        loans,
-        moneyBreakdown,
-        snapshot: createFinancialSnapshot({
-          money: moneyBreakdown,
-          loans,
-          upcomingDues
-        })
-      });
-      setPinnedLoanIdState(getPinnedLoanId());
-      setIsLoading(false);
+    if (!profile?.onboardingCompleted || !moneyBreakdown) {
+      router.replace("/onboarding");
+      return;
     }
 
-    void loadSnapshot();
-
-    return () => {
-      isMounted = false;
-    };
+    setState({
+      profile,
+      loans,
+      moneyBreakdown,
+      snapshot: createFinancialSnapshot({
+        money: moneyBreakdown,
+        loans,
+        upcomingDues
+      })
+    });
+    setPinnedLoanIdState(getPinnedLoanId());
+    setIsLoading(false);
   }, [router]);
+
+  useEffect(() => {
+    void loadSnapshot();
+  }, [loadSnapshot]);
+
+  useFinanceDataReload(() => {
+    void loadSnapshot();
+  });
 
   useEffect(() => {
     function syncPinnedLoan() {

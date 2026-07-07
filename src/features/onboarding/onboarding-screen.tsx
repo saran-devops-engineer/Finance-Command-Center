@@ -105,7 +105,8 @@ function buildLoan(form: OnboardingFormState): Loan | null {
     interestPaid: 0,
     remainingTenureMonths: monthlyEmi > 0 ? Math.ceil(outstandingBalance / monthlyEmi) : 0,
     estimatedClosureDate: "",
-    nextDueDate: form.nextDueDate || new Date().toISOString().slice(0, 10)
+    nextDueDate: form.nextDueDate || new Date().toISOString().slice(0, 10),
+    status: "active"
   };
 }
 
@@ -168,6 +169,7 @@ export function OnboardingScreen() {
     const profile: UserProfile = {
       id: "primary",
       displayName: normalizeDisplayName(form.displayName),
+      currency: "INR",
       onboardingCompleted: true,
       createdAt: now,
       updatedAt: now

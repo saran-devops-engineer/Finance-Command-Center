@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Plus } from "lucide-react";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
+import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { formatInr, cn } from "@/lib/utils";
 import { card, spacing } from "@/lib/design-tokens";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
@@ -18,34 +19,28 @@ export function LoansScreen() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadLoans = useCallback(async () => {
+    const [profile, localLoans] = await Promise.all([
+      indexedDbFinanceRepository.getProfile(),
+      indexedDbFinanceRepository.listLoans()
+    ]);
 
-    async function loadLoans() {
-      const [profile, localLoans] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.listLoans()
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (!profile?.onboardingCompleted) {
-        router.replace("/onboarding");
-        return;
-      }
-
-      setLoans(localLoans);
-      setIsLoading(false);
+    if (!profile?.onboardingCompleted) {
+      router.replace("/onboarding");
+      return;
     }
 
-    void loadLoans();
-
-    return () => {
-      isMounted = false;
-    };
+    setLoans(localLoans);
+    setIsLoading(false);
   }, [router]);
+
+  useEffect(() => {
+    void loadLoans();
+  }, [loadLoans]);
+
+  useFinanceDataReload(() => {
+    void loadLoans();
+  });
 
   const totalOutstanding = loans.reduce(
     (sum, loan) => sum + loan.outstandingBalance,

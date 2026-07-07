@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { SaveSuccessBanner } from "@/components/ui/save-success-banner";
+import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { card, radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import {
   createJsonBackup,
   inspectJsonBackup,
@@ -17,13 +21,14 @@ import {
 import type { BackupPreview } from "@/storage/backup/backup-format";
 import type { UserProfile } from "@/shared/domain/finance";
 
-const preferences = [
-  ["Currency", "INR ₹"],
-  ["Storage", "On-device only"],
-  ["Backup", "Readable JSON file"],
-  ["Appearance", "Automatic"],
-  ["Passcode", "Planned"]
-] as const;
+const preferences = (profile: UserProfile | null) =>
+  [
+    ["Currency", profile?.currency === "INR" || !profile?.currency ? "INR ₹" : profile.currency],
+    ["Storage", "On-device only"],
+    ["Backup", "Readable JSON file"],
+    ["Appearance", "Automatic"],
+    ["Passcode", "Planned"]
+  ] as const;
 
 const privacyPrinciples = [
   {
@@ -42,39 +47,39 @@ const privacyPrinciples = [
 
 export default function ProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [lastRestoreAt, setLastRestoreAt] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [showSavedBanner, setShowSavedBanner] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
+    setShowSavedBanner(new URLSearchParams(window.location.search).get("saved") === "1");
+  }, []);
 
-    async function loadProfile() {
-      const localProfile = await indexedDbFinanceRepository.getProfile();
+  const loadProfile = useCallback(async () => {
+    const localProfile = await indexedDbFinanceRepository.getProfile();
 
-      if (!isMounted) {
-        return;
-      }
-
-      if (!localProfile?.onboardingCompleted) {
-        router.replace("/onboarding");
-        return;
-      }
-
-      setProfile(localProfile);
-      setLastBackupAt(localStorage.getItem("fcc:lastBackupAt"));
-      setLastRestoreAt(localStorage.getItem("fcc:lastRestoreAt"));
+    if (!localProfile?.onboardingCompleted) {
+      router.replace("/onboarding");
+      return;
     }
 
-    void loadProfile();
-
-    return () => {
-      isMounted = false;
-    };
+    setProfile(localProfile);
+    setLastBackupAt(localStorage.getItem("fcc:lastBackupAt"));
+    setLastRestoreAt(localStorage.getItem("fcc:lastRestoreAt"));
   }, [router]);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
+
+  useFinanceDataReload(() => {
+    void loadProfile();
+  });
 
   const displayName = getDisplayName(profile);
   const initial = displayName.charAt(0).toUpperCase();
@@ -130,6 +135,7 @@ export default function ProfilePage() {
       setBackupStatus(
         `Restored JSON backup from ${new Date(restored.createdAt).toLocaleDateString("en-IN")}.`
       );
+      notifyFinanceDataUpdated("profile");
       router.refresh();
     } catch (error) {
       setBackupStatus(getErrorMessage(error));
@@ -144,6 +150,10 @@ export default function ProfilePage() {
   return (
     <MobileShell>
       <div className={spacing.page}>
+        {showSavedBanner ? (
+          <SaveSuccessBanner message="Profile updated. Your greeting and snapshot are refreshed." />
+        ) : null}
+
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Account
@@ -157,12 +167,15 @@ export default function ProfilePage() {
           <div className="grid h-16 w-16 place-items-center rounded-full bg-primary font-display text-2xl text-primary-foreground">
             {initial}
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="font-display text-3xl tracking-[-0.04em]">
               {displayName}
             </h2>
             <p className="text-sm text-muted-foreground">Private ledger · on-device only</p>
           </div>
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/profile/edit">Edit</Link>
+          </Button>
         </Card>
 
         <section className="space-y-3">
@@ -195,7 +208,7 @@ export default function ProfilePage() {
             Data & privacy
           </p>
           <Card className="divide-y divide-border/70 p-0">
-            {preferences.map(([label, value]) => (
+            {preferences(profile).map(([label, value]) => (
               <div key={label} className="flex items-center justify-between gap-4 p-5">
                 <p className="font-medium">{label}</p>
                 <p className="text-right text-sm text-muted-foreground">{value}</p>
