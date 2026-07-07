@@ -6,6 +6,8 @@ import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { radius, spacing } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { Loan, LoanType, UpcomingDue } from "@/shared/domain/finance";
 
@@ -144,7 +146,7 @@ export function AddLoanScreen() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className={spacing.page}>
       <header className="space-y-4 pt-4">
         <Link
           href="/loans"
@@ -181,7 +183,7 @@ export function AddLoanScreen() {
           <select
             value={form.type}
             onChange={(event) => updateField("type", event.target.value as LoanType)}
-            className="h-12 w-full rounded-3xl border border-border bg-white/45 px-4 text-base outline-none focus:border-primary"
+            className={cn("h-12 w-full border border-border bg-white/45 px-4 text-base outline-none focus:border-primary", radius.input)}
           >
             {loanTypes.map((loanType) => (
               <option key={loanType.value} value={loanType.value}>
@@ -284,7 +286,7 @@ function Field({
         placeholder={placeholder}
         inputMode={inputMode}
         type={type}
-        className="h-12 w-full rounded-3xl border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary"
+        className={cn("h-12 w-full border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary", radius.input)}
       />
       {helperText ? (
         <span className="block text-xs leading-5 text-muted-foreground">{helperText}</span>

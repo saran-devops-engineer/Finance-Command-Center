@@ -7,8 +7,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DynamicGreeting } from "@/components/ui/dynamic-greeting";
-import { formatInr } from "@/lib/utils";
-import { getPinnedLoanId } from "@/lib/pinned-loan";
+import { formatInr, cn } from "@/lib/utils";
+import { card, spacing } from "@/lib/design-tokens";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
 import {
@@ -99,7 +99,7 @@ export function HomeScreen() {
 
   if (isLoading || !state) {
     return (
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Loading
@@ -131,13 +131,13 @@ export function HomeScreen() {
   );
 
   return (
-    <div className="space-y-10">
+    <div className={spacing.page}>
       <header className="pt-4">
         <DynamicGreeting name={displayName} />
       </header>
 
-      <Card className="space-y-4">
-        <div className="flex items-start justify-between gap-5">
+      <Card className="space-y-3">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
               Available money
@@ -154,22 +154,22 @@ export function HomeScreen() {
         <p className="text-sm leading-6 text-muted-foreground">{healthMessage}</p>
       </Card>
 
-      <div className="grid grid-cols-3 gap-2">
-        <Button asChild variant="secondary" size="sm" className="gap-1 px-2 text-xs sm:px-3 sm:text-sm">
+      <div className={cn("grid grid-cols-3", spacing.metricGrid)}>
+        <Button asChild variant="secondary" size="sm" className="gap-1 px-2 text-xs">
           <Link href="/loans/new">
-            <Plus className="h-3.5 w-3.5 shrink-0" />
+            <Plus className="h-4 w-4 shrink-0" />
             Add Loan
           </Link>
         </Button>
-        <Button asChild variant="secondary" size="sm" className="px-2 text-xs sm:px-3 sm:text-sm">
+        <Button asChild variant="secondary" size="sm" className="px-2 text-xs">
           <Link href="/money/edit">Add Income</Link>
         </Button>
-        <Button asChild variant="secondary" size="sm" className="px-2 text-xs sm:px-3 sm:text-sm">
+        <Button asChild variant="secondary" size="sm" className="px-2 text-xs">
           <Link href="/money/edit">Add Expense</Link>
         </Button>
       </div>
 
-      <section className="space-y-3">
+      <section className={spacing.section}>
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             {dueDisplay.status === "overdue" ? "Overdue" : "Upcoming due"}
@@ -186,7 +186,7 @@ export function HomeScreen() {
             No payments due in the next {HOME_DUE_LOOKAHEAD_DAYS} days.
           </p>
         ) : (
-          <Card className="flex items-center justify-between gap-4 p-5">
+          <Card className={cn("flex items-center justify-between gap-4", card.paddingCompact)}>
             <div>
               <h3 className="font-semibold">{dueDisplay.featuredDue.title}</h3>
               <p className="text-xs text-muted-foreground">
@@ -198,7 +198,7 @@ export function HomeScreen() {
         )}
       </section>
 
-      <section className="space-y-3">
+      <section className={spacing.section}>
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Priority loan
@@ -210,7 +210,7 @@ export function HomeScreen() {
 
         {priorityLoan ? (
           <Link href={`/loans/${priorityLoan.id}`} className="block">
-            <Card className="space-y-4 p-5">
+            <Card className={cn("space-y-3", card.paddingCompact)}>
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -256,7 +256,7 @@ export function HomeScreen() {
             </Card>
           </Link>
         ) : (
-          <Card className="space-y-3 p-5">
+          <Card className={cn("space-y-2", card.paddingCompact)}>
             <h3 className="font-display text-2xl tracking-[-0.04em]">No active loans yet.</h3>
             <p className="text-sm leading-6 text-muted-foreground">
               Add a loan when you are ready to track payoff progress here.
@@ -266,7 +266,7 @@ export function HomeScreen() {
       </section>
 
       {primaryRecommendation && recommendationHref ? (
-        <section className="space-y-3">
+        <section className={spacing.section}>
           <div className="flex items-center justify-between gap-4">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
               What to do next
@@ -275,7 +275,7 @@ export function HomeScreen() {
               View all
             </Link>
           </div>
-          <Card className="space-y-4">
+          <Card className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
               {primaryRecommendation.category.replace("-", " ")}
             </p>

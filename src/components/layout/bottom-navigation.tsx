@@ -4,6 +4,7 @@ import { BarChart3, CreditCard, Home, Lightbulb, UserRound } from "lucide-react"
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { radius, shell } from "@/lib/design-tokens";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -17,8 +18,19 @@ export function BottomNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md px-5 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-      <div className="grid grid-cols-5 rounded-[1.75rem] border border-white/70 bg-card/82 px-2 py-3 shadow-soft backdrop-blur-xl">
+    <nav
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-50 mx-auto pb-[calc(env(safe-area-inset-bottom)+0.75rem)]",
+        shell.maxWidth,
+        "px-5"
+      )}
+    >
+      <div
+        className={cn(
+          "grid h-16 grid-cols-5 border border-white/70 bg-card/82 px-2 shadow-soft backdrop-blur-xl",
+          radius.card
+        )}
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -28,7 +40,7 @@ export function BottomNavigation() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-2xl px-2 py-1 text-[0.64rem] uppercase tracking-[0.16em] text-muted-foreground transition",
+                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-[0.64rem] uppercase tracking-[0.16em] text-muted-foreground transition",
                 isActive && "text-foreground"
               )}
             >

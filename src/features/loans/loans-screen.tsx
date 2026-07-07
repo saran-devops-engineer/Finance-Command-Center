@@ -7,7 +7,8 @@ import { AlertTriangle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
-import { formatInr } from "@/lib/utils";
+import { formatInr, cn } from "@/lib/utils";
+import { card, spacing } from "@/lib/design-tokens";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { Loan } from "@/shared/domain/finance";
 
@@ -60,7 +61,7 @@ export function LoansScreen() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Loading
@@ -74,7 +75,7 @@ export function LoansScreen() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className={spacing.page}>
       <header className="space-y-2 pt-4">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
           Liabilities
@@ -97,7 +98,7 @@ export function LoansScreen() {
       </MetricCardGrid>
 
       {priorityLoan && attentionMessage ? (
-        <Card className="space-y-4 bg-primary text-primary-foreground">
+        <Card className="space-y-3 bg-primary text-primary-foreground">
           <div className="flex items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10">
               <AlertTriangle className="h-5 w-5" strokeWidth={1.7} />
@@ -125,13 +126,13 @@ export function LoansScreen() {
         </Link>
       </Button>
 
-      <section className="space-y-4">
+      <section className={spacing.section}>
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
           Priority portfolio
         </p>
-        <div className="flex snap-y snap-mandatory flex-col gap-5 overflow-y-auto">
+        <div className={cn("flex flex-col", spacing.cardStack)}>
           {loans.length === 0 ? (
-            <Card className="space-y-3 p-7">
+            <Card className={cn("space-y-2", card.paddingCompact)}>
               <h2 className="font-display text-3xl tracking-[-0.04em]">
                 No loans added yet.
               </h2>
@@ -149,14 +150,14 @@ export function LoansScreen() {
             );
 
             return (
-              <Link key={loan.id} href={`/loans/${loan.id}`} className="block snap-center">
-                <Card className="min-h-[24rem] space-y-6 p-7">
+              <Link key={loan.id} href={`/loans/${loan.id}`} className="block">
+                <Card className={cn("space-y-4", card.paddingCompact)}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                         {loan.type} loan · {loan.lender}
                       </p>
-                      <h2 className="mt-2 font-display text-4xl leading-none tracking-[-0.05em]">
+                      <h2 className="mt-1 font-display text-3xl leading-tight tracking-[-0.04em]">
                         {loan.name}
                       </h2>
                     </div>

@@ -7,6 +7,7 @@ import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { MoneyBreakdown } from "@/shared/domain/finance";
@@ -70,7 +71,7 @@ export default function MoneyPage() {
   if (isLoading) {
     return (
       <MobileShell>
-        <div className="space-y-8">
+        <div className={spacing.page}>
           <header className="space-y-2 pt-4">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
               Loading
@@ -86,7 +87,7 @@ export default function MoneyPage() {
 
   return (
     <MobileShell>
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Cash flow
@@ -99,7 +100,7 @@ export default function MoneyPage() {
           </p>
         </header>
 
-        <Card className="space-y-5">
+        <Card className="space-y-4">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
               Safe to use

@@ -7,6 +7,7 @@ import { ArrowLeft, Info, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { getPinnedLoanId, setPinnedLoanId } from "@/lib/pinned-loan";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
@@ -78,7 +79,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Loading
@@ -93,7 +94,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 
   if (!loan) {
     return (
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-4 pt-4">
           <Link
             href="/loans"
@@ -111,7 +112,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className={spacing.page}>
       <header className="space-y-4 pt-4">
         <Link
           href="/loans"
@@ -146,7 +147,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
         </div>
       </header>
 
-      <Card className="space-y-5">
+      <Card className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
             Outstanding

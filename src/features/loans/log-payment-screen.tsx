@@ -7,7 +7,8 @@ import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard } from "@/components/ui/metric-card";
-import { formatInr } from "@/lib/utils";
+import { radius, spacing } from "@/lib/design-tokens";
+import { formatInr, cn } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { applyLoanPayment } from "@/services/loan-payment/apply-payment";
 import type { Loan, LoanPaymentKind } from "@/shared/domain/finance";
@@ -140,7 +141,7 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Loading
@@ -155,7 +156,7 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
 
   if (!loan) {
     return (
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-4 pt-4">
           <Link
             href="/loans"
@@ -173,7 +174,7 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className={spacing.page}>
       <header className="space-y-4 pt-4">
         <Link
           href={`/loans/${loan.id}`}
@@ -195,18 +196,20 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
         </div>
       </header>
 
-      <Card className="space-y-5">
+      <Card className="space-y-4">
         <div className="grid grid-cols-3 gap-2">
           {(["emi", "prepayment", "part-payment"] as const).map((kind) => (
             <button
               key={kind}
               type="button"
               onClick={() => changeKind(kind)}
-              className={`rounded-3xl border px-3 py-3 text-xs font-medium capitalize transition ${
+              className={cn(
+                "border px-3 py-3 text-xs font-medium capitalize transition",
+                radius.input,
                 form.kind === kind
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-white/45"
-              }`}
+              )}
             >
               {kind.replace("-", " ")}
             </button>
@@ -240,7 +243,7 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
             value={form.note}
             onChange={(event) => updateField("note", event.target.value)}
             placeholder="Optional"
-            className="min-h-24 w-full rounded-3xl border border-border bg-white/45 px-4 py-3 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary"
+            className={cn("min-h-24 w-full border border-border bg-white/45 px-4 py-3 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary", radius.input)}
           />
         </label>
       </Card>
@@ -275,7 +278,7 @@ function Field({ label, value, onChange, type = "text" }: FieldProps) {
         onChange={(event) => onChange(event.target.value)}
         inputMode={type === "date" ? undefined : "numeric"}
         type={type}
-        className="h-12 w-full rounded-3xl border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary"
+        className={cn("h-12 w-full border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary", radius.input)}
       />
     </label>
   );

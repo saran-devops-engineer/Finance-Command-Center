@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { radius, spacing } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { Loan, MoneyBreakdown, UpcomingDue, UserProfile } from "@/shared/domain/finance";
 
@@ -186,7 +188,7 @@ export function OnboardingScreen() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className={spacing.page}>
       <header className="space-y-2 pt-4">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
           {currentStep.eyebrow}
@@ -378,7 +380,7 @@ function Field({
         placeholder={placeholder}
         inputMode={inputMode}
         type={type}
-        className="h-12 w-full rounded-3xl border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary"
+        className={cn("h-12 w-full border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary", radius.input)}
       />
     </label>
   );

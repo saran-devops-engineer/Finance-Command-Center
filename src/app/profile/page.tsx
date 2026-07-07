@@ -6,7 +6,8 @@ import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { card, radius, spacing } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
 import {
   createJsonBackup,
   inspectJsonBackup,
@@ -141,7 +142,7 @@ export default function ProfilePage() {
 
   return (
     <MobileShell>
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Account
@@ -177,7 +178,7 @@ export default function ProfilePage() {
             </p>
             <div className="space-y-3">
               {privacyPrinciples.map((principle) => (
-                <div key={principle.title} className="rounded-3xl bg-white/45 p-4">
+                <div key={principle.title} className={cn("bg-white/45", radius.inner, card.paddingCompact)}>
                   <p className="font-medium">{principle.title}</p>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {principle.description}
@@ -240,7 +241,7 @@ export default function ProfilePage() {
               </Button>
             </div>
 
-            <div className="rounded-3xl bg-white/45 p-4">
+            <div className={cn("bg-white/45", radius.inner, card.paddingCompact)}>
               <p className="font-medium">Restore Backup</p>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
                 Restore your previously saved financial data from a backup file.
@@ -256,7 +257,7 @@ export default function ProfilePage() {
             />
 
             {backupStatus ? (
-              <div className="rounded-3xl bg-white/45 p-4">
+              <div className={cn("bg-white/45", radius.inner, card.paddingCompact)}>
                 <p className="text-sm leading-6 text-muted-foreground">{backupStatus}</p>
               </div>
             ) : null}

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { card, radius } from "@/lib/design-tokens";
 
 interface ExpandableCardProps {
   title: string;
@@ -22,21 +23,29 @@ export function ExpandableCard({
   children
 }: ExpandableCardProps) {
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-card/80 shadow-card backdrop-blur">
+    <section
+      className={cn(
+        "overflow-hidden border border-white/70 bg-card/80 shadow-card backdrop-blur",
+        radius.card
+      )}
+    >
       <button
         type="button"
         aria-expanded={isExpanded}
         onClick={() => onExpandedChange(!isExpanded)}
-        className="flex w-full items-center gap-4 p-6 text-left outline-none transition hover:bg-white/35 focus-visible:ring-2 focus-visible:ring-primary/40 motion-reduce:transition-none"
+        className={cn(
+          "flex min-h-[72px] w-full items-center gap-4 text-left outline-none transition hover:bg-white/35 focus-visible:ring-2 focus-visible:ring-primary/40 motion-reduce:transition-none",
+          card.paddingCompact
+        )}
       >
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/60 text-primary">
           {icon}
         </span>
-        <span className="min-w-0 flex-1 space-y-2">
-          <span className="block font-display text-3xl leading-tight tracking-[-0.04em]">
+        <span className="min-w-0 flex-1 space-y-1">
+          <span className="block font-display text-2xl leading-tight tracking-[-0.04em]">
             {title}
           </span>
-          <span className="block text-sm leading-6 text-muted-foreground">
+          <span className="block text-sm leading-5 text-muted-foreground line-clamp-2">
             {description}
           </span>
           {!isExpanded ? (
@@ -60,7 +69,15 @@ export function ExpandableCard({
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="space-y-5 border-t border-border/60 p-6 pt-5">{children}</div>
+          <div
+            className={cn(
+              "space-y-4 border-t border-border/60",
+              card.padding,
+              "pt-4"
+            )}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </section>

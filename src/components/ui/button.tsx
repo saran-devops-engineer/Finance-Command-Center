@@ -2,9 +2,13 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { radius } from "@/lib/design-tokens";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-full text-sm font-medium transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+  cn(
+    "inline-flex items-center justify-center text-sm font-medium transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+    radius.pill
+  ),
   {
     variants: {
       variant: {
@@ -13,9 +17,9 @@ const buttonVariants = cva(
         ghost: "bg-transparent text-foreground"
       },
       size: {
-        sm: "h-9 px-4",
-        md: "h-11 px-5",
-        lg: "h-12 px-6"
+        sm: "h-12 px-4",
+        md: "h-[52px] px-5",
+        lg: "h-14 px-6"
       }
     },
     defaultVariants: {

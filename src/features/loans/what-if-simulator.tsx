@@ -5,7 +5,8 @@ import { Calculator, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpandableCard } from "@/components/ui/expandable-card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
-import { formatInr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { card, radius, spacing } from "@/lib/design-tokens";
 import {
   homeLoanSimulationEngine,
   simulateLoanPrepayment,
@@ -189,7 +190,7 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
         </div>
 
         {selectedStrategy ? (
-          <div className="space-y-4 rounded-[1.75rem] bg-white/45 p-5">
+          <div className={cn("space-y-4 bg-white/45", radius.card, card.paddingCompact)}>
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                 Step 2
@@ -214,7 +215,7 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
                       setShowFullCalculation(false);
                     }}
                     inputMode="numeric"
-                    className="h-12 w-full rounded-3xl border border-border bg-card/80 px-4 text-base outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35"
+                    className={cn("h-12 w-full border border-border bg-card/80 px-4 text-base outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35", radius.input)}
                   />
                 </label>
 
@@ -327,7 +328,7 @@ function RecommendationCard({
   const recommendedStrategy = getRecommendedStrategy(result, compareResult);
 
   return (
-    <div className="space-y-4 rounded-[1.75rem] bg-primary p-5 text-primary-foreground">
+    <div className={cn("space-y-4 bg-primary text-primary-foreground", radius.card, card.paddingCompact)}>
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
           Recommended Strategy
@@ -375,7 +376,7 @@ function ComparisonPanel({ compareResult }: { compareResult: HomeLoanCompareResu
   const preferred = compareResult.recommendation.preferredStrategy;
 
   return (
-    <div className="space-y-3 rounded-3xl bg-white/10 p-4 text-sm">
+    <div className={cn("space-y-3 bg-white/10 text-sm", radius.inner, card.paddingCompact)}>
       <p className="font-semibold">Why this recommendation</p>
       <p className="text-xs leading-5 opacity-75">{compareResult.recommendation.reason}</p>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -414,7 +415,7 @@ function ComparisonOption({
   isRecommended: boolean;
 }) {
   return (
-    <div className="rounded-3xl bg-white/10 p-4">
+    <div className={cn("bg-white/10", radius.inner, card.paddingCompact)}>
       <div className="flex items-center justify-between gap-3">
         <p className="font-semibold">{title}</p>
         {isRecommended ? (
@@ -456,7 +457,7 @@ function FullCalculationPanel({
   ];
 
   return (
-    <div className="space-y-3 rounded-3xl bg-white/10 p-4 text-sm">
+    <div className={cn("space-y-3 bg-white/10 text-sm", radius.inner, card.paddingCompact)}>
       <div className="flex items-center gap-2">
         <Calculator className="h-4 w-4" aria-hidden="true" />
         <p className="font-semibold">Full calculation</p>
@@ -474,12 +475,13 @@ function FullCalculationPanel({
 }
 
 function getStrategyCardClassName(isSelected: boolean) {
-  return [
-    "rounded-3xl border p-4 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35 motion-reduce:transition-none",
+  return cn(
+    radius.inner,
+    "border p-4 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35 motion-reduce:transition-none",
     isSelected
       ? "border-primary/45 bg-card shadow-card"
       : "border-border bg-card/70 hover:bg-card"
-  ].join(" ");
+  );
 }
 
 function getSelectedStrategyTitle(strategy: SimulatorStrategy) {

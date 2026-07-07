@@ -6,6 +6,8 @@ import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { radius, spacing } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import type { MoneyBreakdown } from "@/shared/domain/finance";
 
@@ -103,7 +105,7 @@ export function EditCashFlowScreen() {
 
   if (!form) {
     return (
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Loading
@@ -117,7 +119,7 @@ export function EditCashFlowScreen() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className={spacing.page}>
       <header className="space-y-4 pt-4">
         <Link
           href="/money"
@@ -234,7 +236,7 @@ function Field({ label, value, onChange, helperText }: FieldProps) {
         value={value}
         onChange={(event) => onChange(event.target.value)}
         inputMode="numeric"
-        className="h-12 w-full rounded-3xl border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary"
+        className={cn("h-12 w-full border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary", radius.input)}
       />
       {helperText ? (
         <span className="block text-xs leading-5 text-muted-foreground">{helperText}</span>

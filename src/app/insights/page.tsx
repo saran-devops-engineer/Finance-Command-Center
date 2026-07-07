@@ -7,6 +7,7 @@ import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
@@ -83,7 +84,7 @@ export default function InsightsPage() {
 
   return (
     <MobileShell>
-      <div className="space-y-8">
+      <div className={spacing.page}>
         <header className="space-y-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Intelligence

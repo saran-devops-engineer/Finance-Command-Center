@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { BottomNavigation } from "./bottom-navigation";
+import { shell, spacing } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
 
 interface MobileShellProps {
   children: ReactNode;
@@ -8,7 +10,14 @@ interface MobileShellProps {
 
 export function MobileShell({ children, showNavigation = true }: MobileShellProps) {
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-md px-5 pt-8 safe-area-shell">
+    <main
+      className={cn(
+        "mx-auto min-h-dvh w-full safe-area-shell",
+        shell.maxWidth,
+        spacing.screenX,
+        spacing.screenTop
+      )}
+    >
       {children}
       {showNavigation ? <BottomNavigation /> : null}
     </main>
