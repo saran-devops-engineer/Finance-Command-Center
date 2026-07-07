@@ -12,6 +12,8 @@ function toSimulationInput(loan: Loan): HomeLoanSimulationInput {
     annualInterestRate: loan.annualInterestRate,
     monthlyEmi: loan.monthlyEmi,
     remainingTenureMonths: loan.remainingTenureMonths,
+    loanStartDate: loan.loanStartDate,
+    emiPaymentDay: loan.emiPaymentDay,
     asOfDate: new Date().toISOString().slice(0, 10)
   };
 }

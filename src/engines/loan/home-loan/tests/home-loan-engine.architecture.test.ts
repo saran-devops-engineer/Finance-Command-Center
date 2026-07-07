@@ -1,50 +1,48 @@
 /**
  * Home Loan Engine — architecture tests.
- *
- * @todo Replace with behaviour tests once banking rules and formulas are implemented.
  */
 
 import { describe, it, expect } from "vitest";
-import { homeLoanEngine } from "@/engines/loan/home-loan/services/HomeLoanEngine";
-import { validationEngine } from "@/engines/loan/home-loan/validators/ValidationEngine";
-import { emiCalculator } from "@/engines/loan/home-loan/calculators/EMICalculator";
-import { amortizationCalculator } from "@/engines/loan/home-loan/calculators/AmortizationCalculator";
-import { paymentProcessor } from "@/engines/loan/home-loan/services/PaymentProcessor";
-import { simulationEngine } from "@/engines/loan/home-loan/simulators/SimulationEngine";
-import { recommendationEngine } from "@/engines/loan/home-loan/recommendations/RecommendationEngine";
-import { lumpSumOneTimePaymentSimulator } from "@/engines/loan/home-loan/simulators/lump-sum-one-time-payment";
-import { monthlyExtraPaymentSimulator } from "@/engines/loan/home-loan/simulators/monthly-extra-payment";
+import { homeLoanAmortizationEngine } from "@/engines/loan/home-loan/HomeLoanAmortizationEngine";
+import { calculateEmi } from "@/engines/loan/home-loan/core/math";
+import { snapshotFromPersistedLoan } from "@/engines/loan/home-loan/adapters/from-persisted-loan";
+import type { Loan } from "@/shared/domain/finance";
 
 describe("Home Loan Engine architecture", () => {
-  it("exports a wired HomeLoanEngine facade", () => {
-    expect(homeLoanEngine).toBeDefined();
-    expect(typeof homeLoanEngine.analyze).toBe("function");
-    expect(typeof homeLoanEngine.processPayment).toBe("function");
-    expect(typeof homeLoanEngine.loadLoan).toBe("function");
+  it("exports the amortization engine facade", () => {
+    expect(homeLoanAmortizationEngine).toBeDefined();
+    expect(typeof homeLoanAmortizationEngine.simulateLumpSum).toBe("function");
+    expect(typeof homeLoanAmortizationEngine.simulateMonthlyExtra).toBe("function");
+    expect(typeof homeLoanAmortizationEngine.comparePrepaymentStrategies).toBe("function");
   });
 
-  it("exposes independently replaceable module implementations", () => {
-    expect(validationEngine).toBeDefined();
-    expect(emiCalculator).toBeDefined();
-    expect(amortizationCalculator).toBeDefined();
-    expect(paymentProcessor).toBeDefined();
-    expect(simulationEngine).toBeDefined();
-    expect(recommendationEngine).toBeDefined();
+  it("calculates EMI deterministically from core math", () => {
+    const emi = calculateEmi(1_000_000, 8.5, 240);
+    expect(emi).toBeGreaterThan(0);
   });
 
-  it("calculates EMI deterministically", () => {
-    const result = emiCalculator.calculate({
-      principal: 1_000_000,
-      annualInterestRate: 8.5,
-      tenureMonths: 240
-    });
-    expect(result.monthlyEmi).toBeGreaterThan(0);
-  });
+  it("maps persisted loans to simulation snapshots without original amount", () => {
+    const loan: Loan = {
+      id: "home-1",
+      name: "Home",
+      type: "home",
+      lender: "Bank",
+      originalAmount: 5_000_000,
+      outstandingBalance: 2_200_000,
+      annualInterestRate: 12.35,
+      monthlyEmi: 25_000,
+      principalPaid: 2_800_000,
+      interestPaid: 0,
+      remainingTenureMonths: 300,
+      estimatedClosureDate: "2045-01-01",
+      nextDueDate: "2026-07-05",
+      loanStartDate: "2020-01-01",
+      originalLoanTenureMonths: 360,
+      emiPaymentDay: 5
+    };
 
-  it("exposes approved rule-set simulators", () => {
-    expect(lumpSumOneTimePaymentSimulator).toBeDefined();
-    expect(typeof lumpSumOneTimePaymentSimulator.simulate).toBe("function");
-    expect(monthlyExtraPaymentSimulator).toBeDefined();
-    expect(typeof monthlyExtraPaymentSimulator.simulate).toBe("function");
+    const snapshot = snapshotFromPersistedLoan(loan);
+    expect(snapshot.outstandingPrincipal).toBe(2_200_000);
+    expect(snapshot).not.toHaveProperty("originalAmount");
   });
 });

@@ -119,7 +119,7 @@ describe("Home Loan Data Model V1", () => {
     });
 
     const snapshot = homeLoanSnapshotFromPersistedLoan(loan);
-    expect(snapshot.outstandingPrincipal).toBe(3820000);
+    expect(snapshot.outstandingPrincipal).toBe(3_820_000);
     expect(snapshot.monthlyEmi).toBe(45200);
     expect(snapshot.remainingTenureMonths).toBe(214);
     expect(snapshot.annualInterestRate).toBe(8.6);

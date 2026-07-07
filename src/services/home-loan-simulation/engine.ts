@@ -1,79 +1,111 @@
-import { DEFAULT_MAX_SCHEDULE_EXPORT_MONTHS } from "@/services/home-loan-simulation/constants";
-import { runBaselineProjection } from "@/services/home-loan-simulation/scenarios/baseline-projection";
-import { runComparePrepayment } from "@/services/home-loan-simulation/scenarios/compare-prepayment";
-import { runPrepayReduceEmi } from "@/services/home-loan-simulation/scenarios/prepay-reduce-emi";
-import { runPrepayReduceTenure } from "@/services/home-loan-simulation/scenarios/prepay-reduce-tenure";
-import { assertValidInput } from "@/services/home-loan-simulation/validation/validate-input";
+import { homeLoanAmortizationEngine } from "@/engines/loan/home-loan/HomeLoanAmortizationEngine";
 import {
-  assertValidScenario,
-  clampPrepaymentAmount
-} from "@/services/home-loan-simulation/validation/validate-scenario";
+  snapshotFromLegacyInput,
+  toLegacyCompareResult,
+  toLegacySimulationResult
+} from "@/engines/loan/home-loan/adapters/to-legacy-ui";
 import type {
+  HomeLoanCompareResult,
   HomeLoanSimulationEngine,
   HomeLoanSimulationInput,
   HomeLoanSimulationOptions,
+  HomeLoanSimulationResult,
   HomeLoanSimulationScenario
 } from "@/services/home-loan-simulation/types";
 
-function resolveOptions(options?: HomeLoanSimulationOptions) {
-  return {
-    includeSchedule: options?.includeSchedule ?? false,
-    maxScheduleMonths: options?.maxScheduleMonths ?? DEFAULT_MAX_SCHEDULE_EXPORT_MONTHS
-  };
-}
-
-function collectWarnings(
+function assertValidScenario(
   input: HomeLoanSimulationInput,
   scenario: HomeLoanSimulationScenario
 ) {
-  return [...assertValidInput(input), ...assertValidScenario(scenario, input)];
+  const snapshot = snapshotFromLegacyInput(input);
+
+  if (scenario.kind === "baseline-projection") {
+    homeLoanAmortizationEngine.projectBaseline(snapshot);
+    return;
+  }
+
+  if (scenario.prepaymentAmount <= 0) {
+    throw new Error("Prepayment amount must be greater than zero.");
+  }
+
+  if (scenario.prepaymentAmount > input.outstandingBalance) {
+    throw new Error("Prepayment cannot exceed outstanding principal.");
+  }
 }
 
 export const homeLoanSimulationEngine: HomeLoanSimulationEngine = {
-  simulate(input, scenario, options) {
-    const resolvedOptions = resolveOptions(options);
-    const warnings = collectWarnings(input, scenario);
+  simulate(
+    input: HomeLoanSimulationInput,
+    scenario: HomeLoanSimulationScenario,
+    _options?: HomeLoanSimulationOptions
+  ): HomeLoanSimulationResult {
+    assertValidScenario(input, scenario);
+    const snapshot = snapshotFromLegacyInput(input);
 
-    switch (scenario.kind) {
-      case "baseline-projection":
-        return runBaselineProjection(input, resolvedOptions, warnings);
-      case "prepay-reduce-tenure":
-        return runPrepayReduceTenure(
-          input,
-          clampPrepaymentAmount(input, scenario.prepaymentAmount),
-          resolvedOptions,
-          warnings
-        );
-      case "prepay-reduce-emi":
-        return runPrepayReduceEmi(
-          input,
-          clampPrepaymentAmount(input, scenario.prepaymentAmount),
-          resolvedOptions,
-          warnings
-        );
-      case "compare-prepayment":
-        throw new Error("Use comparePrepayment() for side-by-side prepayment comparison.");
+    if (scenario.kind === "baseline-projection") {
+      const baseline = homeLoanAmortizationEngine.projectBaseline(snapshot);
+
+      return {
+        scenario: "baseline-projection",
+        isEstimate: true,
+        input,
+        baseline: {
+          remainingMonths: baseline.tenureMonths,
+          totalInterestRemaining: baseline.totalInterest,
+          estimatedClosureDate: baseline.closureDate ?? ""
+        },
+        outcome: {
+          remainingMonths: baseline.tenureMonths,
+          monthsSaved: 0,
+          interestSaved: 0,
+          revisedOutstanding: input.outstandingBalance,
+          estimatedClosureDate: baseline.closureDate ?? ""
+        },
+        assumptions: ["Baseline derived from full amortization schedule."],
+        warnings: []
+      };
     }
+
+    const strategy =
+      scenario.kind === "prepay-reduce-emi" ? "reduce-emi" : "reduce-tenure";
+
+    const result = homeLoanAmortizationEngine.simulateLumpSum({
+      snapshot,
+      paymentAmount: scenario.prepaymentAmount,
+      strategy
+    });
+
+    if (!result.valid) {
+      throw new Error(result.errors.join(" "));
+    }
+
+    return toLegacySimulationResult(input, scenario.kind, result);
   },
 
-  comparePrepayment(input, prepaymentAmount, options) {
-    const resolvedOptions = resolveOptions(options);
-    const scenario: HomeLoanSimulationScenario = {
-      kind: "compare-prepayment",
-      prepaymentAmount
-    };
-    const warnings = collectWarnings(input, scenario);
+  comparePrepayment(
+    input: HomeLoanSimulationInput,
+    prepaymentAmount: number,
+    options?: HomeLoanSimulationOptions & {
+      recommendationContext?: { hasStrongCashBuffer?: boolean };
+    }
+  ): HomeLoanCompareResult {
+    const snapshot = snapshotFromLegacyInput(input);
+    const comparison = homeLoanAmortizationEngine.comparePrepaymentStrategies(
+      snapshot,
+      prepaymentAmount,
+      {
+        emiAffordable: true,
+        prioritizeCashFlow: !options?.recommendationContext?.hasStrongCashBuffer
+      }
+    );
 
-    return runComparePrepayment(input, prepaymentAmount, {
-      ...resolvedOptions,
-      recommendationContext: options?.recommendationContext
-    }, warnings);
+    return toLegacyCompareResult(input, comparison);
   },
 
-  projectBaseline(input, options) {
-    const resolvedOptions = resolveOptions(options);
-    const warnings = collectWarnings(input, { kind: "baseline-projection" });
-
-    return runBaselineProjection(input, resolvedOptions, warnings);
+  projectBaseline(
+    input: HomeLoanSimulationInput,
+    _options?: HomeLoanSimulationOptions
+  ): HomeLoanSimulationResult {
+    return homeLoanSimulationEngine.simulate(input, { kind: "baseline-projection" });
   }
 };

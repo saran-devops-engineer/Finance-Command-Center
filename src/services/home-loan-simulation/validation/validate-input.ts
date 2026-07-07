@@ -36,13 +36,6 @@ export function validateInput(input: HomeLoanSimulationInput): ValidationResult 
   }
 
   if (
-    input.originalAmount !== undefined &&
-    input.outstandingBalance > input.originalAmount
-  ) {
-    warnings.push("Outstanding balance exceeds the recorded original amount.");
-  }
-
-  if (
     input.remainingTenureMonths < MIN_REMAINING_TENURE_MONTHS ||
     input.remainingTenureMonths > MAX_REMAINING_TENURE_MONTHS
   ) {

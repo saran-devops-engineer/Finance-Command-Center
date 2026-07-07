@@ -1,8 +1,7 @@
 /**
- * Rule Set 02 service alias — matches approved banking rules naming.
- * Delegates to the monthly extra payment simulator (simulation only).
+ * Rule Set 02 service alias — delegates to HomeLoanAmortizationEngine.
  */
 export {
-  MonthlyExtraPaymentSimulator as MonthlyExtraPaymentService,
-  monthlyExtraPaymentSimulator as monthlyExtraPaymentService
-} from "@/engines/loan/home-loan/simulators/monthly-extra-payment";
+  homeLoanAmortizationEngine as MonthlyExtraPaymentService,
+  homeLoanAmortizationEngine as monthlyExtraPaymentService
+} from "@/engines/loan/home-loan/HomeLoanAmortizationEngine";

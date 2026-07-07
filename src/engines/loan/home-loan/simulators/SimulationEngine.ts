@@ -1,56 +1,32 @@
-import type {
-  ComparePrepaymentRequest,
-  ComparePrepaymentResult,
-  HomeLoanSnapshot,
-  SimulationOptions,
-  SimulationResult,
-  SimulationScenario
-} from "@/engines/loan/home-loan/types/LoanInterfaces";
+import { homeLoanAmortizationEngine } from "@/engines/loan/home-loan/HomeLoanAmortizationEngine";
+import type { HomeLoanSimulationSnapshot } from "@/engines/loan/home-loan/core/types";
+import type { LumpSumSimulationRequest } from "@/engines/loan/home-loan/core/types";
+import type { MonthlyExtraSimulationRequest } from "@/engines/loan/home-loan/core/types";
 
-/**
- * Runs Home Loan what-if scenarios (baseline, prepayment, comparison).
- * Single responsibility: scenario orchestration — uses calculators internally.
- */
 export interface SimulationEngine {
-  simulate(
-    loan: HomeLoanSnapshot,
-    scenario: SimulationScenario,
-    options?: SimulationOptions
-  ): SimulationResult;
-
-  comparePrepayment(request: ComparePrepaymentRequest): ComparePrepaymentResult;
-
-  projectBaseline(loan: HomeLoanSnapshot, options?: SimulationOptions): SimulationResult;
+  projectBaseline(snapshot: HomeLoanSimulationSnapshot): ReturnType<
+    typeof homeLoanAmortizationEngine.projectBaseline
+  >;
+  simulateLumpSum(request: LumpSumSimulationRequest): ReturnType<
+    typeof homeLoanAmortizationEngine.simulateLumpSum
+  >;
+  simulateMonthlyExtra(request: MonthlyExtraSimulationRequest): ReturnType<
+    typeof homeLoanAmortizationEngine.simulateMonthlyExtra
+  >;
 }
 
 export class HomeLoanSimulationEngine implements SimulationEngine {
-  /**
-   * @todo Wire ValidationEngine → EMICalculator → AmortizationCalculator pipeline.
-   * @todo Delegate per-scenario runners (reduce-tenure, reduce-emi, baseline).
-   */
-  simulate(
-    _loan: HomeLoanSnapshot,
-    _scenario: SimulationScenario,
-    _options?: SimulationOptions
-  ): SimulationResult {
-    throw new Error(
-      "HomeLoanSimulationEngine.simulate is not implemented. Awaiting banking rules."
-    );
+  projectBaseline(snapshot: HomeLoanSimulationSnapshot) {
+    return homeLoanAmortizationEngine.projectBaseline(snapshot);
   }
 
-  /** @todo Run reduce-tenure and reduce-emi scenarios in parallel for comparison. */
-  comparePrepayment(_request: ComparePrepaymentRequest): ComparePrepaymentResult {
-    throw new Error(
-      "HomeLoanSimulationEngine.comparePrepayment is not implemented. Awaiting banking rules."
-    );
+  simulateLumpSum(request: LumpSumSimulationRequest) {
+    return homeLoanAmortizationEngine.simulateLumpSum(request);
   }
 
-  /** @todo Project remaining interest and closure date without prepayment. */
-  projectBaseline(_loan: HomeLoanSnapshot, _options?: SimulationOptions): SimulationResult {
-    throw new Error(
-      "HomeLoanSimulationEngine.projectBaseline is not implemented. Awaiting banking rules."
-    );
+  simulateMonthlyExtra(request: MonthlyExtraSimulationRequest) {
+    return homeLoanAmortizationEngine.simulateMonthlyExtra(request);
   }
 }
 
-export const simulationEngine: SimulationEngine = new HomeLoanSimulationEngine();
+export const simulationEngine: SimulationEngine = homeLoanAmortizationEngine;

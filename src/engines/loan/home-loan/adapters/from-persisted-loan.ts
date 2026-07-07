@@ -1,35 +1,37 @@
 import type { Loan } from "@/shared/domain/finance";
-import type { HomeLoanSnapshot } from "@/engines/loan/home-loan/types/LoanInterfaces";
 import { getLoanStatus } from "@/lib/loan-status";
+import type { HomeLoanSimulationSnapshot } from "@/engines/loan/home-loan/core/types";
 
-/**
- * Maps persisted Home Loan V1 data to the Phase 2 engine snapshot.
- * Simulation starts from the current snapshot only.
- */
-export function homeLoanSnapshotFromPersistedLoan(loan: Loan): HomeLoanSnapshot {
+export function snapshotFromPersistedLoan(loan: Loan): HomeLoanSimulationSnapshot {
   if (loan.type !== "home") {
     throw new Error("Expected a home loan.");
   }
 
   return {
     loanId: loan.id,
-    lender: loan.lender,
-    originalPrincipal: loan.originalAmount,
     outstandingPrincipal: loan.outstandingBalance,
-    annualInterestRate: loan.annualInterestRate,
     monthlyEmi: loan.monthlyEmi,
+    annualInterestRate: loan.annualInterestRate,
     remainingTenureMonths: loan.remainingTenureMonths,
+    loanStartDate: loan.loanStartDate ?? new Date().toISOString().slice(0, 10),
+    emiPaymentDay: loan.emiPaymentDay ?? deriveEmiPaymentDay(loan.nextDueDate),
     asOfDate: new Date().toISOString().slice(0, 10),
-    nextDueDate: loan.nextDueDate,
-    estimatedClosureDate: loan.estimatedClosureDate,
     status: getLoanStatus(loan)
   };
 }
 
-export function tryHomeLoanSnapshotFromPersistedLoan(loan: Loan): HomeLoanSnapshot | null {
+export function trySnapshotFromPersistedLoan(loan: Loan): HomeLoanSimulationSnapshot | null {
   if (loan.type !== "home") {
     return null;
   }
 
-  return homeLoanSnapshotFromPersistedLoan(loan);
+  return snapshotFromPersistedLoan(loan);
+}
+
+function deriveEmiPaymentDay(nextDueDate: string | undefined): number {
+  if (!nextDueDate) {
+    return 1;
+  }
+
+  return new Date(`${nextDueDate.slice(0, 10)}T00:00:00`).getDate();
 }

@@ -4,7 +4,8 @@ export interface HomeLoanSimulationInput {
   annualInterestRate: number;
   monthlyEmi: number;
   remainingTenureMonths: number;
-  originalAmount?: number;
+  loanStartDate?: string;
+  emiPaymentDay?: number;
   asOfDate?: string;
 }
 

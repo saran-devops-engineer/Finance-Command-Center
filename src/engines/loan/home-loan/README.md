@@ -1,51 +1,49 @@
-# Home Loan Engine (Phase 2)
+# Home Loan Amortization Engine
 
-**Status:** Rule Sets 01 and 02 implemented — orchestrator facade pending  
-**UI Foundation:** V1.0 frozen — screens must consume engine outputs only
+**Status:** Production — single source of truth for all home loan simulations  
+**UI Foundation:** V1.0 frozen — UI consumes engine outputs via adapters only
 
-## Implemented simulators
-
-| Rule set | Entry point | Status |
-|----------|-------------|--------|
-| 01 — Lump sum one-time payment | `lumpSumOneTimePaymentSimulator.simulate()` | Implemented |
-| 02 — Monthly extra payment | `monthlyExtraPaymentSimulator.simulate()` / `monthlyExtraPaymentService.simulate()` | Implemented |
-
-## Pipeline
-
-```
-HomeLoanEngine (facade — pending)
-  → ValidationEngine
-  → EMICalculator
-  → AmortizationCalculator
-  → PaymentProcessor
-  → SimulationEngine
-  → RecommendationEngine
-```
-
-Rule-set simulators are callable directly today. The facade will delegate to them once all scenarios are approved.
-
-## Rules
-
-- UI must never calculate financial values.
-- Every calculation must be deterministic.
-- Every module must be independently testable.
-- Business logic must never live inside React components.
-- Banking rules are defined in `docs/handbook/loan-engine/home-loan/rules/` — do not guess formulas.
-
-## Legacy note
-
-`src/services/home-loan-simulation/` remains active for V1 UI until adapters wire these engines. Do not remove legacy code in this phase.
-
-## Public entry
-
-Import from `@/engines/loan/home-loan`.
+## Engine entry point
 
 ```typescript
-import {
-  lumpSumOneTimePaymentSimulator,
-  monthlyExtraPaymentSimulator
-} from "@/engines/loan/home-loan";
+import { homeLoanAmortizationEngine } from "@/engines/loan/home-loan";
+```
 
-// Service alias (Rule Set 02 approved naming)
-import { monthlyExtraPaymentService } from "@/engines/loan/home-loan";
+## Capabilities
+
+| Method | Description |
+|--------|-------------|
+| `projectBaseline(snapshot)` | Full baseline amortization schedule |
+| `simulateLumpSum(request)` | Lump sum with reduce-tenure or reduce-emi |
+| `simulateMonthlyExtra(request)` | Recurring monthly extra payment |
+| `comparePrepaymentStrategies(snapshot, amount)` | Compare both strategies + recommendation |
+
+## Rules implemented
+
+- Monthly rate: `r = annual / 12 / 100`
+- EMI: standard reducing-balance formula
+- Amortization: month-by-month until closing balance <= 0
+- Interest saved: sum(original schedule interest) − sum(simulation schedule interest)
+- Tenure: `ceil(ln(EMI / (EMI − P×r)) / ln(1+r))` for reduce-tenure
+- Debug mode: pass `debug: true` on simulation requests
+
+## Snapshot inputs (calculations only)
+
+- Outstanding Principal
+- Current EMI
+- Interest Rate
+- Remaining Tenure
+- Loan Start Date
+- EMI Payment Day
+
+Original loan amount is never used in calculations.
+
+## Legacy UI adapter
+
+`src/services/home-loan-simulation/engine.ts` delegates to this engine for the What-If Simulator.
+
+## Public import
+
+```typescript
+import { homeLoanAmortizationEngine } from "@/engines/loan/home-loan";
 ```

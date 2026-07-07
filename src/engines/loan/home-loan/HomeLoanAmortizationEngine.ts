@@ -1,0 +1,48 @@
+import { buildBaselineSchedule } from "@/engines/loan/home-loan/core/schedule-builder";
+import type {
+  HomeLoanSimulationSnapshot,
+  LumpSumSimulationRequest,
+  MonthlyExtraSimulationRequest
+} from "@/engines/loan/home-loan/core/types";
+import { validateSnapshot } from "@/engines/loan/home-loan/core/validation";
+import { simulateLumpSumPayment } from "@/engines/loan/home-loan/simulation/lump-sum";
+import { simulateMonthlyExtraPayment } from "@/engines/loan/home-loan/simulation/monthly-extra";
+import {
+  comparePrepaymentStrategies,
+  type StrategyRecommendationContext
+} from "@/engines/loan/home-loan/recommendation/strategy-v1";
+
+/**
+ * Banking-grade Home Loan Amortization Engine.
+ * The ONLY source of truth for every home loan simulation.
+ */
+export class HomeLoanAmortizationEngine {
+  projectBaseline(snapshot: HomeLoanSimulationSnapshot) {
+    const validation = validateSnapshot(snapshot);
+
+    if (!validation.valid) {
+      throw new Error(validation.errors.join(" "));
+    }
+
+    return buildBaselineSchedule(snapshot);
+  }
+
+  simulateLumpSum(request: LumpSumSimulationRequest) {
+    return simulateLumpSumPayment(request);
+  }
+
+  simulateMonthlyExtra(request: MonthlyExtraSimulationRequest) {
+    return simulateMonthlyExtraPayment(request);
+  }
+
+  comparePrepaymentStrategies(
+    snapshot: HomeLoanSimulationSnapshot,
+    prepaymentAmount: number,
+    context?: StrategyRecommendationContext,
+    debug = false
+  ) {
+    return comparePrepaymentStrategies(snapshot, prepaymentAmount, context, debug);
+  }
+}
+
+export const homeLoanAmortizationEngine = new HomeLoanAmortizationEngine();

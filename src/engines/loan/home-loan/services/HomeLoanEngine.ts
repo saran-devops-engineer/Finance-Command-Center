@@ -1,8 +1,5 @@
 import type { ValidationEngine } from "@/engines/loan/home-loan/validators/ValidationEngine";
-import type { EMICalculator } from "@/engines/loan/home-loan/calculators/EMICalculator";
-import type { AmortizationCalculator } from "@/engines/loan/home-loan/calculators/AmortizationCalculator";
 import type { PaymentProcessor } from "@/engines/loan/home-loan/services/PaymentProcessor";
-import type { SimulationEngine } from "@/engines/loan/home-loan/simulators/SimulationEngine";
 import type { RecommendationEngine } from "@/engines/loan/home-loan/recommendations/RecommendationEngine";
 import type { LoanRepository } from "@/engines/loan/home-loan/services/LoanRepository";
 import type { HomeLoanEventBus } from "@/engines/loan/home-loan/types/LoanEvents";
@@ -13,19 +10,15 @@ import type {
   PaymentApplicationResult
 } from "@/engines/loan/home-loan/types/LoanInterfaces";
 import { validationEngine } from "@/engines/loan/home-loan/validators/ValidationEngine";
-import { emiCalculator } from "@/engines/loan/home-loan/calculators/EMICalculator";
-import { amortizationCalculator } from "@/engines/loan/home-loan/calculators/AmortizationCalculator";
 import { paymentProcessor } from "@/engines/loan/home-loan/services/PaymentProcessor";
-import { simulationEngine } from "@/engines/loan/home-loan/simulators/SimulationEngine";
 import { recommendationEngine } from "@/engines/loan/home-loan/recommendations/RecommendationEngine";
 import { loanRepository } from "@/engines/loan/home-loan/services/LoanRepository";
+import { homeLoanAmortizationEngine } from "@/engines/loan/home-loan/HomeLoanAmortizationEngine";
 
 export interface HomeLoanEngineDependencies {
   validationEngine: ValidationEngine;
-  emiCalculator: EMICalculator;
-  amortizationCalculator: AmortizationCalculator;
+  amortizationEngine: typeof homeLoanAmortizationEngine;
   paymentProcessor: PaymentProcessor;
-  simulationEngine: SimulationEngine;
   recommendationEngine: RecommendationEngine;
   loanRepository: LoanRepository;
   eventBus?: HomeLoanEventBus;
@@ -33,9 +26,6 @@ export interface HomeLoanEngineDependencies {
 
 /**
  * Facade orchestrating the Home Loan Engine pipeline.
- *
- * Pipeline:
- *   Validation → EMI → Amortization → Payment → Simulation → Recommendation
  *
  * UI and React components must call this engine — never compute values directly.
  */
@@ -47,7 +37,7 @@ export class HomeLoanEngine {
    * @todo Wire pipeline stages and event bus emissions.
    */
   analyze(_request: HomeLoanAnalysisRequest): HomeLoanAnalysisResult {
-    throw new Error("HomeLoanEngine.analyze is not implemented. Awaiting banking rules.");
+    throw new Error("HomeLoanEngine.analyze is not implemented. Use homeLoanAmortizationEngine.");
   }
 
   /**
@@ -62,15 +52,18 @@ export class HomeLoanEngine {
   async loadLoan(loanId: string) {
     return this.deps.loanRepository.getHomeLoanSnapshot(loanId);
   }
+
+  /** Direct access to the amortization engine — single source of truth for simulations. */
+  get amortization() {
+    return this.deps.amortizationEngine;
+  }
 }
 
 /** Default engine wired with placeholder module implementations. */
 export const homeLoanEngine = new HomeLoanEngine({
   validationEngine,
-  emiCalculator,
-  amortizationCalculator,
+  amortizationEngine: homeLoanAmortizationEngine,
   paymentProcessor,
-  simulationEngine,
   recommendationEngine,
   loanRepository
 });

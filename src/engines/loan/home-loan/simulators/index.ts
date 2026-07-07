@@ -1,15 +1,13 @@
 export {
+  HomeLoanAmortizationEngine,
+  homeLoanAmortizationEngine
+} from "@/engines/loan/home-loan/HomeLoanAmortizationEngine";
+
+export {
   HomeLoanSimulationEngine,
   simulationEngine,
   type SimulationEngine
 } from "@/engines/loan/home-loan/simulators/SimulationEngine";
 
-export {
-  LumpSumOneTimePaymentSimulator,
-  lumpSumOneTimePaymentSimulator
-} from "@/engines/loan/home-loan/simulators/lump-sum-one-time-payment";
-
-export {
-  MonthlyExtraPaymentSimulator,
-  monthlyExtraPaymentSimulator
-} from "@/engines/loan/home-loan/simulators/monthly-extra-payment";
+export { simulateLumpSumPayment, simulateForeclosure } from "@/engines/loan/home-loan/simulation/lump-sum";
+export { simulateMonthlyExtraPayment } from "@/engines/loan/home-loan/simulation/monthly-extra";
