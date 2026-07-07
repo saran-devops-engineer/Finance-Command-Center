@@ -1,4 +1,5 @@
 import { homeLoanSimulationEngine, tryFromLoan } from "@/services/home-loan-simulation";
+import type { HomeLoanSimulationResult } from "@/services/home-loan-simulation/types";
 import { simulatePrepayment } from "@/services/loan-projection/prepayment";
 import type { Loan } from "@/shared/domain/finance";
 
@@ -13,6 +14,8 @@ export interface LoanPrepaymentSimulationView {
   revisedEmi?: number;
   strategy: LoanPrepaymentStrategy;
   isHomeLoan: boolean;
+  /** Full engine result for home loans (source for the detailed breakdown). */
+  engineResult?: HomeLoanSimulationResult;
 }
 
 export function simulateLoanPrepayment(
@@ -37,7 +40,8 @@ export function simulateLoanPrepayment(
       revisedMonths: result.outcome.remainingMonths,
       revisedEmi: result.outcome.revisedEmi,
       strategy,
-      isHomeLoan: true
+      isHomeLoan: true,
+      engineResult: result
     };
   }
 

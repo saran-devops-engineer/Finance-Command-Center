@@ -10,10 +10,20 @@ export interface PrepaymentSimulation {
   revisedMonths: number;
 }
 
+/**
+ * Shortcut prepayment estimate for NON-home loans only. Home loans must use the
+ * banking-grade amortization engine (HomeLoanAmortizationEngine) — never this.
+ */
 export function simulatePrepayment(
   loan: Loan,
   prepaymentAmount: number
 ): PrepaymentSimulation {
+  if (loan.type === "home") {
+    throw new Error(
+      "Home loans must be simulated with HomeLoanAmortizationEngine, not the shortcut estimator."
+    );
+  }
+
   const safePrepayment = Math.min(Math.max(prepaymentAmount, 0), loan.outstandingBalance);
   const revisedOutstanding = loan.outstandingBalance - safePrepayment;
   const monthlyRate = loan.annualInterestRate / 12 / 100;

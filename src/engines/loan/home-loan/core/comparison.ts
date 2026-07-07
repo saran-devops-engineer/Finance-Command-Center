@@ -10,14 +10,16 @@ export function compareSchedules(
   original: AmortizationSchedule,
   simulated: AmortizationSchedule
 ): ScheduleComparison {
+  // Real deltas from the schedules — never clamped, so incorrect results surface
+  // instead of silently reading as zero.
   const interestSaved = original.totalInterest - simulated.totalInterest;
   const monthsSaved = original.tenureMonths - simulated.tenureMonths;
 
   return {
     original,
     simulated,
-    interestSaved: Math.max(interestSaved, 0),
-    monthsSaved: Math.max(monthsSaved, 0),
+    interestSaved,
+    monthsSaved,
     totalPaymentsDelta: simulated.totalPayments - original.totalPayments,
     closureDateDeltaMonths: monthsSaved
   };

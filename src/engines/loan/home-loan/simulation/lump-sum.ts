@@ -1,8 +1,4 @@
-import {
-  calculateEmi,
-  calculateTenureMonths,
-  monthlyInterestRate
-} from "@/engines/loan/home-loan/core/math";
+import { calculateEmi, monthlyInterestRate } from "@/engines/loan/home-loan/core/math";
 import { buildDebugReport, compareSchedules } from "@/engines/loan/home-loan/core/comparison";
 import {
   buildAmortizationSchedule,
@@ -59,12 +55,15 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
 
   const newOutstanding = request.snapshot.outstandingPrincipal - request.paymentAmount;
   const r = monthlyInterestRate(request.snapshot.annualInterestRate);
+  // Canonical tenure is derived from the baseline schedule (trust-EMI basis).
+  const originalTenureMonths = baseline.tenureMonths;
 
   if (request.strategy === "reduce-emi") {
+    // Keep the (derived) tenure, recompute the EMI for the reduced principal.
     const newEmi = calculateEmi(
       newOutstanding,
       request.snapshot.annualInterestRate,
-      request.snapshot.remainingTenureMonths
+      originalTenureMonths
     );
 
     const simulated = buildAmortizationSchedule({
@@ -72,8 +71,7 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
       monthlyEmi: newEmi,
       annualInterestRate: request.snapshot.annualInterestRate,
       snapshot: request.snapshot,
-      upfrontPrincipalReduction: request.paymentAmount,
-      fixedTenureMonths: request.snapshot.remainingTenureMonths
+      upfrontPrincipalReduction: request.paymentAmount
     });
     const simulatedWithUpfrontPayment = includeUpfrontPaymentInTotals(
       simulated,
@@ -101,7 +99,7 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
             {
               monthlyInterestRate: r,
               emi: newEmi,
-              tenureMonths: request.snapshot.remainingTenureMonths,
+              tenureMonths: originalTenureMonths,
               newOutstanding
             },
             baseline,
@@ -111,19 +109,13 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
     };
   }
 
-  const newTenureMonths = calculateTenureMonths(
-    newOutstanding,
-    request.snapshot.annualInterestRate,
-    request.snapshot.monthlyEmi
-  );
-
+  // Reduce tenure: keep the same EMI, let the schedule close earlier naturally.
   const simulated = buildAmortizationSchedule({
     openingPrincipal: request.snapshot.outstandingPrincipal,
     monthlyEmi: request.snapshot.monthlyEmi,
     annualInterestRate: request.snapshot.annualInterestRate,
     snapshot: request.snapshot,
-    upfrontPrincipalReduction: request.paymentAmount,
-    fixedTenureMonths: newTenureMonths
+    upfrontPrincipalReduction: request.paymentAmount
   });
   const simulatedWithUpfrontPayment = includeUpfrontPaymentInTotals(
     simulated,
@@ -151,7 +143,7 @@ export function simulateLumpSumPayment(request: LumpSumSimulationRequest): LumpS
           {
             monthlyInterestRate: r,
             emi: request.snapshot.monthlyEmi,
-            tenureMonths: newTenureMonths,
+            tenureMonths: simulated.tenureMonths,
             newOutstanding
           },
           baseline,

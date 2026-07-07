@@ -1,4 +1,4 @@
-import { monthlyInterestRate } from "@/engines/loan/home-loan/core/math";
+import { calculateEmi, monthlyInterestRate } from "@/engines/loan/home-loan/core/math";
 import { paymentDateForMonth, resolveFirstPaymentDate } from "@/engines/loan/home-loan/core/payment-dates";
 import type {
   AmortizationSchedule,
@@ -12,23 +12,24 @@ export interface BuildScheduleOptions {
   openingPrincipal: number;
   monthlyEmi: number;
   annualInterestRate: number;
-  snapshot: Pick<
-    HomeLoanSimulationSnapshot,
-    "asOfDate" | "emiPaymentDay" | "loanStartDate" | "remainingTenureMonths"
-  >;
-  /** Lump sum applied before the first EMI month */
+  snapshot: Pick<HomeLoanSimulationSnapshot, "asOfDate" | "emiPaymentDay">;
+  /** Lump sum applied to principal before the first EMI month */
   upfrontPrincipalReduction?: number;
   /** Extra principal applied after EMI each month (0-based index) */
   monthlyExtraByMonth?: Record<number, number>;
-  /** When set, recalculate EMI each month after extra payment (reduce-EMI strategy) */
-  recalculateEmiEachMonth?: boolean;
-  /** Cap iterations when reduce-EMI keeps tenure fixed */
-  fixedTenureMonths?: number;
+  /**
+   * Reduce-EMI behaviour: recompute the EMI each month so the balance amortizes
+   * over the remaining months of this target tenure (keeps tenure fixed).
+   */
+  recalculateEmiToTenure?: number;
 }
 
 /**
  * STEP 3 — Reducing-balance amortization.
- * Generates every month until closing balance <= 0.
+ *
+ * Runs month-by-month until the balance is cleared. Tenure is ALWAYS derived
+ * from the schedule; it is never forced. The final month naturally carries a
+ * smaller EMI when the last principal chunk is below a full instalment.
  */
 export function buildAmortizationSchedule(options: BuildScheduleOptions): AmortizationSchedule {
   const r = monthlyInterestRate(options.annualInterestRate);
@@ -49,32 +50,17 @@ export function buildAmortizationSchedule(options: BuildScheduleOptions): Amorti
   let monthIndex = 0;
 
   while (openingBalance > 0 && monthIndex < MAX_SCHEDULE_MONTHS) {
-    if (
-      options.fixedTenureMonths !== undefined &&
-      monthIndex >= options.fixedTenureMonths
-    ) {
-      break;
-    }
-
-    let monthlyEmi = options.monthlyEmi;
-
-    if (options.recalculateEmiEachMonth) {
-      const remainingMonths = (options.fixedTenureMonths ?? MAX_SCHEDULE_MONTHS) - monthIndex;
-
-      if (remainingMonths <= 0) {
-        break;
-      }
-
-      monthlyEmi = calculateEmiForRemaining(openingBalance, r, remainingMonths);
-    }
-
-    const isFinalPlannedMonth =
-      options.fixedTenureMonths !== undefined &&
-      monthIndex === options.fixedTenureMonths - 1;
+    const monthlyEmi = resolveMonthlyEmi(options, openingBalance, monthIndex);
     const interest = openingBalance * r;
     let principal = monthlyEmi - interest;
 
-    if (isFinalPlannedMonth || principal >= openingBalance) {
+    // EMI cannot cover the accruing interest — the loan will never amortize.
+    if (principal <= 0 && (options.monthlyExtraByMonth?.[monthIndex] ?? 0) <= 0) {
+      break;
+    }
+
+    // Natural final month: last chunk is smaller than a full instalment.
+    if (principal > openingBalance) {
       principal = openingBalance;
     }
 
@@ -85,11 +71,7 @@ export function buildAmortizationSchedule(options: BuildScheduleOptions): Amorti
     const emi = interest + principal;
     let closingBalance = openingBalance - principal;
 
-    const extraPayment = Math.min(
-      options.monthlyExtraByMonth?.[monthIndex] ?? 0,
-      closingBalance
-    );
-
+    const extraPayment = Math.min(options.monthlyExtraByMonth?.[monthIndex] ?? 0, closingBalance);
     closingBalance -= extraPayment;
 
     cumulativeInterest += interest;
@@ -97,11 +79,7 @@ export function buildAmortizationSchedule(options: BuildScheduleOptions): Amorti
 
     rows.push({
       monthNumber: monthIndex + 1,
-      paymentDate: paymentDateForMonth(
-        firstPaymentDate,
-        monthIndex,
-        options.snapshot.emiPaymentDay
-      ),
+      paymentDate: paymentDateForMonth(firstPaymentDate, monthIndex, options.snapshot.emiPaymentDay),
       openingBalance,
       interest,
       principal,
@@ -114,46 +92,45 @@ export function buildAmortizationSchedule(options: BuildScheduleOptions): Amorti
 
     monthIndex += 1;
     openingBalance = closingBalance;
-
-    if (openingBalance <= 0) {
-      break;
-    }
   }
 
   return summarizeSchedule(rows);
 }
 
-export function buildBaselineSchedule(
-  snapshot: HomeLoanSimulationSnapshot
-): AmortizationSchedule {
+/**
+ * Baseline projection — canonical basis is the current EMI. The stored
+ * remaining-tenure field is display-only and is NOT used to bound the schedule.
+ */
+export function buildBaselineSchedule(snapshot: HomeLoanSimulationSnapshot): AmortizationSchedule {
   return buildAmortizationSchedule({
     openingPrincipal: snapshot.outstandingPrincipal,
     monthlyEmi: snapshot.monthlyEmi,
     annualInterestRate: snapshot.annualInterestRate,
-    snapshot,
-    fixedTenureMonths: snapshot.remainingTenureMonths
+    snapshot
   });
 }
 
-function calculateEmiForRemaining(principal: number, monthlyRate: number, months: number): number {
-  if (principal <= 0 || months <= 0) {
-    return 0;
+function resolveMonthlyEmi(
+  options: BuildScheduleOptions,
+  openingBalance: number,
+  monthIndex: number
+): number {
+  if (options.recalculateEmiToTenure === undefined) {
+    return options.monthlyEmi;
   }
 
-  if (monthlyRate <= 0) {
-    return principal / months;
+  const remainingMonths = options.recalculateEmiToTenure - monthIndex;
+
+  if (remainingMonths <= 0) {
+    return openingBalance;
   }
 
-  const factor = Math.pow(1 + monthlyRate, months);
-  return (principal * monthlyRate * factor) / (factor - 1);
+  return calculateEmi(openingBalance, options.annualInterestRate, remainingMonths);
 }
 
 function summarizeSchedule(rows: AmortizationScheduleRow[]): AmortizationSchedule {
   const totalInterest = rows.reduce((sum, row) => sum + row.interest, 0);
-  const totalPrincipal = rows.reduce(
-    (sum, row) => sum + row.principal + row.extraPayment,
-    0
-  );
+  const totalPrincipal = rows.reduce((sum, row) => sum + row.principal + row.extraPayment, 0);
   const totalPayments = rows.reduce((sum, row) => sum + row.emi + row.extraPayment, 0);
   const lastRow = rows.at(-1);
 

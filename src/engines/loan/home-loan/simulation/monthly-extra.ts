@@ -61,14 +61,15 @@ export function simulateMonthlyExtraPayment(
   const r = monthlyInterestRate(request.snapshot.annualInterestRate);
 
   if (request.strategy === "reduce-emi") {
+    // Keep the (derived) tenure fixed; the extra principal lowers the EMI each
+    // month as the balance is re-amortized over the remaining months.
     const simulated = buildAmortizationSchedule({
       openingPrincipal: request.snapshot.outstandingPrincipal,
       monthlyEmi: request.snapshot.monthlyEmi,
       annualInterestRate: request.snapshot.annualInterestRate,
       snapshot: request.snapshot,
       monthlyExtraByMonth,
-      recalculateEmiEachMonth: true,
-      fixedTenureMonths: request.snapshot.remainingTenureMonths
+      recalculateEmiToTenure: baseline.tenureMonths
     });
 
     const firstRow = simulated.rows[startMonthIndex];

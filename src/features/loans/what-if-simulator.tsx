@@ -95,26 +95,15 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
     return simulateLoanPrepayment(loan, amount, activeGoal);
   }, [amount, goal, hasRunSimulation, loan, selectedStrategy]);
 
-  const engineResult = useMemo(() => {
-    if (!hasRunSimulation || !selectedStrategy || !homeLoanInput || !amount) {
-      return null;
-    }
-
-    const activeGoal = selectedStrategy === "compare" ? "reduce-tenure" : goal;
-
-    return homeLoanSimulationEngine.simulate(homeLoanInput, {
-      kind: activeGoal === "reduce-tenure" ? "prepay-reduce-tenure" : "prepay-reduce-emi",
-      prepaymentAmount: amount
-    });
-  }, [amount, goal, hasRunSimulation, homeLoanInput, selectedStrategy]);
+  const engineResult = selectedResult?.engineResult ?? null;
 
   const compareResult = useMemo(() => {
-    if (!hasRunSimulation || !homeLoanInput || !amount) {
+    if (!hasRunSimulation || selectedStrategy !== "compare" || !homeLoanInput || !amount) {
       return null;
     }
 
     return homeLoanSimulationEngine.comparePrepayment(homeLoanInput, amount);
-  }, [amount, hasRunSimulation, homeLoanInput]);
+  }, [amount, hasRunSimulation, homeLoanInput, selectedStrategy]);
 
   function handleExpandedChange(nextValue: boolean) {
     setIsExpanded(nextValue);
