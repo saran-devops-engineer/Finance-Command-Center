@@ -1,7 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { Calculator, CheckCircle2, Sparkles } from "lucide-react";
+import { Calculator, CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpandableCard } from "@/components/ui/expandable-card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
@@ -77,7 +78,7 @@ const simulatorStrategies: Array<{
 
 export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedStrategy, setSelectedStrategy] = useState<SimulatorStrategy | null>(null);
+  const [expandedStrategy, setExpandedStrategy] = useState<SimulatorStrategy | null>(null);
   const [prepaymentAmount, setPrepaymentAmount] = useState("100000");
   const [goal, setGoal] = useState<LoanPrepaymentStrategy>("reduce-tenure");
   const [hasRunSimulation, setHasRunSimulation] = useState(false);
@@ -87,49 +88,66 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
   const amount = toNumber(prepaymentAmount);
   const homeLoanInput = useMemo(() => tryFromLoan(loan), [loan]);
   const selectedResult = useMemo(() => {
-    if (!hasRunSimulation || !selectedStrategy || !amount) {
+    if (!hasRunSimulation || !expandedStrategy || !amount) {
       return null;
     }
 
-    const activeGoal = selectedStrategy === "compare" ? "reduce-tenure" : goal;
+    const activeGoal = expandedStrategy === "compare" ? "reduce-tenure" : goal;
     return simulateLoanPrepayment(loan, amount, activeGoal);
-  }, [amount, goal, hasRunSimulation, loan, selectedStrategy]);
+  }, [amount, goal, hasRunSimulation, loan, expandedStrategy]);
 
   const engineResult = selectedResult?.engineResult ?? null;
 
   const compareResult = useMemo(() => {
-    if (!hasRunSimulation || selectedStrategy !== "compare" || !homeLoanInput || !amount) {
+    if (!hasRunSimulation || expandedStrategy !== "compare" || !homeLoanInput || !amount) {
       return null;
     }
 
     return homeLoanSimulationEngine.comparePrepayment(homeLoanInput, amount);
-  }, [amount, hasRunSimulation, homeLoanInput, selectedStrategy]);
+  }, [amount, hasRunSimulation, homeLoanInput, expandedStrategy]);
 
-  function handleExpandedChange(nextValue: boolean) {
-    setIsExpanded(nextValue);
-
-    if (!nextValue) {
-      setHasRunSimulation(false);
-      setShowComparison(false);
-      setShowFullCalculation(false);
-    }
-  }
-
-  function handleSelectStrategy(strategy: SimulatorStrategy) {
-    setSelectedStrategy(strategy);
+  function resetRunState() {
     setHasRunSimulation(false);
     setShowComparison(false);
     setShowFullCalculation(false);
   }
 
-  function handleRunSimulation() {
-    setHasRunSimulation(true);
-    setShowComparison(selectedStrategy === "compare");
-    setShowFullCalculation(false);
+  function handleExpandedChange(nextValue: boolean) {
+    setIsExpanded(nextValue);
+
+    if (!nextValue) {
+      resetRunState();
+    }
   }
 
-  const canRunSelectedStrategy =
-    selectedStrategy === "one-time" || selectedStrategy === "compare";
+  function handleToggleStrategy(strategy: SimulatorStrategy) {
+    if (expandedStrategy === strategy) {
+      // Collapse the open card. User-entered values are kept in state so the
+      // card reopens exactly as they left it.
+      setExpandedStrategy(null);
+      return;
+    }
+
+    // Opening a different strategy closes the previous one and starts fresh.
+    setExpandedStrategy(strategy);
+    resetRunState();
+  }
+
+  function handleAmountChange(nextValue: string) {
+    setPrepaymentAmount(nextValue);
+    resetRunState();
+  }
+
+  function handleGoalChange(nextGoal: LoanPrepaymentStrategy) {
+    setGoal(nextGoal);
+    setHasRunSimulation(false);
+  }
+
+  function handleRunSimulation() {
+    setHasRunSimulation(true);
+    setShowComparison(expandedStrategy === "compare");
+    setShowFullCalculation(false);
+  }
 
   return (
     <section className="space-y-4">
@@ -151,127 +169,155 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
             </h2>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {simulatorStrategies.map((strategy) => (
-              <button
-                key={strategy.id}
-                type="button"
-                onClick={() => handleSelectStrategy(strategy.id)}
-                className={getStrategyCardClassName(selectedStrategy === strategy.id)}
-                aria-pressed={selectedStrategy === strategy.id}
-              >
-                <span className="flex items-start justify-between gap-3">
-                  <span>
-                    <span className="block font-semibold">{strategy.title}</span>
-                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                      {strategy.description}
-                    </span>
-                  </span>
-                  {selectedStrategy === strategy.id ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  ) : null}
-                </span>
-                {!strategy.isAvailable ? (
-                  <span className="mt-3 inline-flex rounded-full bg-muted px-3 py-1 text-[0.68rem] font-medium text-muted-foreground">
-                    Planned
-                  </span>
-                ) : null}
-              </button>
-            ))}
+          <div className="space-y-3">
+            {simulatorStrategies.map((strategy) => {
+              const isOpen = expandedStrategy === strategy.id;
+
+              return (
+                <StrategyAccordionCard
+                  key={strategy.id}
+                  strategy={strategy}
+                  isOpen={isOpen}
+                  onToggle={() => handleToggleStrategy(strategy.id)}
+                >
+                  {strategy.isAvailable ? (
+                    <>
+                      <label className="block space-y-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                          Amount
+                        </span>
+                        <input
+                          value={prepaymentAmount}
+                          onChange={(event) => handleAmountChange(event.target.value)}
+                          inputMode="numeric"
+                          className={cn(
+                            "h-12 w-full border border-border bg-card/80 px-4 text-base outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35",
+                            radius.input
+                          )}
+                        />
+                      </label>
+
+                      {strategy.id === "one-time" ? (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                            Goal
+                          </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <StrategyGoalButton
+                              label="Reduce Tenure"
+                              description="Same EMI, close sooner"
+                              isSelected={goal === "reduce-tenure"}
+                              onClick={() => handleGoalChange("reduce-tenure")}
+                            />
+                            <StrategyGoalButton
+                              label="Reduce EMI"
+                              description="Lower monthly EMI"
+                              isSelected={goal === "reduce-emi"}
+                              onClick={() => handleGoalChange("reduce-emi")}
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={handleRunSimulation}
+                        disabled={amount <= 0}
+                      >
+                        Run Simulation
+                      </Button>
+
+                      {isOpen && selectedResult ? (
+                        <RecommendationCard
+                          loan={loan}
+                          result={selectedResult}
+                          selectedStrategy={strategy.id}
+                          engineResult={engineResult}
+                          compareResult={compareResult}
+                          showComparison={showComparison}
+                          showFullCalculation={showFullCalculation}
+                          onShowComparison={() => setShowComparison((current) => !current)}
+                          onShowFullCalculation={() =>
+                            setShowFullCalculation((current) => !current)
+                          }
+                        />
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      This strategy needs additional loan details and will be added later. Use
+                      one-time extra payment or compare strategies for now.
+                    </p>
+                  )}
+                </StrategyAccordionCard>
+              );
+            })}
           </div>
         </div>
-
-        {selectedStrategy ? (
-          <div className={cn("space-y-4 bg-white/45", radius.card, card.paddingCompact)}>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                Step 2
-              </p>
-              <h3 className="font-display text-2xl tracking-[-0.04em]">
-                {getSelectedStrategyTitle(selectedStrategy)}
-              </h3>
-            </div>
-
-            {canRunSelectedStrategy ? (
-              <>
-                <label className="block space-y-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                    Amount
-                  </span>
-                  <input
-                    value={prepaymentAmount}
-                    onChange={(event) => {
-                      setPrepaymentAmount(event.target.value);
-                      setHasRunSimulation(false);
-                      setShowComparison(false);
-                      setShowFullCalculation(false);
-                    }}
-                    inputMode="numeric"
-                    className={cn("h-12 w-full border border-border bg-card/80 px-4 text-base outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35", radius.input)}
-                  />
-                </label>
-
-                {selectedStrategy === "one-time" ? (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                      Goal
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <StrategyGoalButton
-                        label="Reduce Tenure"
-                        description="Same EMI, close sooner"
-                        isSelected={goal === "reduce-tenure"}
-                        onClick={() => {
-                          setGoal("reduce-tenure");
-                          setHasRunSimulation(false);
-                        }}
-                      />
-                      <StrategyGoalButton
-                        label="Reduce EMI"
-                        description="Lower monthly EMI"
-                        isSelected={goal === "reduce-emi"}
-                        onClick={() => {
-                          setGoal("reduce-emi");
-                          setHasRunSimulation(false);
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
-                <Button
-                  type="button"
-                  className="w-full"
-                  onClick={handleRunSimulation}
-                  disabled={amount <= 0}
-                >
-                  Run Simulation
-                </Button>
-              </>
-            ) : (
-              <p className="text-sm leading-6 text-muted-foreground">
-                This strategy needs additional loan details and will be added later. Use
-                one-time extra payment or compare strategies for now.
-              </p>
-            )}
-          </div>
-        ) : null}
-
-        {selectedResult ? (
-          <RecommendationCard
-            loan={loan}
-            result={selectedResult}
-            selectedStrategy={selectedStrategy}
-            engineResult={engineResult}
-            compareResult={compareResult}
-            showComparison={showComparison}
-            showFullCalculation={showFullCalculation}
-            onShowComparison={() => setShowComparison((current) => !current)}
-            onShowFullCalculation={() => setShowFullCalculation((current) => !current)}
-          />
-        ) : null}
       </ExpandableCard>
     </section>
+  );
+}
+
+function StrategyAccordionCard({
+  strategy,
+  isOpen,
+  onToggle,
+  children
+}: {
+  strategy: (typeof simulatorStrategies)[number];
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        radius.inner,
+        "overflow-hidden border transition-colors duration-200 motion-reduce:transition-none",
+        isOpen ? "border-primary/45 bg-card shadow-card" : "border-border bg-card/70"
+      )}
+    >
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 p-4 text-left outline-none transition hover:bg-card focus-visible:ring-2 focus-visible:ring-primary/35 motion-reduce:transition-none"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">{strategy.title}</span>
+            {!strategy.isAvailable ? (
+              <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-[0.62rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Planned
+              </span>
+            ) : null}
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+            {strategy.description}
+          </span>
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-out motion-reduce:transition-none",
+            isOpen && "rotate-180 text-primary"
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="space-y-4 border-t border-border/60 px-4 pb-4 pt-4">{children}</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -495,10 +541,6 @@ function getStrategyCardClassName(isSelected: boolean) {
       ? "border-primary/45 bg-card shadow-card"
       : "border-border bg-card/70 hover:bg-card"
   );
-}
-
-function getSelectedStrategyTitle(strategy: SimulatorStrategy) {
-  return simulatorStrategies.find((item) => item.id === strategy)?.title ?? "Strategy";
 }
 
 function getRecommendedStrategy(
