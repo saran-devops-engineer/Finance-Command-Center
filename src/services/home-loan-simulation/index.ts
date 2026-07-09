@@ -13,6 +13,10 @@ export {
   simulateAnnualExtra,
   type AnnualExtraSimulationView
 } from "@/services/home-loan-simulation/presenters/annual-extra";
+export {
+  simulateTargetClosure,
+  type TargetClosureSimulationView
+} from "@/services/home-loan-simulation/presenters/target-closure";
 export type {
   AmortizationMonth,
   AmortizationSchedule,

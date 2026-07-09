@@ -13,12 +13,14 @@ import {
   simulateAnnualExtra,
   simulateLoanPrepayment,
   simulateMonthlyExtra,
+  simulateTargetClosure,
   tryFromLoan
 } from "@/services/home-loan-simulation";
 import type { LoanPrepaymentStrategy } from "@/services/home-loan-simulation/presenters/loan-prepayment";
 import type {
   AnnualExtraSimulationView,
-  MonthlyExtraSimulationView
+  MonthlyExtraSimulationView,
+  TargetClosureSimulationView
 } from "@/services/home-loan-simulation";
 import type {
   HomeLoanCompareResult,
@@ -71,9 +73,9 @@ const simulatorStrategies: Array<{
   },
   {
     id: "target-closure",
-    title: "Target Loan Closure",
-    description: "Work backward from a closure goal.",
-    isAvailable: false
+    title: "Target Closure Date",
+    description: "Find the monthly extra payment required to become debt-free by your desired date.",
+    isAvailable: true
   },
   {
     id: "compare",
@@ -90,6 +92,7 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
   const [monthlyExtraAmount, setMonthlyExtraAmount] = useState("5000");
   const [annualExtraAmount, setAnnualExtraAmount] = useState("100000");
   const [annualPaymentMonth, setAnnualPaymentMonth] = useState(12);
+  const [targetClosureDate, setTargetClosureDate] = useState("");
   const [goal, setGoal] = useState<LoanPrepaymentStrategy>("reduce-tenure");
   const [hasRunSimulation, setHasRunSimulation] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
@@ -116,6 +119,14 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
 
     return simulateAnnualExtra(loan, annualExtraValue, annualPaymentMonth);
   }, [annualExtraValue, annualPaymentMonth, expandedStrategy, loan]);
+
+  const targetClosureView = useMemo(() => {
+    if (expandedStrategy !== "target-closure" || !targetClosureDate) {
+      return null;
+    }
+
+    return simulateTargetClosure(loan, targetClosureDate, true);
+  }, [expandedStrategy, loan, targetClosureDate]);
   const selectedResult = useMemo(() => {
     if (!hasRunSimulation || !expandedStrategy || !amount) {
       return null;
@@ -195,6 +206,11 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
     resetRunState();
   }
 
+  function handleTargetDateChange(nextValue: string) {
+    setTargetClosureDate(nextValue);
+    resetRunState();
+  }
+
   return (
     <section className="space-y-4">
       <ExpandableCard
@@ -251,6 +267,16 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
                       showSchedule={showSchedule}
                       onAmountChange={handleAnnualExtraChange}
                       onMonthChange={handleAnnualMonthChange}
+                      onRun={handleRunSimulation}
+                      onToggleSchedule={() => setShowSchedule((current) => !current)}
+                    />
+                  ) : strategy.id === "target-closure" ? (
+                    <TargetClosureStrategyBody
+                      targetDate={targetClosureDate}
+                      view={targetClosureView}
+                      hasRun={isOpen && hasRunSimulation}
+                      showSchedule={showSchedule}
+                      onDateChange={handleTargetDateChange}
                       onRun={handleRunSimulation}
                       onToggleSchedule={() => setShowSchedule((current) => !current)}
                     />
@@ -778,6 +804,237 @@ function AnnualExtraResultPanel({
       {showSchedule ? <ScheduleDebugTable rows={view.scheduleRows} withAppliedFlag /> : null}
     </div>
   );
+}
+
+function TargetClosureStrategyBody({
+  targetDate,
+  view,
+  hasRun,
+  showSchedule,
+  onDateChange,
+  onRun,
+  onToggleSchedule
+}: {
+  targetDate: string;
+  view: TargetClosureSimulationView | null;
+  hasRun: boolean;
+  showSchedule: boolean;
+  onDateChange: (value: string) => void;
+  onRun: () => void;
+  onToggleSchedule: () => void;
+}) {
+  const canRun = Boolean(targetDate) && view?.valid === true;
+
+  return (
+    <>
+      <label className="block space-y-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          Target Closure Date
+        </span>
+        <input
+          type="date"
+          value={targetDate}
+          onChange={(event) => onDateChange(event.target.value)}
+          className={cn(
+            "h-12 w-full border border-border bg-card/80 px-4 text-base outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35",
+            radius.input
+          )}
+        />
+      </label>
+
+      {view && !view.valid && view.errors.length > 0 ? (
+        <p className="text-xs leading-5 text-rose-600">{view.errors[0]}</p>
+      ) : null}
+
+      <Button type="button" className="w-full" onClick={onRun} disabled={!canRun}>
+        Run Calculation
+      </Button>
+
+      {hasRun && view && view.valid ? (
+        <TargetClosureResultPanel
+          view={view}
+          showSchedule={showSchedule}
+          onToggleSchedule={onToggleSchedule}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function TargetClosureResultPanel({
+  view,
+  showSchedule,
+  onToggleSchedule
+}: {
+  view: TargetClosureSimulationView;
+  showSchedule: boolean;
+  onToggleSchedule: () => void;
+}) {
+  const percent =
+    view.currentEmi > 0 ? Math.round((view.requiredMonthlyExtra / view.currentEmi) * 100) : 0;
+  const status = getTargetClosureStatus(percent, view.achievable);
+
+  return (
+    <div className={cn("space-y-4 bg-primary text-primary-foreground", radius.card, card.paddingCompact)}>
+      <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">🎯 Goal</p>
+        <div className="space-y-1">
+          <p className="text-sm opacity-75">Close loan by</p>
+          <p className="font-display text-2xl leading-tight tracking-[-0.04em]">
+            {formatFullDate(view.targetDate)}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm opacity-75">Required Monthly Extra</p>
+          <p className="font-display text-3xl leading-tight tracking-[-0.04em]">
+            {formatInr(view.requiredMonthlyExtra)}
+          </p>
+        </div>
+        <div className={cn("space-y-1 bg-white/10", radius.inner, "p-4")}>
+          <p className="text-sm font-semibold">
+            {status.emoji} {status.label}
+          </p>
+          <p className="text-xs leading-5 opacity-75">{status.message(percent)}</p>
+        </div>
+      </div>
+
+      <MetricCardGrid>
+        <MetricCard label="Int. saved" value={formatInr(view.interestSaved)} variant="dark" />
+        <MetricCard label="Closes" value={`${formatMonths(view.monthsSaved)} earlier`} variant="dark" />
+      </MetricCardGrid>
+
+      <div className={cn("space-y-3 bg-white/10 text-sm", radius.inner, card.paddingCompact)}>
+        <div className="flex items-center justify-between gap-3 text-[0.68rem] uppercase tracking-[0.16em] opacity-60">
+          <span>Metric</span>
+          <span>Current → Target plan</span>
+        </div>
+        <ComparisonRow
+          label="Closure date"
+          current={formatDisplayDate(view.currentClosureDate ?? "")}
+          next={formatDisplayDate(view.expectedClosureDate ?? "")}
+        />
+        <ComparisonRow
+          label="Remaining months"
+          current={`${view.originalMonths}`}
+          next={`${view.newMonths}`}
+        />
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs opacity-65">Target date</span>
+          <span className="text-right text-sm font-medium">{formatDisplayDate(view.targetDate)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs opacity-65">Required monthly extra</span>
+          <span className="text-right text-sm font-medium">
+            {formatInr(view.requiredMonthlyExtra)}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <SummaryStat label="Months saved" value={`${view.monthsSaved}`} />
+        <SummaryStat label="Total extra paid" value={formatInr(view.totalExtraPaid)} />
+      </div>
+
+      <Button type="button" variant="secondary" className="w-full" onClick={onToggleSchedule}>
+        {showSchedule ? "Hide Search Detail" : "Debug: Search detail"}
+      </Button>
+
+      {showSchedule ? <TargetSearchDebug view={view} /> : null}
+    </div>
+  );
+}
+
+function getTargetClosureStatus(percent: number, achievable: boolean) {
+  if (!achievable) {
+    return {
+      emoji: "🔴",
+      label: "Aggressive Goal",
+      message: () =>
+        "Even a very high monthly extra cannot reach this date. Consider selecting a later target date."
+    };
+  }
+
+  if (percent <= 25) {
+    return {
+      emoji: "🟢",
+      label: "Highly Achievable",
+      message: (value: number) =>
+        `You need to increase your monthly payment by only ${value}% over your current EMI.`
+    };
+  }
+
+  if (percent <= 75) {
+    return {
+      emoji: "🟢",
+      label: "Achievable",
+      message: (value: number) =>
+        `You need to increase your monthly payment by ${value}% over your current EMI.`
+    };
+  }
+
+  if (percent <= 150) {
+    return {
+      emoji: "🟠",
+      label: "Challenging Goal",
+      message: (value: number) => `This is ${value}% of your current EMI.`
+    };
+  }
+
+  return {
+    emoji: "🔴",
+    label: "Aggressive Goal",
+    message: (value: number) =>
+      `This is ${value}% of your current EMI. Consider selecting a later target date.`
+  };
+}
+
+function TargetSearchDebug({ view }: { view: TargetClosureSimulationView }) {
+  return (
+    <div className={cn("space-y-3 bg-white/10 text-sm", radius.inner, "p-3")}>
+      <div className="grid grid-cols-2 gap-2">
+        <SummaryStat label="Target months" value={`${view.targetMonths}`} />
+        <SummaryStat label="Search iterations" value={`${view.searchIterations}`} />
+        <SummaryStat label="Final monthly extra" value={formatInr(view.requiredMonthlyExtra)} />
+        <SummaryStat label="Achievable" value={view.achievable ? "Yes" : "No"} />
+      </div>
+      <div className="max-h-72 overflow-auto">
+        <table className="w-full border-collapse text-[0.68rem]">
+          <thead className="sticky top-0 bg-primary text-left">
+            <tr className="opacity-80">
+              <th className="px-1 py-1">Iter</th>
+              <th className="px-1 py-1 text-right">Extra tested</th>
+              <th className="px-1 py-1 text-right">Closure months</th>
+              <th className="px-1 py-1 text-right">Closure date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {view.searchSteps.map((step) => (
+              <tr key={step.iteration} className="border-t border-white/10">
+                <td className="px-1 py-1">{step.iteration}</td>
+                <td className="px-1 py-1 text-right">{formatInr(step.monthlyExtraTested)}</td>
+                <td className="px-1 py-1 text-right">{step.simulatedClosureMonths}</td>
+                <td className="px-1 py-1 text-right">
+                  {formatDisplayDate(step.simulatedClosureDate ?? "")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function formatFullDate(value: string) {
+  if (!value) {
+    return "Not available";
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(new Date(`${value.slice(0, 10)}T00:00:00`));
 }
 
 function formatInrCompact(value: number) {

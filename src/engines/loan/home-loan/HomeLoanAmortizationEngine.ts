@@ -3,12 +3,14 @@ import type {
   AnnualExtraSimulationRequest,
   HomeLoanSimulationSnapshot,
   LumpSumSimulationRequest,
-  MonthlyExtraSimulationRequest
+  MonthlyExtraSimulationRequest,
+  TargetClosureSimulationRequest
 } from "@/engines/loan/home-loan/core/types";
 import { validateSnapshot } from "@/engines/loan/home-loan/core/validation";
 import { simulateAnnualExtraPayment } from "@/engines/loan/home-loan/simulation/annual-extra";
 import { simulateLumpSumPayment } from "@/engines/loan/home-loan/simulation/lump-sum";
 import { simulateMonthlyExtraPayment } from "@/engines/loan/home-loan/simulation/monthly-extra";
+import { simulateTargetClosure } from "@/engines/loan/home-loan/simulation/target-closure";
 import {
   comparePrepaymentStrategies,
   type StrategyRecommendationContext
@@ -39,6 +41,10 @@ export class HomeLoanAmortizationEngine {
 
   simulateAnnualExtra(request: AnnualExtraSimulationRequest) {
     return simulateAnnualExtraPayment(request);
+  }
+
+  simulateTargetClosure(request: TargetClosureSimulationRequest) {
+    return simulateTargetClosure(request);
   }
 
   comparePrepaymentStrategies(

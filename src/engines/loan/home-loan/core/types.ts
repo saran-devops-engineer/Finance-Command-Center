@@ -149,6 +149,39 @@ export interface AnnualExtraSimulationResult {
   debug?: DebugReport;
 }
 
+export interface TargetClosureSimulationRequest {
+  snapshot: HomeLoanSimulationSnapshot;
+  /** Desired maximum remaining tenure (payments made on or before target date). */
+  targetMonths: number;
+  debug?: boolean;
+}
+
+export interface TargetClosureSearchStep {
+  iteration: number;
+  monthlyExtraTested: number;
+  simulatedClosureMonths: number;
+  simulatedClosureDate: string | null;
+}
+
+export interface TargetClosureSimulationResult {
+  kind: "target-closure";
+  strategy: "reduce-tenure";
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  targetMonths: number;
+  achievable: boolean;
+  requiredMonthlyExtra: number;
+  searchIterations: number;
+  newEmi: number;
+  interestSaved: number;
+  monthsSaved: number;
+  totalExtraPaid: number;
+  closureDate: string | null;
+  comparison: ScheduleComparison;
+  searchSteps?: TargetClosureSearchStep[];
+}
+
 export interface DebugFormulaValues {
   monthlyInterestRate: number;
   emi?: number;
