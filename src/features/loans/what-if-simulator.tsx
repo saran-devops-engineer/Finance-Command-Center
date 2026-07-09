@@ -66,21 +66,9 @@ const simulatorStrategies: Array<{
     isAvailable: true
   },
   {
-    id: "increase-emi",
-    title: "Increase EMI",
-    description: "See the impact of paying more every month.",
-    isAvailable: false
-  },
-  {
     id: "target-closure",
     title: "Target Closure Date",
     description: "Find the monthly extra payment required to become debt-free by your desired date.",
-    isAvailable: true
-  },
-  {
-    id: "compare",
-    title: "Compare Strategies",
-    description: "Compare tenure reduction with EMI reduction.",
     isAvailable: true
   }
 ];
