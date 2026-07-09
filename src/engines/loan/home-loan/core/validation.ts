@@ -85,3 +85,26 @@ export function validateMonthlyExtra(
     warnings
   };
 }
+
+export function validateAnnualExtra(
+  snapshot: HomeLoanSimulationSnapshot,
+  annualExtraAmount: number
+): ValidationResult {
+  const base = validateSnapshot(snapshot);
+  const errors = [...base.errors];
+  const warnings = [...base.warnings];
+
+  if (annualExtraAmount <= 0) {
+    errors.push("Annual extra payment must be greater than zero.");
+  }
+
+  if (annualExtraAmount >= snapshot.outstandingPrincipal) {
+    errors.push("Annual extra payment must be less than the outstanding principal.");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings
+  };
+}

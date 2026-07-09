@@ -1,10 +1,12 @@
 import { buildBaselineSchedule } from "@/engines/loan/home-loan/core/schedule-builder";
 import type {
+  AnnualExtraSimulationRequest,
   HomeLoanSimulationSnapshot,
   LumpSumSimulationRequest,
   MonthlyExtraSimulationRequest
 } from "@/engines/loan/home-loan/core/types";
 import { validateSnapshot } from "@/engines/loan/home-loan/core/validation";
+import { simulateAnnualExtraPayment } from "@/engines/loan/home-loan/simulation/annual-extra";
 import { simulateLumpSumPayment } from "@/engines/loan/home-loan/simulation/lump-sum";
 import { simulateMonthlyExtraPayment } from "@/engines/loan/home-loan/simulation/monthly-extra";
 import {
@@ -33,6 +35,10 @@ export class HomeLoanAmortizationEngine {
 
   simulateMonthlyExtra(request: MonthlyExtraSimulationRequest) {
     return simulateMonthlyExtraPayment(request);
+  }
+
+  simulateAnnualExtra(request: AnnualExtraSimulationRequest) {
+    return simulateAnnualExtraPayment(request);
   }
 
   comparePrepaymentStrategies(

@@ -122,6 +122,33 @@ export interface MonthlyExtraSimulationResult {
   debug?: DebugReport;
 }
 
+export interface AnnualExtraSimulationRequest {
+  snapshot: HomeLoanSimulationSnapshot;
+  annualExtraAmount: number;
+  /** Calendar month the annual payment is made (1 = January … 12 = December). */
+  paymentMonth: number;
+  debug?: boolean;
+}
+
+export interface AnnualExtraSimulationResult {
+  kind: "annual-extra";
+  strategy: "reduce-tenure";
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  annualExtraAmount: number;
+  paymentMonth: number;
+  annualPaymentsMade: number;
+  totalExtraPaid: number;
+  newEmi: number;
+  newTenureMonths: number;
+  monthsSaved: number;
+  interestSaved: number;
+  closureDate: string | null;
+  comparison: ScheduleComparison;
+  debug?: DebugReport;
+}
+
 export interface DebugFormulaValues {
   monthlyInterestRate: number;
   emi?: number;

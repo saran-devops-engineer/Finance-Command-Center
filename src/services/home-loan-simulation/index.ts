@@ -9,6 +9,10 @@ export {
   simulateMonthlyExtra,
   type MonthlyExtraSimulationView
 } from "@/services/home-loan-simulation/presenters/monthly-extra";
+export {
+  simulateAnnualExtra,
+  type AnnualExtraSimulationView
+} from "@/services/home-loan-simulation/presenters/annual-extra";
 export type {
   AmortizationMonth,
   AmortizationSchedule,

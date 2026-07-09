@@ -10,12 +10,16 @@ import { cn, formatInr } from "@/lib/utils";
 import { card, radius } from "@/lib/design-tokens";
 import {
   homeLoanSimulationEngine,
+  simulateAnnualExtra,
   simulateLoanPrepayment,
   simulateMonthlyExtra,
   tryFromLoan
 } from "@/services/home-loan-simulation";
 import type { LoanPrepaymentStrategy } from "@/services/home-loan-simulation/presenters/loan-prepayment";
-import type { MonthlyExtraSimulationView } from "@/services/home-loan-simulation";
+import type {
+  AnnualExtraSimulationView,
+  MonthlyExtraSimulationView
+} from "@/services/home-loan-simulation";
 import type {
   HomeLoanCompareResult,
   HomeLoanSimulationResult
@@ -55,9 +59,9 @@ const simulatorStrategies: Array<{
   },
   {
     id: "annual-prepayment",
-    title: "Annual Prepayment",
-    description: "Plan a yearly lump-sum payment.",
-    isAvailable: false
+    title: "Annual Extra Payment",
+    description: "Make one extra principal payment every year.",
+    isAvailable: true
   },
   {
     id: "increase-emi",
@@ -84,6 +88,8 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
   const [expandedStrategy, setExpandedStrategy] = useState<SimulatorStrategy | null>(null);
   const [prepaymentAmount, setPrepaymentAmount] = useState("100000");
   const [monthlyExtraAmount, setMonthlyExtraAmount] = useState("5000");
+  const [annualExtraAmount, setAnnualExtraAmount] = useState("100000");
+  const [annualPaymentMonth, setAnnualPaymentMonth] = useState(12);
   const [goal, setGoal] = useState<LoanPrepaymentStrategy>("reduce-tenure");
   const [hasRunSimulation, setHasRunSimulation] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
@@ -92,6 +98,7 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
 
   const amount = toNumber(prepaymentAmount);
   const monthlyExtraValue = toNumber(monthlyExtraAmount);
+  const annualExtraValue = toNumber(annualExtraAmount);
   const homeLoanInput = useMemo(() => tryFromLoan(loan), [loan]);
 
   const monthlyExtraView = useMemo(() => {
@@ -101,6 +108,14 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
 
     return simulateMonthlyExtra(loan, monthlyExtraValue);
   }, [expandedStrategy, loan, monthlyExtraValue]);
+
+  const annualExtraView = useMemo(() => {
+    if (expandedStrategy !== "annual-prepayment" || annualExtraValue <= 0) {
+      return null;
+    }
+
+    return simulateAnnualExtra(loan, annualExtraValue, annualPaymentMonth);
+  }, [annualExtraValue, annualPaymentMonth, expandedStrategy, loan]);
   const selectedResult = useMemo(() => {
     if (!hasRunSimulation || !expandedStrategy || !amount) {
       return null;
@@ -170,6 +185,16 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
     resetRunState();
   }
 
+  function handleAnnualExtraChange(nextValue: string) {
+    setAnnualExtraAmount(nextValue);
+    resetRunState();
+  }
+
+  function handleAnnualMonthChange(nextMonth: number) {
+    setAnnualPaymentMonth(nextMonth);
+    resetRunState();
+  }
+
   return (
     <section className="space-y-4">
       <ExpandableCard
@@ -214,6 +239,18 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
                       hasRun={isOpen && hasRunSimulation}
                       showSchedule={showSchedule}
                       onAmountChange={handleMonthlyExtraChange}
+                      onRun={handleRunSimulation}
+                      onToggleSchedule={() => setShowSchedule((current) => !current)}
+                    />
+                  ) : strategy.id === "annual-prepayment" ? (
+                    <AnnualExtraStrategyBody
+                      amount={annualExtraAmount}
+                      paymentMonth={annualPaymentMonth}
+                      view={annualExtraView}
+                      hasRun={isOpen && hasRunSimulation}
+                      showSchedule={showSchedule}
+                      onAmountChange={handleAnnualExtraChange}
+                      onMonthChange={handleAnnualMonthChange}
                       onRun={handleRunSimulation}
                       onToggleSchedule={() => setShowSchedule((current) => !current)}
                     />
@@ -528,7 +565,13 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ScheduleDebugTable({ rows }: { rows: AmortizationScheduleRow[] }) {
+function ScheduleDebugTable({
+  rows,
+  withAppliedFlag = false
+}: {
+  rows: AmortizationScheduleRow[];
+  withAppliedFlag?: boolean;
+}) {
   return (
     <div className={cn("bg-white/10", radius.inner, "p-3")}>
       <div className="max-h-72 overflow-auto">
@@ -539,6 +582,7 @@ function ScheduleDebugTable({ rows }: { rows: AmortizationScheduleRow[] }) {
               <th className="px-1 py-1 text-right">Opening</th>
               <th className="px-1 py-1 text-right">Interest</th>
               <th className="px-1 py-1 text-right">Principal</th>
+              {withAppliedFlag ? <th className="px-1 py-1 text-center">Applied</th> : null}
               <th className="px-1 py-1 text-right">Extra</th>
               <th className="px-1 py-1 text-right">Closing</th>
             </tr>
@@ -550,6 +594,9 @@ function ScheduleDebugTable({ rows }: { rows: AmortizationScheduleRow[] }) {
                 <td className="px-1 py-1 text-right">{formatInr(row.openingBalance)}</td>
                 <td className="px-1 py-1 text-right">{formatInr(row.interest)}</td>
                 <td className="px-1 py-1 text-right">{formatInr(row.principal)}</td>
+                {withAppliedFlag ? (
+                  <td className="px-1 py-1 text-center">{row.extraPayment > 0 ? "Yes" : "No"}</td>
+                ) : null}
                 <td className="px-1 py-1 text-right">{formatInr(row.extraPayment)}</td>
                 <td className="px-1 py-1 text-right">{formatInr(row.closingBalance)}</td>
               </tr>
@@ -557,6 +604,178 @@ function ScheduleDebugTable({ rows }: { rows: AmortizationScheduleRow[] }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+const MONTH_OPTIONS = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" }
+];
+
+function monthLabel(month: number) {
+  return MONTH_OPTIONS.find((option) => option.value === month)?.label ?? "December";
+}
+
+function AnnualExtraStrategyBody({
+  amount,
+  paymentMonth,
+  view,
+  hasRun,
+  showSchedule,
+  onAmountChange,
+  onMonthChange,
+  onRun,
+  onToggleSchedule
+}: {
+  amount: string;
+  paymentMonth: number;
+  view: AnnualExtraSimulationView | null;
+  hasRun: boolean;
+  showSchedule: boolean;
+  onAmountChange: (value: string) => void;
+  onMonthChange: (month: number) => void;
+  onRun: () => void;
+  onToggleSchedule: () => void;
+}) {
+  const amountValue = toNumber(amount);
+  const canRun = amountValue > 0 && view?.valid === true;
+
+  return (
+    <>
+      <label className="block space-y-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          Annual Extra Amount
+        </span>
+        <input
+          value={amount}
+          onChange={(event) => onAmountChange(event.target.value)}
+          inputMode="numeric"
+          placeholder="e.g. 100000"
+          className={cn(
+            "h-12 w-full border border-border bg-card/80 px-4 text-base outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35",
+            radius.input
+          )}
+        />
+      </label>
+
+      <label className="block space-y-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          Payment Month
+        </span>
+        <select
+          value={paymentMonth}
+          onChange={(event) => onMonthChange(Number(event.target.value))}
+          className={cn(
+            "h-12 w-full border border-border bg-card/80 px-4 text-base outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35",
+            radius.input
+          )}
+        >
+          {MONTH_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {view && !view.valid && view.errors.length > 0 ? (
+        <p className="text-xs leading-5 text-rose-600">{view.errors[0]}</p>
+      ) : null}
+
+      <Button type="button" className="w-full" onClick={onRun} disabled={!canRun}>
+        Run Simulation
+      </Button>
+
+      {hasRun && view && view.valid ? (
+        <AnnualExtraResultPanel
+          view={view}
+          showSchedule={showSchedule}
+          onToggleSchedule={onToggleSchedule}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function AnnualExtraResultPanel({
+  view,
+  showSchedule,
+  onToggleSchedule
+}: {
+  view: AnnualExtraSimulationView;
+  showSchedule: boolean;
+  onToggleSchedule: () => void;
+}) {
+  return (
+    <div className={cn("space-y-4 bg-primary text-primary-foreground", radius.card, card.paddingCompact)}>
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+          Annual Extra Payment
+        </p>
+        <h3 className="font-display text-3xl leading-tight tracking-[-0.04em]">
+          Close {formatMonths(view.monthsSaved)} earlier
+        </h3>
+        <p className="text-sm leading-6 opacity-75">
+          Paying {formatInr(view.annualExtraAmount)} every {monthLabel(view.paymentMonth)} clears
+          your loan sooner and reduces total interest.
+        </p>
+      </div>
+
+      <MetricCardGrid>
+        <MetricCard label="Int. saved" value={formatInr(view.interestSaved)} variant="dark" />
+        <MetricCard label="Closes" value={`${formatMonths(view.monthsSaved)} earlier`} variant="dark" />
+      </MetricCardGrid>
+
+      <div className={cn("space-y-3 bg-white/10 text-sm", radius.inner, card.paddingCompact)}>
+        <div className="flex items-center justify-between gap-3 text-[0.68rem] uppercase tracking-[0.16em] opacity-60">
+          <span>Metric</span>
+          <span>Original → Annual extra</span>
+        </div>
+        <ComparisonRow
+          label="Closure date"
+          current={formatDisplayDate(view.originalClosureDate ?? "")}
+          next={formatDisplayDate(view.newClosureDate ?? "")}
+        />
+        <ComparisonRow
+          label="Total interest"
+          current={formatInr(view.originalTotalInterest)}
+          next={formatInr(view.simulatedTotalInterest)}
+        />
+        <ComparisonRow
+          label="Total payments"
+          current={formatInr(view.originalTotalPayments)}
+          next={formatInr(view.totalPaid)}
+        />
+        <ComparisonRow
+          label="Remaining months"
+          current={`${view.originalMonths}`}
+          next={`${view.newMonths}`}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <SummaryStat label="Months saved" value={`${view.monthsSaved}`} />
+        <SummaryStat label="Interest saved" value={formatInr(view.interestSaved)} />
+        <SummaryStat label="Annual payments made" value={`${view.annualPaymentsMade}`} />
+        <SummaryStat label="Outstanding reduction" value={formatInr(view.outstandingReduction)} />
+      </div>
+
+      <Button type="button" variant="secondary" className="w-full" onClick={onToggleSchedule}>
+        {showSchedule ? "Hide Schedule" : "Debug: Month-by-month"}
+      </Button>
+
+      {showSchedule ? <ScheduleDebugTable rows={view.scheduleRows} withAppliedFlag /> : null}
     </div>
   );
 }
