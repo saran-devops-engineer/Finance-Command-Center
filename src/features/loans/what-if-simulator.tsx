@@ -11,13 +11,16 @@ import { card, radius } from "@/lib/design-tokens";
 import {
   homeLoanSimulationEngine,
   simulateLoanPrepayment,
+  simulateMonthlyExtra,
   tryFromLoan
 } from "@/services/home-loan-simulation";
 import type { LoanPrepaymentStrategy } from "@/services/home-loan-simulation/presenters/loan-prepayment";
+import type { MonthlyExtraSimulationView } from "@/services/home-loan-simulation";
 import type {
   HomeLoanCompareResult,
   HomeLoanSimulationResult
 } from "@/services/home-loan-simulation";
+import type { AmortizationScheduleRow } from "@/engines/loan/home-loan/core/types";
 import type { Loan } from "@/shared/domain/finance";
 
 type SimulatorStrategy =
@@ -47,8 +50,8 @@ const simulatorStrategies: Array<{
   {
     id: "monthly-extra",
     title: "Monthly Extra Payment",
-    description: "Explore a recurring monthly add-on.",
-    isAvailable: false
+    description: "Pay an additional amount every month to close your loan earlier.",
+    isAvailable: true
   },
   {
     id: "annual-prepayment",
@@ -80,13 +83,24 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedStrategy, setExpandedStrategy] = useState<SimulatorStrategy | null>(null);
   const [prepaymentAmount, setPrepaymentAmount] = useState("100000");
+  const [monthlyExtraAmount, setMonthlyExtraAmount] = useState("5000");
   const [goal, setGoal] = useState<LoanPrepaymentStrategy>("reduce-tenure");
   const [hasRunSimulation, setHasRunSimulation] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [showFullCalculation, setShowFullCalculation] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   const amount = toNumber(prepaymentAmount);
+  const monthlyExtraValue = toNumber(monthlyExtraAmount);
   const homeLoanInput = useMemo(() => tryFromLoan(loan), [loan]);
+
+  const monthlyExtraView = useMemo(() => {
+    if (expandedStrategy !== "monthly-extra" || monthlyExtraValue <= 0) {
+      return null;
+    }
+
+    return simulateMonthlyExtra(loan, monthlyExtraValue);
+  }, [expandedStrategy, loan, monthlyExtraValue]);
   const selectedResult = useMemo(() => {
     if (!hasRunSimulation || !expandedStrategy || !amount) {
       return null;
@@ -110,6 +124,7 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
     setHasRunSimulation(false);
     setShowComparison(false);
     setShowFullCalculation(false);
+    setShowSchedule(false);
   }
 
   function handleExpandedChange(nextValue: boolean) {
@@ -147,6 +162,12 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
     setHasRunSimulation(true);
     setShowComparison(expandedStrategy === "compare");
     setShowFullCalculation(false);
+    setShowSchedule(false);
+  }
+
+  function handleMonthlyExtraChange(nextValue: string) {
+    setMonthlyExtraAmount(nextValue);
+    resetRunState();
   }
 
   return (
@@ -180,7 +201,23 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
                   isOpen={isOpen}
                   onToggle={() => handleToggleStrategy(strategy.id)}
                 >
-                  {strategy.isAvailable ? (
+                  {!strategy.isAvailable ? (
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      This strategy needs additional loan details and will be added later. Use
+                      one-time extra payment, monthly extra payment, or compare strategies for
+                      now.
+                    </p>
+                  ) : strategy.id === "monthly-extra" ? (
+                    <MonthlyExtraStrategyBody
+                      amount={monthlyExtraAmount}
+                      view={monthlyExtraView}
+                      hasRun={isOpen && hasRunSimulation}
+                      showSchedule={showSchedule}
+                      onAmountChange={handleMonthlyExtraChange}
+                      onRun={handleRunSimulation}
+                      onToggleSchedule={() => setShowSchedule((current) => !current)}
+                    />
+                  ) : (
                     <>
                       <label className="block space-y-2">
                         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -244,11 +281,6 @@ export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
                         />
                       ) : null}
                     </>
-                  ) : (
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      This strategy needs additional loan details and will be added later. Use
-                      one-time extra payment or compare strategies for now.
-                    </p>
                   )}
                 </StrategyAccordionCard>
               );
@@ -319,6 +351,232 @@ function StrategyAccordionCard({
       </div>
     </div>
   );
+}
+
+function MonthlyExtraStrategyBody({
+  amount,
+  view,
+  hasRun,
+  showSchedule,
+  onAmountChange,
+  onRun,
+  onToggleSchedule
+}: {
+  amount: string;
+  view: MonthlyExtraSimulationView | null;
+  hasRun: boolean;
+  showSchedule: boolean;
+  onAmountChange: (value: string) => void;
+  onRun: () => void;
+  onToggleSchedule: () => void;
+}) {
+  const amountValue = toNumber(amount);
+  const canRun = amountValue > 0 && view?.valid === true;
+
+  return (
+    <>
+      <label className="block space-y-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          Monthly Extra Amount
+        </span>
+        <input
+          value={amount}
+          onChange={(event) => onAmountChange(event.target.value)}
+          inputMode="numeric"
+          placeholder="e.g. 5000"
+          className={cn(
+            "h-12 w-full border border-border bg-card/80 px-4 text-base outline-none transition focus-visible:ring-2 focus-visible:ring-primary/35",
+            radius.input
+          )}
+        />
+      </label>
+
+      {view && !view.valid && view.errors.length > 0 ? (
+        <p className="text-xs leading-5 text-rose-600">{view.errors[0]}</p>
+      ) : null}
+
+      {view && view.valid ? (
+        <div className={cn("space-y-2 bg-white/45", radius.inner, "p-4")}>
+          <p className="text-xs font-medium text-muted-foreground">
+            At this rate you will approximately:
+          </p>
+          <ul className="space-y-1.5 text-sm">
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <span>Close your loan {formatMonths(view.monthsSaved)} earlier</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <span>Save approximately {formatInrCompact(view.interestSaved)} in interest</span>
+            </li>
+          </ul>
+        </div>
+      ) : null}
+
+      <Button type="button" className="w-full" onClick={onRun} disabled={!canRun}>
+        Run Simulation
+      </Button>
+
+      {hasRun && view && view.valid ? (
+        <MonthlyExtraResultPanel
+          view={view}
+          showSchedule={showSchedule}
+          onToggleSchedule={onToggleSchedule}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function MonthlyExtraResultPanel({
+  view,
+  showSchedule,
+  onToggleSchedule
+}: {
+  view: MonthlyExtraSimulationView;
+  showSchedule: boolean;
+  onToggleSchedule: () => void;
+}) {
+  return (
+    <div className={cn("space-y-4 bg-primary text-primary-foreground", radius.card, card.paddingCompact)}>
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">
+          Monthly Extra Payment
+        </p>
+        <h3 className="font-display text-3xl leading-tight tracking-[-0.04em]">
+          Close {formatMonths(view.monthsSaved)} earlier
+        </h3>
+        <p className="text-sm leading-6 opacity-75">
+          Paying {formatInr(view.monthlyExtraAmount)} extra every month clears your loan sooner and
+          reduces total interest.
+        </p>
+      </div>
+
+      <MetricCardGrid>
+        <MetricCard label="Int. saved" value={formatInr(view.interestSaved)} variant="dark" />
+        <MetricCard label="Closes" value={`${formatMonths(view.monthsSaved)} earlier`} variant="dark" />
+      </MetricCardGrid>
+
+      <div className={cn("space-y-3 bg-white/10 text-sm", radius.inner, card.paddingCompact)}>
+        <div className="flex items-center justify-between gap-3 text-[0.68rem] uppercase tracking-[0.16em] opacity-60">
+          <span>Metric</span>
+          <span>Current → With extra</span>
+        </div>
+        <ComparisonRow
+          label="Closure date"
+          current={formatDisplayDate(view.originalClosureDate ?? "")}
+          next={formatDisplayDate(view.newClosureDate ?? "")}
+        />
+        <ComparisonRow
+          label="Total interest"
+          current={formatInr(view.originalTotalInterest)}
+          next={formatInr(view.simulatedTotalInterest)}
+        />
+        <ComparisonRow
+          label="Total payments"
+          current={formatInr(view.originalTotalPayments)}
+          next={formatInr(view.totalPaid)}
+        />
+        <ComparisonRow
+          label="Remaining months"
+          current={`${view.originalMonths}`}
+          next={`${view.newMonths}`}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <SummaryStat label="Months saved" value={`${view.monthsSaved}`} />
+        <SummaryStat label="Total extra paid" value={formatInr(view.totalExtraPaid)} />
+      </div>
+
+      <Button type="button" variant="secondary" className="w-full" onClick={onToggleSchedule}>
+        {showSchedule ? "Hide Schedule" : "Debug: Month-by-month"}
+      </Button>
+
+      {showSchedule ? <ScheduleDebugTable rows={view.scheduleRows} /> : null}
+    </div>
+  );
+}
+
+function ComparisonRow({
+  label,
+  current,
+  next
+}: {
+  label: string;
+  current: string;
+  next: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-xs opacity-65">{label}</span>
+      <span className="text-right text-sm">
+        <span className="opacity-55">{current}</span>
+        <span className="px-1 opacity-40">→</span>
+        <span className="font-medium">{next}</span>
+      </span>
+    </div>
+  );
+}
+
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={cn("bg-white/10", radius.inner, "px-4 py-3")}>
+      <p className="text-[0.68rem] uppercase tracking-[0.16em] opacity-60">{label}</p>
+      <p className="mt-1 text-base font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function ScheduleDebugTable({ rows }: { rows: AmortizationScheduleRow[] }) {
+  return (
+    <div className={cn("bg-white/10", radius.inner, "p-3")}>
+      <div className="max-h-72 overflow-auto">
+        <table className="w-full border-collapse text-[0.68rem]">
+          <thead className="sticky top-0 bg-primary text-left">
+            <tr className="opacity-80">
+              <th className="px-1 py-1">#</th>
+              <th className="px-1 py-1 text-right">Opening</th>
+              <th className="px-1 py-1 text-right">Interest</th>
+              <th className="px-1 py-1 text-right">Principal</th>
+              <th className="px-1 py-1 text-right">Extra</th>
+              <th className="px-1 py-1 text-right">Closing</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.monthNumber} className="border-t border-white/10">
+                <td className="px-1 py-1">{row.monthNumber}</td>
+                <td className="px-1 py-1 text-right">{formatInr(row.openingBalance)}</td>
+                <td className="px-1 py-1 text-right">{formatInr(row.interest)}</td>
+                <td className="px-1 py-1 text-right">{formatInr(row.principal)}</td>
+                <td className="px-1 py-1 text-right">{formatInr(row.extraPayment)}</td>
+                <td className="px-1 py-1 text-right">{formatInr(row.closingBalance)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function formatInrCompact(value: number) {
+  const abs = Math.abs(value);
+
+  if (abs >= 1_00_00_000) {
+    return `₹${(value / 1_00_00_000).toFixed(1)} crore`;
+  }
+
+  if (abs >= 1_00_000) {
+    return `₹${(value / 1_00_000).toFixed(1)} lakh`;
+  }
+
+  if (abs >= 1_000) {
+    return `₹${(value / 1_000).toFixed(1)}k`;
+  }
+
+  return formatInr(value);
 }
 
 function StrategyGoalButton({

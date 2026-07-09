@@ -75,8 +75,8 @@ export function validateMonthlyExtra(
     errors.push("Monthly extra payment must be greater than zero.");
   }
 
-  if (monthlyExtraAmount > snapshot.outstandingPrincipal) {
-    warnings.push("Monthly extra payment exceeds outstanding principal. Loan may close quickly.");
+  if (monthlyExtraAmount >= snapshot.outstandingPrincipal) {
+    errors.push("Monthly extra payment must be less than the outstanding principal.");
   }
 
   return {

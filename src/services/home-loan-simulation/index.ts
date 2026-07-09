@@ -5,6 +5,10 @@ export {
   type LoanPrepaymentSimulationView,
   type LoanPrepaymentStrategy
 } from "@/services/home-loan-simulation/presenters/loan-prepayment";
+export {
+  simulateMonthlyExtra,
+  type MonthlyExtraSimulationView
+} from "@/services/home-loan-simulation/presenters/monthly-extra";
 export type {
   AmortizationMonth,
   AmortizationSchedule,
