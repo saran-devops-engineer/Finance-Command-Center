@@ -29,7 +29,7 @@ import {
   getCompletionDateLabel
 } from "@/lib/loan-display";
 import { getPinnedLoanId, setPinnedLoanId } from "@/lib/pinned-loan";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import {
   archiveLoanRecord,
   softDeleteLoanRecord
@@ -56,9 +56,9 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 
   const loadLoan = useCallback(async () => {
     const [profile, localLoan, localPayments] = await Promise.all([
-      indexedDbFinanceRepository.getProfile(),
-      indexedDbFinanceRepository.getLoan(loanId),
-      indexedDbFinanceRepository.listLoanPayments(loanId)
+      financeRepository.getProfile(),
+      financeRepository.getLoan(loanId),
+      financeRepository.listLoanPayments(loanId)
     ]);
 
     if (!profile?.onboardingCompleted) {
@@ -75,7 +75,8 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 
     setLoan(localLoan);
     setPayments(localPayments);
-    setIsPinned(isActiveLoan(localLoan) && getPinnedLoanId() === loanId);
+    const pinnedLoanId = await getPinnedLoanId();
+    setIsPinned(isActiveLoan(localLoan) && pinnedLoanId === loanId);
     setIsLoading(false);
   }, [loanId, router]);
 
@@ -103,7 +104,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
     }
 
     const nextPinned = !isPinned;
-    setPinnedLoanId(nextPinned ? loan.id : null);
+    void setPinnedLoanId(nextPinned ? loan.id : null);
     setIsPinned(nextPinned);
   }
 
@@ -119,7 +120,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
       window.setTimeout(resolve, 220);
     });
 
-    await softDeleteLoanRecord(indexedDbFinanceRepository, loan.id);
+    await softDeleteLoanRecord(financeRepository, loan.id);
     router.replace("/loans");
   }
 
@@ -135,7 +136,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
       window.setTimeout(resolve, 220);
     });
 
-    await archiveLoanRecord(indexedDbFinanceRepository, loan.id, archiveReason);
+    await archiveLoanRecord(financeRepository, loan.id, archiveReason);
     router.replace("/loans?view=archived");
   }
 

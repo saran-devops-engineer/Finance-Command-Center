@@ -1,6 +1,6 @@
 export const FINANCE_DATA_UPDATED_EVENT = "fcc:finance-data-updated";
 
-export type FinanceDataScope = "profile" | "loan" | "money" | "payment";
+export type FinanceDataScope = "profile" | "loan" | "money" | "payment" | "restore";
 
 export function notifyFinanceDataUpdated(scope?: FinanceDataScope) {
   if (typeof window === "undefined") {
@@ -12,6 +12,14 @@ export function notifyFinanceDataUpdated(scope?: FinanceDataScope) {
       detail: { scope }
     })
   );
+}
+
+/**
+ * Phase 4 — broadcast after a backup restore so every subscribed screen
+ * reloads from IndexedDB without a manual refresh.
+ */
+export function notifyFinanceDataRestored() {
+  notifyFinanceDataUpdated("restore");
 }
 
 export function subscribeFinanceDataUpdated(listener: () => void) {

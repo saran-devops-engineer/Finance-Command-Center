@@ -6,6 +6,7 @@ import type {
   UpcomingDue,
   UserProfile
 } from "@/shared/domain/finance";
+import type { UserAppState } from "@/repositories/app-settings";
 import { migrateLegacyHomeLoan } from "@/shared/finance/home-loan-form";
 import { migrateGoldLoan } from "@/shared/finance/gold-loan-form";
 
@@ -33,13 +34,18 @@ interface FinanceCommandCenterDb extends DBSchema {
     value: UpcomingDue;
     indexes: { "by-due-date": string };
   };
+  /** Phase 2 — user/session state (pinned loan, backup timestamps). Not financial ledger data. */
+  appState: {
+    key: string;
+    value: UserAppState;
+  };
 }
 
 let databasePromise: Promise<IDBPDatabase<FinanceCommandCenterDb>> | null = null;
 
 export function getFinanceDatabase() {
   if (!databasePromise) {
-    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 4, {
+    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 5, {
       upgrade: async (database, oldVersion, _newVersion, transaction) => {
         if (!database.objectStoreNames.contains("profile")) {
           database.createObjectStore("profile", { keyPath: "id" });
@@ -67,6 +73,10 @@ export function getFinanceDatabase() {
             keyPath: "id"
           });
           upcomingDues.createIndex("by-due-date", "dueDate");
+        }
+
+        if (!database.objectStoreNames.contains("appState")) {
+          database.createObjectStore("appState", { keyPath: "id" });
         }
 
         if (oldVersion < 3) {

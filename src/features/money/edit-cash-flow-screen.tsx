@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import type { MoneyBreakdown } from "@/shared/domain/finance";
 
 interface CashFlowFormState {
@@ -67,8 +67,8 @@ export function EditCashFlowScreen() {
 
     async function loadMoneyBreakdown() {
       const [profile, moneyBreakdown] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.getMoneyBreakdown()
+        financeRepository.getProfile(),
+        financeRepository.getMoneyBreakdown()
       ]);
 
       if (!isMounted) {
@@ -100,7 +100,7 @@ export function EditCashFlowScreen() {
     }
 
     setIsSaving(true);
-    await indexedDbFinanceRepository.saveMoneyBreakdown(toMoneyBreakdown(form));
+    await financeRepository.saveMoneyBreakdown(toMoneyBreakdown(form));
     notifyFinanceDataUpdated("money");
     router.replace("/");
   }

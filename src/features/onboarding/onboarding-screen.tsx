@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import type { Loan, MoneyBreakdown, UpcomingDue, UserProfile } from "@/shared/domain/finance";
 
 interface OnboardingFormState {
@@ -175,15 +175,15 @@ export function OnboardingScreen() {
       updatedAt: now
     };
 
-    await indexedDbFinanceRepository.saveProfile(profile);
-    await indexedDbFinanceRepository.saveMoneyBreakdown(moneyBreakdown);
+    await financeRepository.saveProfile(profile);
+    await financeRepository.saveMoneyBreakdown(moneyBreakdown);
 
     if (loan) {
-      await indexedDbFinanceRepository.saveLoan(loan);
+      await financeRepository.saveLoan(loan);
     }
 
     if (due) {
-      await indexedDbFinanceRepository.saveUpcomingDue(due);
+      await financeRepository.saveUpcomingDue(due);
     }
 
     router.replace("/");

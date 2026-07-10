@@ -17,7 +17,7 @@ import {
   getOutstandingLabel
 } from "@/lib/loan-display";
 import { card, radius, spacing } from "@/lib/design-tokens";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import { computeMonthlyInterestBurden } from "@/shared/finance/gold-loan-calculations";
 import { isGoldLoan } from "@/shared/finance/gold-loan-form";
 import type { Loan } from "@/shared/domain/finance";
@@ -34,9 +34,9 @@ export function LoansScreen() {
 
   const loadLoans = useCallback(async () => {
     const [profile, localActiveLoans, localArchivedLoans] = await Promise.all([
-      indexedDbFinanceRepository.getProfile(),
-      indexedDbFinanceRepository.listLoans(),
-      indexedDbFinanceRepository.listArchivedLoans()
+      financeRepository.getProfile(),
+      financeRepository.listLoans(),
+      financeRepository.listArchivedLoans()
     ]);
 
     if (!profile?.onboardingCompleted) {

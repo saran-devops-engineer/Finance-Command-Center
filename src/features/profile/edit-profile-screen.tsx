@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import { toNumber } from "@/shared/finance/loan-form";
 import type { UserProfile } from "@/shared/domain/finance";
 
@@ -34,8 +34,8 @@ export function EditProfileScreen() {
 
     async function loadProfile() {
       const [localProfile, moneyBreakdown] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.getMoneyBreakdown()
+        financeRepository.getProfile(),
+        financeRepository.getMoneyBreakdown()
       ]);
 
       if (!isMounted) {
@@ -85,17 +85,17 @@ export function EditProfileScreen() {
 
     setIsSaving(true);
 
-    const moneyBreakdown = await indexedDbFinanceRepository.getMoneyBreakdown();
+    const moneyBreakdown = await financeRepository.getMoneyBreakdown();
 
     if (moneyBreakdown) {
-      await indexedDbFinanceRepository.saveMoneyBreakdown({
+      await financeRepository.saveMoneyBreakdown({
         ...moneyBreakdown,
         monthlyIncome: toNumber(form.monthlyIncome),
         emergencyBuffer: toNumber(form.emergencyBuffer)
       });
     }
 
-    await indexedDbFinanceRepository.saveProfile({
+    await financeRepository.saveProfile({
       ...profile,
       displayName: form.displayName.trim(),
       currency: form.currency,

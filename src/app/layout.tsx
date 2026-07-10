@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { AppBootstrap } from "@/components/app-bootstrap";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
@@ -23,12 +24,19 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Finance"
+    title: "FCC"
   },
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" }
+    ],
     apple: "/apple-touch-icon.svg"
+  },
+  other: {
+    "mobile-web-app-capable": "yes"
   }
 };
 
@@ -48,7 +56,7 @@ export default function RootLayout({
   return (
     <html lang="en-IN">
       <body className={cn(inter.variable, playfair.variable)}>
-        {children}
+        <AppBootstrap>{children}</AppBootstrap>
       </body>
     </html>
   );

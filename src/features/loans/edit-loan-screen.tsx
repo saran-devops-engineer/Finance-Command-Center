@@ -11,7 +11,7 @@ import { HomeLoanFormFields } from "@/features/loans/home-loan-form-fields";
 import { LoanFormFields } from "@/features/loans/loan-form-fields";
 import { spacing } from "@/lib/design-tokens";
 import { isActiveLoan } from "@/lib/loan-status";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import {
   applyHomeLoanAutoCalculations,
   buildHomeLoanFromForm,
@@ -54,8 +54,8 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
 
     async function loadLoan() {
       const [profile, loan] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.getLoan(loanId)
+        financeRepository.getProfile(),
+        financeRepository.getLoan(loanId)
       ]);
 
       if (!isMounted) {
@@ -136,7 +136,7 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
 
       setIsSaving(true);
       const updatedLoan = buildHomeLoanFromForm(homeForm, existingLoan);
-      await saveLoanUpdate(indexedDbFinanceRepository, existingLoan, updatedLoan);
+      await saveLoanUpdate(financeRepository, existingLoan, updatedLoan);
       router.replace(`/loans/${loanId}?saved=1`);
       return;
     }
@@ -151,7 +151,7 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
 
       setIsSaving(true);
       const updatedLoan = buildGoldLoanFromForm(goldForm, existingLoan);
-      await saveLoanUpdate(indexedDbFinanceRepository, existingLoan, updatedLoan);
+      await saveLoanUpdate(financeRepository, existingLoan, updatedLoan);
       router.replace(`/loans/${loanId}?saved=1`);
       return;
     }
@@ -169,7 +169,7 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
 
     setIsSaving(true);
     const updatedLoan = buildLoanFromForm(otherForm, existingLoan);
-    await saveLoanUpdate(indexedDbFinanceRepository, existingLoan, updatedLoan);
+    await saveLoanUpdate(financeRepository, existingLoan, updatedLoan);
     router.replace(`/loans/${loanId}?saved=1`);
   }
 

@@ -11,7 +11,7 @@ import { HomeLoanFormFields } from "@/features/loans/home-loan-form-fields";
 import { LoanFormFields } from "@/features/loans/loan-form-fields";
 import { spacing } from "@/lib/design-tokens";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import {
   applyHomeLoanAutoCalculations,
   buildHomeLoanFromForm,
@@ -62,7 +62,7 @@ export function AddLoanScreen() {
     let isMounted = true;
 
     async function verifyOnboarding() {
-      const profile = await indexedDbFinanceRepository.getProfile();
+      const profile = await financeRepository.getProfile();
 
       if (!isMounted) {
         return;
@@ -123,8 +123,8 @@ export function AddLoanScreen() {
 
       setIsSaving(true);
       const loan = buildHomeLoanFromForm(homeForm);
-      await indexedDbFinanceRepository.saveLoan(loan);
-      await syncLoanCommitments(indexedDbFinanceRepository, null, loan);
+      await financeRepository.saveLoan(loan);
+      await syncLoanCommitments(financeRepository, null, loan);
       notifyFinanceDataUpdated("loan");
       router.replace("/loans");
       return;
@@ -140,8 +140,8 @@ export function AddLoanScreen() {
 
       setIsSaving(true);
       const loan = buildGoldLoanFromForm(goldForm);
-      await indexedDbFinanceRepository.saveLoan(loan);
-      await syncLoanCommitments(indexedDbFinanceRepository, null, loan);
+      await financeRepository.saveLoan(loan);
+      await syncLoanCommitments(financeRepository, null, loan);
       notifyFinanceDataUpdated("loan");
       router.replace("/loans");
       return;
@@ -156,8 +156,8 @@ export function AddLoanScreen() {
 
     setIsSaving(true);
     const loan = buildLoanFromForm(otherForm);
-    await indexedDbFinanceRepository.saveLoan(loan);
-    await syncLoanCommitments(indexedDbFinanceRepository, null, loan);
+    await financeRepository.saveLoan(loan);
+    await syncLoanCommitments(financeRepository, null, loan);
     notifyFinanceDataUpdated("loan");
     router.replace("/loans");
   }

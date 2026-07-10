@@ -10,7 +10,7 @@ import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import type { MoneyBreakdown } from "@/shared/domain/finance";
 import {
   calculateAvailableMoney,
@@ -24,8 +24,8 @@ export default function MoneyPage() {
 
   const loadMoney = useCallback(async () => {
     const [profile, localMoneyBreakdown] = await Promise.all([
-      indexedDbFinanceRepository.getProfile(),
-      indexedDbFinanceRepository.getMoneyBreakdown()
+      financeRepository.getProfile(),
+      financeRepository.getMoneyBreakdown()
     ]);
 
     if (!profile?.onboardingCompleted || !localMoneyBreakdown) {

@@ -1,7 +1,7 @@
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { getPinnedLoanId, setPinnedLoanId } from "@/lib/pinned-loan";
 import { isActiveLoan, normalizeLoan } from "@/lib/loan-status";
-import type { FinanceRepository } from "@/repositories/finance-repository";
+import type { FinanceRepository } from "@/repositories";
 import { buildLoanDue, getLoanMonthlyCommitment } from "@/shared/finance/loan-form";
 import type { Loan } from "@/shared/domain/finance";
 
@@ -61,8 +61,8 @@ export async function softDeleteLoanRecord(
   await repository.deleteUpcomingDue(`due-${loan.id}`);
   await repository.softDeleteLoan(loan.id);
 
-  if (getPinnedLoanId() === loan.id) {
-    setPinnedLoanId(null);
+  if ((await getPinnedLoanId()) === loan.id) {
+    await setPinnedLoanId(null);
   }
 
   notifyFinanceDataUpdated("loan");
@@ -92,8 +92,8 @@ export async function archiveLoanRecord(
   await repository.deleteUpcomingDue(`due-${loan.id}`);
   await repository.archiveLoan(loan.id, archiveReason);
 
-  if (getPinnedLoanId() === loan.id) {
-    setPinnedLoanId(null);
+  if ((await getPinnedLoanId()) === loan.id) {
+    await setPinnedLoanId(null);
   }
 
   notifyFinanceDataUpdated("loan");

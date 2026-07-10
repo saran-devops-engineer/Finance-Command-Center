@@ -11,14 +11,8 @@ import { SaveSuccessBanner } from "@/components/ui/save-success-banner";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { card, radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
-import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
-import {
-  createJsonBackup,
-  inspectJsonBackup,
-  restoreJsonBackup
-} from "@/storage/backup/backup-service";
-import type { BackupPreview } from "@/storage/backup/backup-format";
+import { financeRepository, type BackupPreview } from "@/repositories";
+import { notifyFinanceDataRestored } from "@/lib/finance-data-events";
 import type { UserProfile } from "@/shared/domain/finance";
 
 const preferences = (profile: UserProfile | null) =>
@@ -60,7 +54,10 @@ export default function ProfilePage() {
   }, []);
 
   const loadProfile = useCallback(async () => {
-    const localProfile = await indexedDbFinanceRepository.getProfile();
+    const [localProfile, settings] = await Promise.all([
+      financeRepository.getProfile(),
+      financeRepository.getSettings()
+    ]);
 
     if (!localProfile?.onboardingCompleted) {
       router.replace("/onboarding");
@@ -68,8 +65,8 @@ export default function ProfilePage() {
     }
 
     setProfile(localProfile);
-    setLastBackupAt(localStorage.getItem("fcc:lastBackupAt"));
-    setLastRestoreAt(localStorage.getItem("fcc:lastRestoreAt"));
+    setLastBackupAt(settings.lastBackupAt);
+    setLastRestoreAt(settings.lastRestoreAt);
   }, [router]);
 
   useEffect(() => {
@@ -88,17 +85,15 @@ export default function ProfilePage() {
     setBackupStatus(null);
 
     try {
-      const backup = await createJsonBackup({
-        repository: indexedDbFinanceRepository
-      });
+      const backup = await financeRepository.exportBackup();
       const url = URL.createObjectURL(backup.blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = backup.filename;
       link.click();
       URL.revokeObjectURL(url);
-      localStorage.setItem("fcc:lastBackupAt", backup.backup.createdAt);
-      setLastBackupAt(backup.backup.createdAt);
+      await financeRepository.saveSettings({ lastBackupAt: backup.createdAt });
+      setLastBackupAt(backup.createdAt);
       setBackupStatus("JSON backup created. Store the file somewhere safe.");
     } catch (error) {
       setBackupStatus(getErrorMessage(error));
@@ -116,7 +111,7 @@ export default function ProfilePage() {
     setBackupStatus(null);
 
     try {
-      const preview = await inspectJsonBackup(file);
+      const preview = await financeRepository.inspectBackup(file);
       const shouldRestore = window.confirm(createRestoreSummary(preview));
 
       if (!shouldRestore) {
@@ -124,18 +119,18 @@ export default function ProfilePage() {
         return;
       }
 
-      const restored = await restoreJsonBackup({
-        file,
-        repository: indexedDbFinanceRepository
-      });
+      const restored = await financeRepository.restoreBackup(file);
       const restoredAt = new Date().toISOString();
-      localStorage.setItem("fcc:lastRestoreAt", restoredAt);
+      await financeRepository.saveSettings({ lastRestoreAt: restoredAt });
       setLastRestoreAt(restoredAt);
       setBackupStatus(
         `Restored JSON backup from ${new Date(restored.createdAt).toLocaleDateString("en-IN")}.`
       );
-      notifyFinanceDataUpdated("profile");
-      router.refresh();
+
+      // Phase 4 — refresh every subscribed screen from IndexedDB, then return to dashboard.
+      notifyFinanceDataRestored();
+      await loadProfile();
+      router.replace("/");
     } catch (error) {
       setBackupStatus(getErrorMessage(error));
     } finally {

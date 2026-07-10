@@ -10,7 +10,7 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { radius, spacing } from "@/lib/design-tokens";
 import { formatInr, cn } from "@/lib/utils";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import { applyLoanPayment } from "@/services/loan-payment/apply-payment";
 import type { Loan, LoanPaymentKind } from "@/shared/domain/finance";
 
@@ -49,8 +49,8 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
 
     async function loadLoan() {
       const [profile, localLoan] = await Promise.all([
-        indexedDbFinanceRepository.getProfile(),
-        indexedDbFinanceRepository.getLoan(loanId)
+        financeRepository.getProfile(),
+        financeRepository.getLoan(loanId)
       ]);
 
       if (!isMounted) {
@@ -130,11 +130,11 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
       note: form.note
     });
 
-    await indexedDbFinanceRepository.saveLoan(result.updatedLoan);
-    await indexedDbFinanceRepository.saveLoanPayment(result.payment);
+    await financeRepository.saveLoan(result.updatedLoan);
+    await financeRepository.saveLoanPayment(result.payment);
 
     if (form.kind === "emi") {
-      await indexedDbFinanceRepository.deleteUpcomingDue(`due-${loan.id}`);
+      await financeRepository.deleteUpcomingDue(`due-${loan.id}`);
     }
 
     notifyFinanceDataUpdated("payment");

@@ -10,7 +10,7 @@ import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository } from "@/repositories";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
 import type {
   FinancialSnapshot,
@@ -41,10 +41,10 @@ export default function InsightsPage() {
 
   const loadInsights = useCallback(async () => {
     const [profile, moneyBreakdown, loans, upcomingDues] = await Promise.all([
-      indexedDbFinanceRepository.getProfile(),
-      indexedDbFinanceRepository.getMoneyBreakdown(),
-      indexedDbFinanceRepository.listLoans(),
-      indexedDbFinanceRepository.listUpcomingDues()
+      financeRepository.getProfile(),
+      financeRepository.getMoneyBreakdown(),
+      financeRepository.listLoans(),
+      financeRepository.listUpcomingDues()
     ]);
 
     if (!profile?.onboardingCompleted || !moneyBreakdown) {

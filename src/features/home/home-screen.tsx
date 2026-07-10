@@ -12,7 +12,7 @@ import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { formatInr, cn } from "@/lib/utils";
 import { card, spacing } from "@/lib/design-tokens";
 import { getPinnedLoanId } from "@/lib/pinned-loan";
-import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { financeRepository, buildHomeStateFromBootstrapCache } from "@/repositories";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
 import {
   formatDueLabel,
@@ -40,21 +40,34 @@ const healthCopy = {
 
 export function HomeScreen() {
   const router = useRouter();
+  const initialBootstrapState = buildHomeStateFromBootstrapCache();
   const [state, setState] = useState<{
     profile: UserProfile;
     loans: Loan[];
     moneyBreakdown: MoneyBreakdown;
     snapshot: FinancialSnapshot;
-  } | null>(null);
-  const [pinnedLoanId, setPinnedLoanIdState] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  } | null>(() =>
+    initialBootstrapState
+      ? {
+          profile: initialBootstrapState.profile,
+          loans: initialBootstrapState.loans,
+          moneyBreakdown: initialBootstrapState.moneyBreakdown,
+          snapshot: initialBootstrapState.snapshot
+        }
+      : null
+  );
+  const [pinnedLoanId, setPinnedLoanIdState] = useState<string | null>(
+    () => initialBootstrapState?.pinnedLoanId ?? null
+  );
+  const [isLoading, setIsLoading] = useState(() => !initialBootstrapState);
 
   const loadSnapshot = useCallback(async () => {
-    const [profile, moneyBreakdown, loans, upcomingDues] = await Promise.all([
-      indexedDbFinanceRepository.getProfile(),
-      indexedDbFinanceRepository.getMoneyBreakdown(),
-      indexedDbFinanceRepository.listLoans(),
-      indexedDbFinanceRepository.listUpcomingDues()
+    const [profile, moneyBreakdown, loans, upcomingDues, settings] = await Promise.all([
+      financeRepository.getProfile(),
+      financeRepository.getMoneyBreakdown(),
+      financeRepository.listLoans(),
+      financeRepository.listUpcomingDues(),
+      financeRepository.getSettings()
     ]);
 
     if (!profile?.onboardingCompleted || !moneyBreakdown) {
@@ -72,7 +85,7 @@ export function HomeScreen() {
         upcomingDues
       })
     });
-    setPinnedLoanIdState(getPinnedLoanId());
+    setPinnedLoanIdState(settings.pinnedLoanId);
     setIsLoading(false);
   }, [router]);
 
@@ -86,7 +99,7 @@ export function HomeScreen() {
 
   useEffect(() => {
     function syncPinnedLoan() {
-      setPinnedLoanIdState(getPinnedLoanId());
+      void getPinnedLoanId().then(setPinnedLoanIdState);
     }
 
     window.addEventListener("focus", syncPinnedLoan);
