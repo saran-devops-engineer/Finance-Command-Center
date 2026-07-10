@@ -1,4 +1,8 @@
-import type { Loan, LoanType } from "@/shared/domain/finance";
+import type { Loan, LoanType, UpcomingDue } from "@/shared/domain/finance";
+import {
+  computeAnnualInterest,
+  computeMonthlyInterestBurden
+} from "@/shared/finance/gold-loan-calculations";
 
 export interface LoanFormState {
   name: string;
@@ -119,12 +123,56 @@ export function buildLoanFromForm(form: LoanFormState, existing?: Loan): Loan {
   };
 }
 
-export function buildLoanDue(loan: Loan) {
+/**
+ * Recurring monthly cash-flow commitment for a loan.
+ * - Home / EMI loans: the EMI.
+ * - Gold loans with monthly interest: the monthly interest burden.
+ * - Gold loans with yearly interest: 0 (billed once a year on renewal).
+ */
+export function getLoanMonthlyCommitment(loan: Loan): number {
+  if (loan.type === "gold") {
+    if (loan.goldInterestPaymentType === "yearly") {
+      return 0;
+    }
+
+    return Math.round(
+      computeMonthlyInterestBurden(loan.outstandingBalance, loan.annualInterestRate)
+    );
+  }
+
+  return loan.monthlyEmi;
+}
+
+export function buildLoanDue(loan: Loan): UpcomingDue {
+  if (loan.type === "gold") {
+    if (loan.goldInterestPaymentType === "yearly") {
+      return {
+        id: `due-${loan.id}`,
+        title: `${loan.name} interest renewal`,
+        dueDate: loan.renewalDate ?? loan.nextDueDate,
+        amount: Math.round(
+          computeAnnualInterest(loan.outstandingBalance, loan.annualInterestRate)
+        ),
+        source: "loan"
+      };
+    }
+
+    return {
+      id: `due-${loan.id}`,
+      title: `${loan.name} interest`,
+      dueDate: loan.nextDueDate,
+      amount: Math.round(
+        computeMonthlyInterestBurden(loan.outstandingBalance, loan.annualInterestRate)
+      ),
+      source: "loan"
+    };
+  }
+
   return {
     id: `due-${loan.id}`,
     title: `${loan.name} EMI`,
     dueDate: loan.nextDueDate,
     amount: loan.monthlyEmi,
-    source: "loan" as const
+    source: "loan"
   };
 }

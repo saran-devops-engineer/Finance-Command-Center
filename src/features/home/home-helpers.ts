@@ -6,6 +6,7 @@ import type {
   UpcomingDue
 } from "@/shared/domain/finance";
 import { formatInr } from "@/lib/utils";
+import { getGoldRenewalReminder } from "@/shared/finance/gold-loan-calculations";
 
 export const HOME_DUE_LOOKAHEAD_DAYS = 15;
 
@@ -56,6 +57,34 @@ export function getHomeDueDisplay(dues: UpcomingDue[]): HomeDueDisplay {
     relevantCount: upcomingDues.length,
     hasMore: upcomingDues.length > 1
   };
+}
+
+export interface GoldRenewalAlert {
+  loan: Loan;
+  daysRemaining: number;
+  isOverdue: boolean;
+}
+
+/**
+ * Most urgent gold-loan renewal reminder within the 30-day window (or overdue).
+ * Reminder milestones: 30, 15, 7, 1 days before the renewal date.
+ */
+export function getGoldRenewalAlert(loans: Loan[]): GoldRenewalAlert | null {
+  const alerts = loans
+    .filter((loan) => loan.type === "gold" && Boolean(loan.renewalDate))
+    .map((loan) => {
+      const reminder = getGoldRenewalReminder(loan.renewalDate ?? loan.nextDueDate);
+      return { loan, reminder };
+    })
+    .filter(({ reminder }) => reminder.shouldRemind)
+    .sort((first, second) => first.reminder.daysRemaining - second.reminder.daysRemaining);
+
+  if (alerts.length === 0) {
+    return null;
+  }
+
+  const { loan, reminder } = alerts[0];
+  return { loan, daysRemaining: reminder.daysRemaining, isOverdue: reminder.isOverdue };
 }
 
 export function getPriorityLoan(loans: Loan[], pinnedLoanId: string | null) {

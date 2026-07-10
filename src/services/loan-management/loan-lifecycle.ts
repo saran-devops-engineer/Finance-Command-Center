@@ -2,7 +2,7 @@ import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { getPinnedLoanId, setPinnedLoanId } from "@/lib/pinned-loan";
 import { isActiveLoan, normalizeLoan } from "@/lib/loan-status";
 import type { FinanceRepository } from "@/repositories/finance-repository";
-import { buildLoanDue } from "@/shared/finance/loan-form";
+import { buildLoanDue, getLoanMonthlyCommitment } from "@/shared/finance/loan-form";
 import type { Loan } from "@/shared/domain/finance";
 
 export async function syncLoanCommitments(
@@ -13,10 +13,10 @@ export async function syncLoanCommitments(
   const moneyBreakdown = await repository.getMoneyBreakdown();
 
   if (moneyBreakdown) {
-    const previousEmi = previousLoan?.monthlyEmi ?? 0;
-    const nextEmi = nextLoan.monthlyEmi;
+    const previousCommitment = previousLoan ? getLoanMonthlyCommitment(previousLoan) : 0;
+    const nextCommitment = getLoanMonthlyCommitment(nextLoan);
     const adjustedLoanPayments = Math.max(
-      moneyBreakdown.loanPayments - previousEmi + nextEmi,
+      moneyBreakdown.loanPayments - previousCommitment + nextCommitment,
       0
     );
 
@@ -54,7 +54,7 @@ export async function softDeleteLoanRecord(
   if (moneyBreakdown) {
     await repository.saveMoneyBreakdown({
       ...moneyBreakdown,
-      loanPayments: Math.max(moneyBreakdown.loanPayments - loan.monthlyEmi, 0)
+      loanPayments: Math.max(moneyBreakdown.loanPayments - getLoanMonthlyCommitment(loan), 0)
     });
   }
 
@@ -85,7 +85,7 @@ export async function archiveLoanRecord(
   if (moneyBreakdown) {
     await repository.saveMoneyBreakdown({
       ...moneyBreakdown,
-      loanPayments: Math.max(moneyBreakdown.loanPayments - loan.monthlyEmi, 0)
+      loanPayments: Math.max(moneyBreakdown.loanPayments - getLoanMonthlyCommitment(loan), 0)
     });
   }
 

@@ -6,6 +6,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { GoldLoanFormFields } from "@/features/loans/gold-loan-form-fields";
 import { HomeLoanFormFields } from "@/features/loans/home-loan-form-fields";
 import { LoanFormFields } from "@/features/loans/loan-form-fields";
 import { spacing } from "@/lib/design-tokens";
@@ -19,12 +20,20 @@ import {
 } from "@/shared/finance/home-loan-form";
 import type { HomeLoanFormState } from "@/shared/finance/home-loan-form";
 import {
+  buildGoldLoanFromForm,
+  initialGoldLoanFormState,
+  validateGoldLoanForm
+} from "@/shared/finance/gold-loan-form";
+import type { GoldLoanFormState } from "@/shared/finance/gold-loan-form";
+import {
   buildLoanFromForm,
   validateLoanForm
 } from "@/shared/finance/loan-form";
 import type { LoanFormState } from "@/shared/finance/loan-form";
 import { syncLoanCommitments } from "@/services/loan-management/loan-lifecycle";
 import type { LoanType } from "@/shared/domain/finance";
+
+type LoanKind = "home" | "gold" | "other";
 
 const initialOtherLoanState: LoanFormState = {
   name: "",
@@ -42,8 +51,9 @@ const initialOtherLoanState: LoanFormState = {
 
 export function AddLoanScreen() {
   const router = useRouter();
-  const [loanKind, setLoanKind] = useState<"home" | "other">("home");
+  const [loanKind, setLoanKind] = useState<LoanKind>("home");
   const [homeForm, setHomeForm] = useState<HomeLoanFormState>(initialHomeLoanFormState);
+  const [goldForm, setGoldForm] = useState<GoldLoanFormState>(initialGoldLoanFormState);
   const [otherForm, setOtherForm] = useState<LoanFormState>(initialOtherLoanState);
   const [errors, setErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -81,6 +91,14 @@ export function AddLoanScreen() {
     setErrors([]);
   }
 
+  function updateGoldField<Key extends keyof GoldLoanFormState>(
+    field: Key,
+    value: GoldLoanFormState[Key]
+  ) {
+    setGoldForm((current) => ({ ...current, [field]: value }));
+    setErrors([]);
+  }
+
   function updateOtherField<Key extends keyof LoanFormState>(
     field: Key,
     value: LoanFormState[Key]
@@ -89,7 +107,7 @@ export function AddLoanScreen() {
     setErrors([]);
   }
 
-  function switchLoanKind(kind: "home" | "other") {
+  function switchLoanKind(kind: LoanKind) {
     setLoanKind(kind);
     setErrors([]);
   }
@@ -105,6 +123,23 @@ export function AddLoanScreen() {
 
       setIsSaving(true);
       const loan = buildHomeLoanFromForm(homeForm);
+      await indexedDbFinanceRepository.saveLoan(loan);
+      await syncLoanCommitments(indexedDbFinanceRepository, null, loan);
+      notifyFinanceDataUpdated("loan");
+      router.replace("/loans");
+      return;
+    }
+
+    if (loanKind === "gold") {
+      const validationErrors = validateGoldLoanForm(goldForm);
+
+      if (validationErrors.length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+
+      setIsSaving(true);
+      const loan = buildGoldLoanFromForm(goldForm);
       await indexedDbFinanceRepository.saveLoan(loan);
       await syncLoanCommitments(indexedDbFinanceRepository, null, loan);
       notifyFinanceDataUpdated("loan");
@@ -132,10 +167,16 @@ export function AddLoanScreen() {
     homeForm.lender.trim().length > 0 &&
     validateHomeLoanForm(homeForm).length === 0;
 
+  const canSaveGold =
+    goldForm.name.trim().length > 0 &&
+    goldForm.lender.trim().length > 0 &&
+    validateGoldLoanForm(goldForm).length === 0;
+
   const canSaveOther =
     otherForm.name.trim().length > 0 && validateLoanForm(otherForm).length === 0;
 
-  const canSave = loanKind === "home" ? canSaveHome : canSaveOther;
+  const canSave =
+    loanKind === "home" ? canSaveHome : loanKind === "gold" ? canSaveGold : canSaveOther;
 
   return (
     <div className={spacing.page}>
@@ -166,12 +207,11 @@ export function AddLoanScreen() {
         </span>
         <select
           value={loanKind}
-          onChange={(event) =>
-            switchLoanKind(event.target.value === "home" ? "home" : "other")
-          }
+          onChange={(event) => switchLoanKind(event.target.value as LoanKind)}
           className="h-12 w-full rounded-xl border border-border bg-white/45 px-4 text-base outline-none focus:border-primary"
         >
           <option value="home">Home Loan</option>
+          <option value="gold">Gold Loan</option>
           <option value="other">Other loan type</option>
         </select>
       </label>
@@ -183,6 +223,8 @@ export function AddLoanScreen() {
             errors={errors}
             onChange={updateHomeField}
           />
+        ) : loanKind === "gold" ? (
+          <GoldLoanFormFields form={goldForm} errors={errors} onChange={updateGoldField} />
         ) : (
           <LoanFormFields
             form={{ ...otherForm, type: otherForm.type as LoanType }}

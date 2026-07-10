@@ -16,6 +16,7 @@ import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-rep
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
 import {
   formatDueLabel,
+  getGoldRenewalAlert,
   getHomeDueDisplay,
   getMeaningfulHealthMessage,
   getPrimaryRecommendation,
@@ -23,6 +24,7 @@ import {
   getRecommendationHref,
   HOME_DUE_LOOKAHEAD_DAYS
 } from "@/features/home/home-helpers";
+import { computeMonthlyInterestBurden } from "@/shared/finance/gold-loan-calculations";
 import type {
   FinancialSnapshot,
   Loan,
@@ -118,6 +120,7 @@ export function HomeScreen() {
   const displayName = getDisplayName(profile);
   const healthMessage = getMeaningfulHealthMessage(snapshot, loans, moneyBreakdown);
   const dueDisplay = getHomeDueDisplay(snapshot.upcomingDues);
+  const goldRenewalAlert = getGoldRenewalAlert(loans);
   const priorityLoan = getPriorityLoan(loans, pinnedLoanId);
   const primaryRecommendation = getPrimaryRecommendation(snapshot.recommendations);
   const recommendationHref = primaryRecommendation
@@ -195,6 +198,33 @@ export function HomeScreen() {
         )}
       </section>
 
+      {goldRenewalAlert ? (
+        <section className={spacing.section}>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Gold loan renewal due
+          </p>
+          <Link href={`/loans/${goldRenewalAlert.loan.id}`} className="block">
+            <Card className={cn("flex items-center justify-between gap-4", card.paddingCompact)}>
+              <div className="min-w-0">
+                <h3 className="font-semibold">{goldRenewalAlert.loan.name}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {goldRenewalAlert.isOverdue
+                    ? `Renewal overdue by ${Math.abs(goldRenewalAlert.daysRemaining)} day${
+                        Math.abs(goldRenewalAlert.daysRemaining) === 1 ? "" : "s"
+                      }`
+                    : goldRenewalAlert.daysRemaining === 0
+                      ? "Renewal due today"
+                      : `Renewal in ${goldRenewalAlert.daysRemaining} day${
+                          goldRenewalAlert.daysRemaining === 1 ? "" : "s"
+                        }`}
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </Card>
+          </Link>
+        </section>
+      ) : null}
+
       <section className={spacing.section}>
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
@@ -235,8 +265,18 @@ export function HomeScreen() {
               />
 
               <p className="text-xs text-muted-foreground">
-                  {priorityLoan.annualInterestRate}% p.a. · EMI{" "}
-                  {formatInr(priorityLoan.monthlyEmi)}
+                {priorityLoan.type === "gold"
+                  ? `${priorityLoan.annualInterestRate}% p.a. · Interest ${formatInr(
+                      Math.round(
+                        computeMonthlyInterestBurden(
+                          priorityLoan.outstandingBalance,
+                          priorityLoan.annualInterestRate
+                        )
+                      )
+                    )}/mo`
+                  : `${priorityLoan.annualInterestRate}% p.a. · EMI ${formatInr(
+                      priorityLoan.monthlyEmi
+                    )}`}
               </p>
             </Card>
           </Link>

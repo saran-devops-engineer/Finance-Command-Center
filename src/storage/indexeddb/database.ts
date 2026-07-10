@@ -7,6 +7,7 @@ import type {
   UserProfile
 } from "@/shared/domain/finance";
 import { migrateLegacyHomeLoan } from "@/shared/finance/home-loan-form";
+import { migrateGoldLoan } from "@/shared/finance/gold-loan-form";
 
 interface FinanceCommandCenterDb extends DBSchema {
   profile: {
@@ -38,7 +39,7 @@ let databasePromise: Promise<IDBPDatabase<FinanceCommandCenterDb>> | null = null
 
 export function getFinanceDatabase() {
   if (!databasePromise) {
-    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 3, {
+    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 4, {
       upgrade: async (database, oldVersion, _newVersion, transaction) => {
         if (!database.objectStoreNames.contains("profile")) {
           database.createObjectStore("profile", { keyPath: "id" });
@@ -75,6 +76,17 @@ export function getFinanceDatabase() {
           for (const loan of loans) {
             if (loan.type === "home") {
               await loanStore.put(migrateLegacyHomeLoan(loan));
+            }
+          }
+        }
+
+        if (oldVersion < 4) {
+          const loanStore = transaction.objectStore("loans");
+          const loans = await loanStore.getAll();
+
+          for (const loan of loans) {
+            if (loan.type === "gold") {
+              await loanStore.put(migrateGoldLoan(loan));
             }
           }
         }

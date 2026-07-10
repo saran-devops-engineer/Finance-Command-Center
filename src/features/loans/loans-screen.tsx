@@ -18,6 +18,8 @@ import {
 } from "@/lib/loan-display";
 import { card, radius, spacing } from "@/lib/design-tokens";
 import { indexedDbFinanceRepository } from "@/repositories/indexeddb-finance-repository";
+import { computeMonthlyInterestBurden } from "@/shared/finance/gold-loan-calculations";
+import { isGoldLoan } from "@/shared/finance/gold-loan-form";
 import type { Loan } from "@/shared/domain/finance";
 
 type LoansView = "active" | "archived";
@@ -186,12 +188,38 @@ export function LoansScreen() {
                       originalAmount={loan.originalAmount}
                     />
 
-                    <MetricCardGrid>
-                      <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
-                      <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
-                      <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
-                      <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
-                    </MetricCardGrid>
+                    {isGoldLoan(loan) ? (
+                      <MetricCardGrid>
+                        <MetricCard
+                          label="Monthly interest"
+                          value={formatInr(
+                            Math.round(
+                              computeMonthlyInterestBurden(
+                                loan.outstandingBalance,
+                                loan.annualInterestRate
+                              )
+                            )
+                          )}
+                        />
+                        <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
+                        <MetricCard
+                          label="Interest type"
+                          value={loan.goldInterestPaymentType === "yearly" ? "Yearly" : "Monthly"}
+                          valueKind="text"
+                        />
+                        <MetricCard
+                          label="Renewal"
+                          value={formatDueDate(loan.renewalDate ?? loan.nextDueDate)}
+                        />
+                      </MetricCardGrid>
+                    ) : (
+                      <MetricCardGrid>
+                        <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
+                        <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
+                        <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
+                        <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
+                      </MetricCardGrid>
+                    )}
                   </Card>
                 </Link>
               ))}

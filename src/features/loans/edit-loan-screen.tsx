@@ -6,6 +6,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { GoldLoanFormFields } from "@/features/loans/gold-loan-form-fields";
 import { HomeLoanFormFields } from "@/features/loans/home-loan-form-fields";
 import { LoanFormFields } from "@/features/loans/loan-form-fields";
 import { spacing } from "@/lib/design-tokens";
@@ -19,6 +20,13 @@ import {
   validateHomeLoanForm
 } from "@/shared/finance/home-loan-form";
 import type { HomeLoanFormState } from "@/shared/finance/home-loan-form";
+import {
+  buildGoldLoanFromForm,
+  goldLoanToFormState,
+  isGoldLoan,
+  validateGoldLoanForm
+} from "@/shared/finance/gold-loan-form";
+import type { GoldLoanFormState } from "@/shared/finance/gold-loan-form";
 import {
   buildLoanFromForm,
   loanToFormState,
@@ -36,6 +44,7 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
   const router = useRouter();
   const [existingLoan, setExistingLoan] = useState<Loan | null>(null);
   const [homeForm, setHomeForm] = useState<HomeLoanFormState | null>(null);
+  const [goldForm, setGoldForm] = useState<GoldLoanFormState | null>(null);
   const [otherForm, setOtherForm] = useState<LoanFormState | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -67,6 +76,8 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
 
       if (isHomeLoan(loan)) {
         setHomeForm(homeLoanToFormState(loan));
+      } else if (isGoldLoan(loan)) {
+        setGoldForm(goldLoanToFormState(loan));
       } else {
         setOtherForm(loanToFormState(loan));
       }
@@ -91,6 +102,14 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
       const next = { ...current, [field]: value };
       return applyHomeLoanAutoCalculations(next, current);
     });
+    setErrors([]);
+  }
+
+  function updateGoldField<Key extends keyof GoldLoanFormState>(
+    field: Key,
+    value: GoldLoanFormState[Key]
+  ) {
+    setGoldForm((current) => (current ? { ...current, [field]: value } : current));
     setErrors([]);
   }
 
@@ -122,6 +141,21 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
       return;
     }
 
+    if (isGoldLoan(existingLoan) && goldForm) {
+      const validationErrors = validateGoldLoanForm(goldForm);
+
+      if (validationErrors.length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+
+      setIsSaving(true);
+      const updatedLoan = buildGoldLoanFromForm(goldForm, existingLoan);
+      await saveLoanUpdate(indexedDbFinanceRepository, existingLoan, updatedLoan);
+      router.replace(`/loans/${loanId}?saved=1`);
+      return;
+    }
+
     if (!otherForm) {
       return;
     }
@@ -139,7 +173,7 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
     router.replace(`/loans/${loanId}?saved=1`);
   }
 
-  if (!existingLoan || (!homeForm && !otherForm)) {
+  if (!existingLoan || (!homeForm && !goldForm && !otherForm)) {
     return (
       <div className={spacing.page}>
         <header className="space-y-2 pt-4">
@@ -180,6 +214,8 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
       <Card>
         {homeForm ? (
           <HomeLoanFormFields form={homeForm} errors={errors} onChange={updateHomeField} />
+        ) : goldForm ? (
+          <GoldLoanFormFields form={goldForm} errors={errors} onChange={updateGoldField} />
         ) : (
           <LoanFormFields form={otherForm!} errors={errors} onChange={updateOtherField} />
         )}

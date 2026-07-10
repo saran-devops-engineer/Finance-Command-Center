@@ -37,13 +37,17 @@ export const demoLoans: Loan[] = [
     originalAmount: 280000,
     outstandingBalance: 208000,
     annualInterestRate: 11.5,
-    monthlyEmi: 6400,
+    monthlyEmi: 0,
     principalPaid: 72000,
     interestPaid: 28200,
-    remainingTenureMonths: 36,
+    remainingTenureMonths: 0,
     status: "active",
-    estimatedClosureDate: "2029-09-01",
-    nextDueDate: "2028-03-18"
+    estimatedClosureDate: "2028-09-18",
+    nextDueDate: "2028-03-18",
+    loanStartDate: "2027-09-18",
+    renewalDate: "2028-09-18",
+    goldInterestPaymentType: "monthly",
+    goldWeightGrams: 42
   },
   {
     id: "hdfc-home",
@@ -83,10 +87,10 @@ export const demoUpcomingDues: UpcomingDue[] = [
     source: "insurance"
   },
   {
-    id: "muthoot-gold-emi",
-    title: "Muthoot Gold EMI",
+    id: "due-muthoot-gold",
+    title: "Muthoot Gold Loan interest",
     dueDate: "2028-03-18",
-    amount: 6400,
+    amount: 1993,
     source: "loan"
   }
 ];

@@ -26,6 +26,8 @@ export interface MoneyBreakdown {
 
 export type LoanStatus = "active" | "archived" | "deleted";
 
+export type GoldInterestPaymentType = "monthly" | "yearly";
+
 export interface UserProfile {
   id: string;
   displayName: string;
@@ -59,6 +61,12 @@ export interface Loan {
   emiPaymentDay?: number;
   /** Home Loan V1 — when true, auto tenure estimate must not overwrite `remainingTenureMonths`. */
   remainingTenureManuallyOverridden?: boolean;
+  /** Gold Loan V1 — interest payment cadence. Required when `type === "gold"`. */
+  goldInterestPaymentType?: GoldInterestPaymentType;
+  /** Gold Loan V1 — renewal date (`YYYY-MM-DD`). Required when `type === "gold"`. */
+  renewalDate?: string;
+  /** Gold Loan V1 — optional gold weight in grams. Not used in any V1 calculation. */
+  goldWeightGrams?: number;
   notes?: string;
   status?: LoanStatus;
   archivedAt?: string;

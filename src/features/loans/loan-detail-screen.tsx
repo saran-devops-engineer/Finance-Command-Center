@@ -12,11 +12,17 @@ import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
 import { SaveSuccessBanner } from "@/components/ui/save-success-banner";
 import { LoanActionsMenu } from "@/features/loans/loan-actions-menu";
+import { GoldLoanSimulator } from "@/features/loans/gold-loan-simulator";
 import { WhatIfSimulator } from "@/features/loans/what-if-simulator";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { cn, formatInr } from "@/lib/utils";
 import { getLoanStatus, isActiveLoan, isArchivedLoan } from "@/lib/loan-status";
+import {
+  computeMonthlyInterestBurden,
+  getGoldRenewalReminder
+} from "@/shared/finance/gold-loan-calculations";
+import { isGoldLoan } from "@/shared/finance/gold-loan-form";
 import {
   formatLoanTypeLabel,
   getArchiveDateLabel,
@@ -289,12 +295,35 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
           </Card>
         ) : null}
 
-        <MetricCardGrid>
-          <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
-          <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
-          <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
-          <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
-        </MetricCardGrid>
+        {isGoldLoan(loan) ? (
+          <MetricCardGrid>
+            <MetricCard
+              label="Monthly interest"
+              value={formatInr(
+                Math.round(
+                  computeMonthlyInterestBurden(loan.outstandingBalance, loan.annualInterestRate)
+                )
+              )}
+            />
+            <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
+            <MetricCard
+              label="Interest type"
+              value={loan.goldInterestPaymentType === "yearly" ? "Yearly" : "Monthly"}
+              valueKind="text"
+            />
+            <MetricCard
+              label="Renewal"
+              value={formatDueDate(loan.renewalDate ?? loan.nextDueDate)}
+            />
+          </MetricCardGrid>
+        ) : (
+          <MetricCardGrid>
+            <MetricCard label="EMI" value={formatInr(loan.monthlyEmi)} />
+            <MetricCard label="Rate" value={`${loan.annualInterestRate}% p.a.`} />
+            <MetricCard label="Tenure" value={`${loan.remainingTenureMonths} mo`} />
+            <MetricCard label="Next due" value={formatDueDate(loan.nextDueDate)} />
+          </MetricCardGrid>
+        )}
 
         {loan.notes ? (
           <Card className="space-y-2">
@@ -333,7 +362,13 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
           </Button>
         ) : null}
 
-        {isActiveLoan(loan) ? <WhatIfSimulator loan={loan} /> : null}
+        {isActiveLoan(loan) ? (
+          isGoldLoan(loan) ? (
+            <GoldLoanSimulator loan={loan} />
+          ) : (
+            <WhatIfSimulator loan={loan} />
+          )
+        ) : null}
 
         {payments.length > 0 ? (
           <section className="space-y-4">
@@ -385,6 +420,29 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
 function getLoanDetailAttention(loan: Loan) {
   const daysUntilDue = getDaysUntil(loan.nextDueDate);
   const monthlyInterest = Math.round(loan.outstandingBalance * (loan.annualInterestRate / 12 / 100));
+
+  if (isGoldLoan(loan)) {
+    const reminder = getGoldRenewalReminder(loan.renewalDate ?? loan.nextDueDate);
+
+    if (reminder.isOverdue) {
+      return {
+        title: "Gold loan renewal overdue",
+        description: `Renew or repay to avoid penalties. Interest is running at about ${formatInr(monthlyInterest)} per month.`
+      };
+    }
+
+    if (reminder.shouldRemind) {
+      return {
+        title: `Gold loan renewal in ${reminder.daysRemaining} day${reminder.daysRemaining === 1 ? "" : "s"}`,
+        description: `Plan the renewal ahead of time. This loan costs about ${formatInr(monthlyInterest)} in interest each month.`
+      };
+    }
+
+    return {
+      title: "Interest-only gold loan",
+      description: `You are paying about ${formatInr(monthlyInterest)} in interest each month. A one-time principal payment lowers this immediately.`
+    };
+  }
 
   if (loan.isOverdue) {
     return {
