@@ -146,8 +146,8 @@ async function migratePreferenceKeys(
   deps: LegacyMigrationDeps
 ): Promise<FinanceMigrationResult> {
   let migrated = false;
-  let nextUserState = { ...userState };
-  let nextDevicePrefs = { ...devicePrefs };
+  const nextUserState = { ...userState };
+  const nextDevicePrefs = { ...devicePrefs };
   const removedKeys: string[] = [];
 
   const phase1Blob = readLocalStorage(LEGACY_APP_SETTINGS_STORAGE_KEY);
@@ -325,9 +325,9 @@ function discoverLegacyFinancialSnapshot(): DiscoveredSnapshot | null {
     snapshot: {
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
-      profile: isRecord(profile) ? (profile as FinanceDataSnapshot["profile"]) : null,
+      profile: isRecord(profile) ? (profile as unknown as FinanceDataSnapshot["profile"]) : null,
       moneyBreakdown: isRecord(moneyBreakdown)
-        ? (moneyBreakdown as FinanceDataSnapshot["moneyBreakdown"])
+        ? (moneyBreakdown as unknown as FinanceDataSnapshot["moneyBreakdown"])
         : null,
       loans: loans as FinanceDataSnapshot["loans"],
       loanPayments: loanPayments as FinanceDataSnapshot["loanPayments"],
