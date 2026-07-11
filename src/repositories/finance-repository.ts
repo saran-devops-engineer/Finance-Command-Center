@@ -65,7 +65,7 @@ export interface FinanceRepository {
   listLoanPayments(loanId: string): Promise<LoanPayment[]>;
   saveLoanPayment(value: LoanPayment): Promise<void>;
 
-  // --- Upcoming dues ---
+  // --- Upcoming financial commitments (legacy store: upcomingDues) ---
   listUpcomingDues(): Promise<UpcomingDue[]>;
   saveUpcomingDue(value: UpcomingDue): Promise<void>;
   deleteUpcomingDue(id: string): Promise<void>;

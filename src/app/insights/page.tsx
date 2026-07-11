@@ -11,6 +11,9 @@ import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { financeRepository } from "@/repositories";
+import { buildFinancialCommitments } from "@/engines/commitment";
+import { generateAllFinancialInsights } from "@/engines/financial-insights";
+import { FinancialInsightsSection } from "@/features/home/financial-insights-section";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
 import type {
   FinancialSnapshot,
@@ -76,6 +79,13 @@ export default function InsightsPage() {
   const primaryInsight = rankedInsights[0];
   const supportingInsights = rankedInsights.slice(1);
   const weeklyReview = state ? getWeeklyReview(state) : null;
+  const financialInsights = state
+    ? generateAllFinancialInsights({
+        loans: state.loans,
+        moneyBreakdown: state.moneyBreakdown,
+        commitments: buildFinancialCommitments({ loans: state.loans })
+      })
+    : [];
 
   return (
     <MobileShell>
@@ -91,6 +101,10 @@ export default function InsightsPage() {
             Clear, rule-based guidance from your on-device financial data.
           </p>
         </header>
+
+        {financialInsights.length > 0 ? (
+          <FinancialInsightsSection insights={financialInsights} showViewAll={false} />
+        ) : null}
 
         {primaryInsight ? (
           <section className="space-y-3">
@@ -201,7 +215,10 @@ export default function InsightsPage() {
               </p>
               <MetricCardGrid>
                 <MetricCard label="Available" value={formatInr(weeklyReview.availableMoney)} />
-                <MetricCard label="Due soon" value={String(weeklyReview.dueSoonCount)} />
+                <MetricCard
+                  label="Commitments due soon"
+                  value={String(weeklyReview.dueSoonCount)}
+                />
               </MetricCardGrid>
             </Card>
           </section>
@@ -295,10 +312,8 @@ function getImpactLabel(recommendation: Recommendation, state: InsightsState) {
 }
 
 function getWeeklyReview(state: InsightsState) {
-  const dueSoonCount = state.upcomingDues.filter((due) => {
-    const daysUntilDue = getDaysUntil(due.dueDate);
-    return daysUntilDue >= 0 && daysUntilDue <= 7;
-  }).length;
+  const commitments = buildFinancialCommitments({ loans: state.loans });
+  const dueSoonCount = commitments.filter((commitment) => commitment.status === "due-soon").length;
 
   return {
     title: "Your week in one sentence.",

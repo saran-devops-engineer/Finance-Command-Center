@@ -39,6 +39,7 @@ type SimulatorStrategy =
 
 interface WhatIfSimulatorProps {
   loan: Loan;
+  initialStrategy?: SimulatorStrategy | null;
 }
 
 const simulatorStrategies: Array<{
@@ -73,9 +74,11 @@ const simulatorStrategies: Array<{
   }
 ];
 
-export function WhatIfSimulator({ loan }: WhatIfSimulatorProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [expandedStrategy, setExpandedStrategy] = useState<SimulatorStrategy | null>(null);
+export function WhatIfSimulator({ loan, initialStrategy = null }: WhatIfSimulatorProps) {
+  const [isExpanded, setIsExpanded] = useState(Boolean(initialStrategy));
+  const [expandedStrategy, setExpandedStrategy] = useState<SimulatorStrategy | null>(
+    initialStrategy
+  );
   const [prepaymentAmount, setPrepaymentAmount] = useState("100000");
   const [monthlyExtraAmount, setMonthlyExtraAmount] = useState("5000");
   const [annualExtraAmount, setAnnualExtraAmount] = useState("100000");

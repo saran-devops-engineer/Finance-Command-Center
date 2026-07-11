@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,15 +14,13 @@ import { card, spacing } from "@/lib/design-tokens";
 import { getPinnedLoanId } from "@/lib/pinned-loan";
 import { financeRepository, buildHomeStateFromBootstrapCache } from "@/repositories";
 import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
+import { buildFinancialCommitments, groupFinancialCommitments } from "@/engines/commitment";
+import { generateFinancialInsights } from "@/engines/financial-insights";
+import { FinancialInsightsSection } from "@/features/home/financial-insights-section";
+import { UpcomingCommitmentsSection } from "@/features/home/upcoming-commitments-section";
 import {
-  formatDueLabel,
-  getGoldRenewalAlert,
-  getHomeDueDisplay,
   getMeaningfulHealthMessage,
-  getPrimaryRecommendation,
-  getPriorityLoan,
-  getRecommendationHref,
-  HOME_DUE_LOOKAHEAD_DAYS
+  getPriorityLoan
 } from "@/features/home/home-helpers";
 import { computeMonthlyInterestBurden } from "@/shared/finance/gold-loan-calculations";
 import type {
@@ -132,13 +130,14 @@ export function HomeScreen() {
   const { profile, loans, moneyBreakdown, snapshot } = state;
   const displayName = getDisplayName(profile);
   const healthMessage = getMeaningfulHealthMessage(snapshot, loans, moneyBreakdown);
-  const dueDisplay = getHomeDueDisplay(snapshot.upcomingDues);
-  const goldRenewalAlert = getGoldRenewalAlert(loans);
+  const commitments = buildFinancialCommitments({ loans });
+  const commitmentGroups = groupFinancialCommitments(commitments);
+  const financialInsights = generateFinancialInsights({
+    loans,
+    moneyBreakdown,
+    commitments
+  });
   const priorityLoan = getPriorityLoan(loans, pinnedLoanId);
-  const primaryRecommendation = getPrimaryRecommendation(snapshot.recommendations);
-  const recommendationHref = primaryRecommendation
-    ? getRecommendationHref(primaryRecommendation, loans, snapshot.upcomingDues)
-    : null;
   const isPriorityLoanPinned = Boolean(
     priorityLoan && pinnedLoanId && priorityLoan.id === pinnedLoanId
   );
@@ -153,7 +152,7 @@ export function HomeScreen() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-              Available money
+              Financial Health
             </p>
             <p className="mt-2 text-4xl font-semibold tracking-[-0.05em]">
               {formatInr(snapshot.availableMoney)}
@@ -182,66 +181,14 @@ export function HomeScreen() {
         </Button>
       </div>
 
-      <section className={spacing.section}>
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            {dueDisplay.status === "overdue" ? "Overdue" : "Upcoming due"}
-          </p>
-          {dueDisplay.status !== "clear" && dueDisplay.hasMore ? (
-            <Link href="/loans" className="text-xs font-medium">
-              View all
-            </Link>
-          ) : null}
-        </div>
+      <UpcomingCommitmentsSection groups={commitmentGroups} />
 
-        {dueDisplay.status === "clear" ? (
-          <p className="text-sm leading-6 text-muted-foreground">
-            No payments due in the next {HOME_DUE_LOOKAHEAD_DAYS} days.
-          </p>
-        ) : (
-          <Card className={cn("flex items-center justify-between gap-4", card.paddingCompact)}>
-            <div>
-              <h3 className="font-semibold">{dueDisplay.featuredDue.title}</h3>
-              <p className="text-xs text-muted-foreground">
-                {formatDueLabel(dueDisplay.featuredDue.dueDate)}
-              </p>
-            </div>
-            <p className="font-semibold">{formatInr(dueDisplay.featuredDue.amount)}</p>
-          </Card>
-        )}
-      </section>
-
-      {goldRenewalAlert ? (
-        <section className={spacing.section}>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Gold loan renewal due
-          </p>
-          <Link href={`/loans/${goldRenewalAlert.loan.id}`} className="block">
-            <Card className={cn("flex items-center justify-between gap-4", card.paddingCompact)}>
-              <div className="min-w-0">
-                <h3 className="font-semibold">{goldRenewalAlert.loan.name}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {goldRenewalAlert.isOverdue
-                    ? `Renewal overdue by ${Math.abs(goldRenewalAlert.daysRemaining)} day${
-                        Math.abs(goldRenewalAlert.daysRemaining) === 1 ? "" : "s"
-                      }`
-                    : goldRenewalAlert.daysRemaining === 0
-                      ? "Renewal due today"
-                      : `Renewal in ${goldRenewalAlert.daysRemaining} day${
-                          goldRenewalAlert.daysRemaining === 1 ? "" : "s"
-                        }`}
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </Card>
-          </Link>
-        </section>
-      ) : null}
+      <FinancialInsightsSection insights={financialInsights} />
 
       <section className={spacing.section}>
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Priority loan
+            Active Loans
           </p>
           <Link href="/loans" className="text-xs font-medium">
             View all loans
@@ -303,35 +250,6 @@ export function HomeScreen() {
         )}
       </section>
 
-      {primaryRecommendation && recommendationHref ? (
-        <section className={spacing.section}>
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              What to do next
-            </p>
-            <Link href="/insights" className="text-xs font-medium">
-              View all
-            </Link>
-          </div>
-          <Card className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-              {primaryRecommendation.category.replace("-", " ")}
-            </p>
-            <h2 className="font-display text-3xl leading-tight tracking-[-0.04em]">
-              {primaryRecommendation.title}
-            </h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {primaryRecommendation.description}
-            </p>
-            <Button asChild size="sm" className="gap-2">
-              <Link href={recommendationHref}>
-                {primaryRecommendation.actionLabel ?? "Review"}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </Card>
-        </section>
-      ) : null}
     </div>
   );
 }

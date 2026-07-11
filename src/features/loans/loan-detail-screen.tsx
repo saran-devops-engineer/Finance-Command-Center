@@ -367,7 +367,12 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
           isGoldLoan(loan) ? (
             <GoldLoanSimulator loan={loan} />
           ) : (
-            <WhatIfSimulator loan={loan} />
+            <WhatIfSimulator
+              loan={loan}
+              initialStrategy={
+                searchParams.get("strategy") === "monthly-extra" ? "monthly-extra" : null
+              }
+            />
           )
         ) : null}
 
