@@ -48,8 +48,8 @@ export function createPostHogProvider(configuration: ConfigurationService): Anal
       }
 
       await safeRunAsync(async () => {
-        const module = await import("posthog-js");
-        posthog = module.default;
+        const posthogModule = await import("posthog-js");
+        posthog = posthogModule.default;
         posthog.init(config.posthogKey, {
           api_host: config.posthogHost,
           person_profiles: "identified_only",

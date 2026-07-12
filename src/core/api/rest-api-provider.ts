@@ -18,13 +18,6 @@ function buildUrl(baseUrl: string, path: string) {
   return `${baseUrl.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-function normalizeHeaders(headers?: Record<string, string>): Record<string, string> {
-  return {
-    Accept: "application/json",
-    ...headers
-  };
-}
-
 async function parseResponseBody(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
 
