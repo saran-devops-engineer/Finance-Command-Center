@@ -101,6 +101,9 @@ export function LoansScreen() {
         <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">
           Your loans
         </h1>
+        <Link href="/chits" className="inline-block text-sm font-medium text-primary">
+          View your chits
+        </Link>
       </header>
 
       <LoanViewTabs view={view} onChange={setView} />

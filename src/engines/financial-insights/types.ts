@@ -1,4 +1,5 @@
 import type { FinancialCommitment } from "@/engines/commitment/types";
+import type { Chit } from "@/shared/domain/chit";
 import type { Loan, MoneyBreakdown } from "@/shared/domain/finance";
 
 export type FinancialInsightCategory = "savings" | "warning" | "opportunity" | "status";
@@ -14,6 +15,7 @@ export interface FinancialInsight {
 
 export interface FinancialInsightContext {
   loans: Loan[];
+  chits?: Chit[];
   moneyBreakdown: MoneyBreakdown;
   commitments: FinancialCommitment[];
   referenceDate?: string;

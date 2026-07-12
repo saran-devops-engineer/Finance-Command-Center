@@ -21,3 +21,9 @@ export {
   homeLoanOpportunityRule,
   largestCommitmentRule
 } from "@/engines/financial-insights/rules/home-loan-rules";
+
+export {
+  chitActiveInsightRule,
+  chitNearingCompletionInsightRule,
+  chitPrizeReceivedInsightRule
+} from "@/engines/financial-insights/rules/chit-rules";

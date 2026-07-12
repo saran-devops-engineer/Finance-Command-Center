@@ -118,6 +118,16 @@ function CommitmentCard({ commitment }: { commitment: FinancialCommitment }) {
     );
   }
 
+  if (commitment.chitId) {
+    return (
+      <li>
+        <Link href={`/chits/${commitment.chitId}`} className="block">
+          {content}
+        </Link>
+      </li>
+    );
+  }
+
   return <li>{content}</li>;
 }
 

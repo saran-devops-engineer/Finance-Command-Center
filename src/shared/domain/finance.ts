@@ -124,4 +124,6 @@ export interface FinanceDataSnapshot {
   loans: Loan[];
   loanPayments: LoanPayment[];
   upcomingDues: UpcomingDue[];
+  /** Chit Management V1 — optional for backward-compatible backups. */
+  chits?: import("@/shared/domain/chit").Chit[];
 }

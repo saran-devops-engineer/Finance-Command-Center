@@ -1,3 +1,4 @@
+import type { Chit } from "@/shared/domain/chit";
 import type { Loan } from "@/shared/domain/finance";
 
 export type CommitmentPriority = "critical" | "high" | "medium" | "low";
@@ -17,10 +18,12 @@ export interface FinancialCommitment {
   priority: CommitmentPriority;
   status: CommitmentStatus;
   loanId?: string;
+  chitId?: string;
 }
 
 export interface CommitmentBuildContext {
   loans: Loan[];
+  chits?: Chit[];
   referenceDate?: string;
 }
 

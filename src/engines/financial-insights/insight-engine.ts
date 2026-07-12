@@ -1,4 +1,9 @@
 import {
+  chitActiveInsightRule,
+  chitNearingCompletionInsightRule,
+  chitPrizeReceivedInsightRule
+} from "@/engines/financial-insights/rules/chit-rules";
+import {
   commitmentWarningRule,
   positiveStatusRule,
   savingsRecommendationRule
@@ -15,9 +20,12 @@ import type {
 
 const defaultRules: FinancialInsightRule[] = [
   commitmentWarningRule,
+  chitNearingCompletionInsightRule,
   savingsRecommendationRule,
   largestCommitmentRule,
   homeLoanOpportunityRule,
+  chitPrizeReceivedInsightRule,
+  chitActiveInsightRule,
   positiveStatusRule
 ];
 

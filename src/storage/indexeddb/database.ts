@@ -7,6 +7,7 @@ import type {
   UserProfile
 } from "@/shared/domain/finance";
 import type { UserAppState } from "@/repositories/app-settings";
+import type { Chit } from "@/shared/domain/chit";
 import { migrateLegacyHomeLoan } from "@/shared/finance/home-loan-form";
 import { migrateGoldLoan } from "@/shared/finance/gold-loan-form";
 
@@ -39,13 +40,19 @@ interface FinanceCommandCenterDb extends DBSchema {
     key: string;
     value: UserAppState;
   };
+  /** Chit Management V1 — standalone chit product records. */
+  chits: {
+    key: string;
+    value: Chit;
+    indexes: { "by-next-due-date": string; "by-status": Chit["status"] };
+  };
 }
 
 let databasePromise: Promise<IDBPDatabase<FinanceCommandCenterDb>> | null = null;
 
 export function getFinanceDatabase() {
   if (!databasePromise) {
-    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 5, {
+    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 6, {
       upgrade: async (database, oldVersion, _newVersion, transaction) => {
         if (!database.objectStoreNames.contains("profile")) {
           database.createObjectStore("profile", { keyPath: "id" });
@@ -77,6 +84,12 @@ export function getFinanceDatabase() {
 
         if (!database.objectStoreNames.contains("appState")) {
           database.createObjectStore("appState", { keyPath: "id" });
+        }
+
+        if (!database.objectStoreNames.contains("chits")) {
+          const chits = database.createObjectStore("chits", { keyPath: "id" });
+          chits.createIndex("by-next-due-date", "nextDueDate");
+          chits.createIndex("by-status", "status");
         }
 
         if (oldVersion < 3) {

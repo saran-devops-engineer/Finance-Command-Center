@@ -27,12 +27,14 @@ import type {
   UpcomingDue,
   UserProfile
 } from "@/shared/domain/finance";
+import type { Chit } from "@/shared/domain/chit";
 import {
   createJsonBackup,
   inspectJsonBackup,
   restoreJsonBackup
 } from "@/storage/backup/backup-service";
 import { getFinanceDatabase } from "@/storage/indexeddb/database";
+import { filterActiveChits, filterArchivedChits, normalizeChit } from "@/lib/chit-status";
 import { filterActiveLoans, filterArchivedLoans, normalizeLoan } from "@/lib/loan-status";
 
 const MONEY_BREAKDOWN_ID = "current-month";
@@ -62,7 +64,15 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     invalidateFinanceBootstrapCache();
     const database = await getFinanceDatabase();
     const transaction = database.transaction(
-      ["profile", "moneyBreakdown", "loans", "loanPayments", "upcomingDues", "appState"],
+      [
+        "profile",
+        "moneyBreakdown",
+        "loans",
+        "loanPayments",
+        "upcomingDues",
+        "appState",
+        "chits"
+      ],
       "readwrite"
     );
 
@@ -72,7 +82,8 @@ export const indexedDbFinanceRepository: FinanceRepository = {
       transaction.objectStore("loans").clear(),
       transaction.objectStore("loanPayments").clear(),
       transaction.objectStore("upcomingDues").clear(),
-      transaction.objectStore("appState").clear()
+      transaction.objectStore("appState").clear(),
+      transaction.objectStore("chits").clear()
     ]);
 
     await transaction.done;
@@ -264,6 +275,69 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     );
   },
 
+  async listChits() {
+    const database = await getFinanceDatabase();
+    const chits = await database.getAll("chits");
+    return filterActiveChits(chits.map(normalizeChit));
+  },
+
+  async listArchivedChits() {
+    const database = await getFinanceDatabase();
+    const chits = await database.getAll("chits");
+    return filterArchivedChits(chits.map(normalizeChit));
+  },
+
+  async getChit(id: string) {
+    const database = await getFinanceDatabase();
+    const chit = await database.get("chits", id);
+    return chit ? normalizeChit(chit) : null;
+  },
+
+  async saveChit(value: Chit) {
+    invalidateFinanceBootstrapCache();
+    const database = await getFinanceDatabase();
+    await database.put("chits", normalizeChit(value));
+  },
+
+  async softDeleteChit(id: string) {
+    invalidateFinanceBootstrapCache();
+    const database = await getFinanceDatabase();
+    const chit = await database.get("chits", id);
+
+    if (!chit) {
+      return;
+    }
+
+    await database.put(
+      "chits",
+      normalizeChit({
+        ...chit,
+        status: "deleted",
+        deletedAt: new Date().toISOString()
+      })
+    );
+  },
+
+  async archiveChit(id: string, archiveReason?: string) {
+    invalidateFinanceBootstrapCache();
+    const database = await getFinanceDatabase();
+    const chit = await database.get("chits", id);
+
+    if (!chit) {
+      return;
+    }
+
+    await database.put(
+      "chits",
+      normalizeChit({
+        ...chit,
+        status: "archived",
+        archivedAt: new Date().toISOString(),
+        archiveReason: archiveReason?.trim() || undefined
+      })
+    );
+  },
+
   async listAllLoanPayments() {
     const database = await getFinanceDatabase();
     return database.getAll("loanPayments");
@@ -303,12 +377,13 @@ export const indexedDbFinanceRepository: FinanceRepository = {
 
   async createDataSnapshot() {
     const database = await getFinanceDatabase();
-    const [profile, moneyRecord, loans, loanPayments, upcomingDues] = await Promise.all([
+    const [profile, moneyRecord, loans, loanPayments, upcomingDues, chits] = await Promise.all([
       database.get("profile", PROFILE_ID),
       database.get("moneyBreakdown", MONEY_BREAKDOWN_ID),
       database.getAll("loans"),
       database.getAll("loanPayments"),
-      database.getAllFromIndex("upcomingDues", "by-due-date")
+      database.getAllFromIndex("upcomingDues", "by-due-date"),
+      database.getAll("chits")
     ]);
     const moneyBreakdown = moneyRecord
       ? {
@@ -331,7 +406,8 @@ export const indexedDbFinanceRepository: FinanceRepository = {
       moneyBreakdown,
       loans,
       loanPayments,
-      upcomingDues
+      upcomingDues,
+      chits: chits.map(normalizeChit)
     };
   },
 
@@ -339,7 +415,7 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     invalidateFinanceBootstrapCache();
     const database = await getFinanceDatabase();
     const transaction = database.transaction(
-      ["profile", "moneyBreakdown", "loans", "loanPayments", "upcomingDues"],
+      ["profile", "moneyBreakdown", "loans", "loanPayments", "upcomingDues", "chits"],
       "readwrite"
     );
 
@@ -348,7 +424,8 @@ export const indexedDbFinanceRepository: FinanceRepository = {
       transaction.objectStore("moneyBreakdown").clear(),
       transaction.objectStore("loans").clear(),
       transaction.objectStore("loanPayments").clear(),
-      transaction.objectStore("upcomingDues").clear()
+      transaction.objectStore("upcomingDues").clear(),
+      transaction.objectStore("chits").clear()
     ]);
 
     if (value.profile) {
@@ -370,7 +447,8 @@ export const indexedDbFinanceRepository: FinanceRepository = {
       ...value.loanPayments.map((payment) =>
         transaction.objectStore("loanPayments").put(payment)
       ),
-      ...value.upcomingDues.map((due) => transaction.objectStore("upcomingDues").put(due))
+      ...value.upcomingDues.map((due) => transaction.objectStore("upcomingDues").put(due)),
+      ...(value.chits ?? []).map((chit) => transaction.objectStore("chits").put(normalizeChit(chit)))
     ]);
 
     await transaction.done;
@@ -419,13 +497,14 @@ async function writeUserAppState(state: UserAppState) {
 
 async function hasIndexedDbFinancialData(): Promise<boolean> {
   const database = await getFinanceDatabase();
-  const [profile, money, loans] = await Promise.all([
+  const [profile, money, loans, chits] = await Promise.all([
     database.get("profile", PROFILE_ID),
     database.get("moneyBreakdown", MONEY_BREAKDOWN_ID),
-    database.getAll("loans")
+    database.getAll("loans"),
+    database.getAll("chits")
   ]);
 
-  return Boolean(profile) || Boolean(money) || loans.length > 0;
+  return Boolean(profile) || Boolean(money) || loans.length > 0 || chits.length > 0;
 }
 
 /**

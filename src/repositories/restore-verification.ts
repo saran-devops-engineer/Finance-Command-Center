@@ -35,6 +35,15 @@ export function verifyRestoredSnapshot(
     throw new Error("Restore verification failed: money breakdown presence mismatch.");
   }
 
+  const expectedChitCount = expected.chits?.length ?? 0;
+  const actualChitCount = actual.chits?.length ?? 0;
+
+  if (expectedChitCount !== actualChitCount) {
+    throw new Error(
+      `Restore verification failed: expected ${expectedChitCount} chits, found ${actualChitCount}.`
+    );
+  }
+
   const expectedLoanIds = new Set(expected.loans.map((loan) => loan.id));
   for (const loan of actual.loans) {
     if (!expectedLoanIds.has(loan.id)) {

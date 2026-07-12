@@ -26,3 +26,4 @@ export {
 
 export { homeLoanCommitmentProvider } from "@/engines/commitment/providers/home-loan-commitment-provider";
 export { goldLoanCommitmentProvider } from "@/engines/commitment/providers/gold-loan-commitment-provider";
+export { chitCommitmentProvider } from "@/engines/commitment/providers/chit-commitment-provider";

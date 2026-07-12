@@ -29,6 +29,9 @@ import type {
   MoneyBreakdown,
   UserProfile
 } from "@/shared/domain/finance";
+import type { Chit } from "@/shared/domain/chit";
+import { getChitProviderDisplay, getPrizeStatusLabel } from "@/lib/chit-display";
+import { deriveChitMetrics } from "@/shared/finance/chit-calculations";
 
 const healthCopy = {
   healthy: "Healthy",
@@ -42,6 +45,7 @@ export function HomeScreen() {
   const [state, setState] = useState<{
     profile: UserProfile;
     loans: Loan[];
+    chits: Chit[];
     moneyBreakdown: MoneyBreakdown;
     snapshot: FinancialSnapshot;
   } | null>(() =>
@@ -49,6 +53,7 @@ export function HomeScreen() {
       ? {
           profile: initialBootstrapState.profile,
           loans: initialBootstrapState.loans,
+          chits: [],
           moneyBreakdown: initialBootstrapState.moneyBreakdown,
           snapshot: initialBootstrapState.snapshot
         }
@@ -60,10 +65,11 @@ export function HomeScreen() {
   const [isLoading, setIsLoading] = useState(() => !initialBootstrapState);
 
   const loadSnapshot = useCallback(async () => {
-    const [profile, moneyBreakdown, loans, upcomingDues, settings] = await Promise.all([
+    const [profile, moneyBreakdown, loans, chits, upcomingDues, settings] = await Promise.all([
       financeRepository.getProfile(),
       financeRepository.getMoneyBreakdown(),
       financeRepository.listLoans(),
+      financeRepository.listChits(),
       financeRepository.listUpcomingDues(),
       financeRepository.getSettings()
     ]);
@@ -76,6 +82,7 @@ export function HomeScreen() {
     setState({
       profile,
       loans,
+      chits,
       moneyBreakdown,
       snapshot: createFinancialSnapshot({
         money: moneyBreakdown,
@@ -127,13 +134,14 @@ export function HomeScreen() {
     );
   }
 
-  const { profile, loans, moneyBreakdown, snapshot } = state;
+  const { profile, loans, chits, moneyBreakdown, snapshot } = state;
   const displayName = getDisplayName(profile);
   const healthMessage = getMeaningfulHealthMessage(snapshot, loans, moneyBreakdown);
-  const commitments = buildFinancialCommitments({ loans });
+  const commitments = buildFinancialCommitments({ loans, chits });
   const commitmentGroups = groupFinancialCommitments(commitments);
   const financialInsights = generateFinancialInsights({
     loans,
+    chits,
     moneyBreakdown,
     commitments
   });
@@ -166,11 +174,17 @@ export function HomeScreen() {
         <p className="text-sm leading-6 text-muted-foreground">{healthMessage}</p>
       </Card>
 
-      <div className={cn("grid grid-cols-3", spacing.metricGrid)}>
+      <div className={cn("grid grid-cols-2 gap-2", spacing.metricGrid)}>
         <Button asChild variant="secondary" size="sm" className="gap-1 px-2 text-xs">
           <Link href="/loans/new">
             <Plus className="h-4 w-4 shrink-0" />
             Add Loan
+          </Link>
+        </Button>
+        <Button asChild variant="secondary" size="sm" className="gap-1 px-2 text-xs">
+          <Link href="/chits/new">
+            <Plus className="h-4 w-4 shrink-0" />
+            Add Chit
           </Link>
         </Button>
         <Button asChild variant="secondary" size="sm" className="px-2 text-xs">
@@ -247,6 +261,72 @@ export function HomeScreen() {
               Add a loan when you are ready to track payoff progress here.
             </p>
           </Card>
+        )}
+      </section>
+
+      <section className={spacing.section}>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Your Chits
+          </p>
+          <Link href="/chits" className="text-xs font-medium">
+            View all chits
+          </Link>
+        </div>
+
+        {chits.length === 0 ? (
+          <Card className={cn("space-y-2", card.paddingCompact)}>
+            <h3 className="font-display text-2xl tracking-[-0.04em]">No active chits yet.</h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Add a chit to track monthly contributions and prize status.
+            </p>
+          </Card>
+        ) : (
+          <Link href={`/chits/${chits[0]?.id}`} className="block">
+            <Card className={cn("space-y-3", card.paddingCompact)}>
+              {(() => {
+                const featuredChit = chits[0]!;
+                const metrics = deriveChitMetrics(featuredChit);
+
+                return (
+                  <>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                          {getChitProviderDisplay(featuredChit)}
+                        </p>
+                        <h3 className="mt-1 font-display text-2xl tracking-[-0.04em]">
+                          {featuredChit.chitName}
+                        </h3>
+                      </div>
+                      <p className="text-sm font-semibold">
+                        {formatInr(featuredChit.monthlyContribution)}/mo
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Current month</p>
+                        <p className="font-semibold">Month {featuredChit.currentRunningMonth}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Prize status</p>
+                        <p className="font-semibold">{getPrizeStatusLabel(featuredChit)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Remaining months</p>
+                        <p className="font-semibold">{metrics.remainingMonths}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Next due</p>
+                        <p className="font-semibold">{featuredChit.nextDueDate}</p>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </Card>
+          </Link>
         )}
       </section>
 

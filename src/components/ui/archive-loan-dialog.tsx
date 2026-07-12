@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils";
 interface ArchiveLoanDialogProps {
   open: boolean;
   isWorking?: boolean;
+  title?: string;
+  description?: string;
+  reasonPlaceholder?: string;
   onConfirm: (archiveReason?: string) => void;
   onCancel: () => void;
 }
@@ -15,6 +18,9 @@ interface ArchiveLoanDialogProps {
 export function ArchiveLoanDialog({
   open,
   isWorking = false,
+  title = "Archive loan?",
+  description = "This loan will be removed from your active portfolio but all payment history, documents and statistics will be preserved.",
+  reasonPlaceholder = "Loan completed",
   onConfirm,
   onCancel
 }: ArchiveLoanDialogProps) {
@@ -75,11 +81,10 @@ export function ArchiveLoanDialog({
       >
         <div className="space-y-2">
           <h2 id={titleId} className="font-display text-3xl tracking-[-0.04em]">
-            Archive loan?
+            {title}
           </h2>
           <p id={descriptionId} className="text-sm leading-6 text-muted-foreground">
-            This loan will be removed from your active portfolio but all payment history,
-            documents and statistics will be preserved.
+            {description}
           </p>
         </div>
 
@@ -90,7 +95,7 @@ export function ArchiveLoanDialog({
           <input
             value={archiveReason}
             onChange={(event) => setArchiveReason(event.target.value)}
-            placeholder="Loan completed"
+            placeholder={reasonPlaceholder}
             className={cn(
               "h-12 w-full border border-border bg-white/45 px-4 text-base outline-none transition placeholder:text-muted-foreground/55 focus:border-primary",
               radius.input

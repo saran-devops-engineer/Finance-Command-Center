@@ -1,4 +1,5 @@
 import { endOfMonth, getDaysUntil, isNextCalendarMonth, isSameCalendarMonth } from "@/engines/commitment/commitment-utils";
+import { chitCommitmentProvider } from "@/engines/commitment/providers/chit-commitment-provider";
 import { goldLoanCommitmentProvider } from "@/engines/commitment/providers/gold-loan-commitment-provider";
 import { homeLoanCommitmentProvider } from "@/engines/commitment/providers/home-loan-commitment-provider";
 import type {
@@ -10,7 +11,8 @@ import type {
 
 const defaultProviders: CommitmentProvider[] = [
   homeLoanCommitmentProvider,
-  goldLoanCommitmentProvider
+  goldLoanCommitmentProvider,
+  chitCommitmentProvider
 ];
 
 const registeredProviders: CommitmentProvider[] = [...defaultProviders];

@@ -1,3 +1,4 @@
+import type { Chit } from "@/shared/domain/chit";
 import type {
   FinanceDataSnapshot,
   Loan,
@@ -64,6 +65,14 @@ export interface FinanceRepository {
   listAllLoanPayments(): Promise<LoanPayment[]>;
   listLoanPayments(loanId: string): Promise<LoanPayment[]>;
   saveLoanPayment(value: LoanPayment): Promise<void>;
+
+  // --- Chits ---
+  listChits(): Promise<Chit[]>;
+  listArchivedChits(): Promise<Chit[]>;
+  getChit(id: string): Promise<Chit | null>;
+  saveChit(value: Chit): Promise<void>;
+  softDeleteChit(id: string): Promise<void>;
+  archiveChit(id: string, archiveReason?: string): Promise<void>;
 
   // --- Upcoming financial commitments (legacy store: upcomingDues) ---
   listUpcomingDues(): Promise<UpcomingDue[]>;

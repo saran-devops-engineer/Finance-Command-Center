@@ -22,11 +22,13 @@ import type {
   Recommendation,
   UpcomingDue
 } from "@/shared/domain/finance";
+import type { Chit } from "@/shared/domain/chit";
 
 interface InsightsState {
   snapshot: FinancialSnapshot;
   moneyBreakdown: MoneyBreakdown;
   loans: Loan[];
+  chits: Chit[];
   upcomingDues: UpcomingDue[];
 }
 
@@ -43,10 +45,11 @@ export default function InsightsPage() {
   const [state, setState] = useState<InsightsState | null>(null);
 
   const loadInsights = useCallback(async () => {
-    const [profile, moneyBreakdown, loans, upcomingDues] = await Promise.all([
+    const [profile, moneyBreakdown, loans, chits, upcomingDues] = await Promise.all([
       financeRepository.getProfile(),
       financeRepository.getMoneyBreakdown(),
       financeRepository.listLoans(),
+      financeRepository.listChits(),
       financeRepository.listUpcomingDues()
     ]);
 
@@ -58,6 +61,7 @@ export default function InsightsPage() {
     setState({
       moneyBreakdown,
       loans,
+      chits,
       upcomingDues,
       snapshot: createFinancialSnapshot({
         money: moneyBreakdown,
@@ -82,8 +86,9 @@ export default function InsightsPage() {
   const financialInsights = state
     ? generateAllFinancialInsights({
         loans: state.loans,
+        chits: state.chits,
         moneyBreakdown: state.moneyBreakdown,
-        commitments: buildFinancialCommitments({ loans: state.loans })
+        commitments: buildFinancialCommitments({ loans: state.loans, chits: state.chits })
       })
     : [];
 
@@ -312,7 +317,7 @@ function getImpactLabel(recommendation: Recommendation, state: InsightsState) {
 }
 
 function getWeeklyReview(state: InsightsState) {
-  const commitments = buildFinancialCommitments({ loans: state.loans });
+  const commitments = buildFinancialCommitments({ loans: state.loans, chits: state.chits });
   const dueSoonCount = commitments.filter((commitment) => commitment.status === "due-soon").length;
 
   return {

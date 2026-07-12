@@ -1,4 +1,5 @@
 import type { FinanceRepository } from "@/repositories/finance-repository";
+import type { Chit } from "@/shared/domain/chit";
 import type {
   FinanceDataSnapshot,
   Loan,
@@ -166,7 +167,8 @@ function validateBackupData(value: unknown): FinanceDataSnapshot {
     moneyBreakdown: isMoneyBreakdown(value.moneyBreakdown) ? value.moneyBreakdown : null,
     loans: readLoanArray(value.loans),
     loanPayments: readLoanPaymentArray(value.loanPayments),
-    upcomingDues: readUpcomingDueArray(value.upcomingDues)
+    upcomingDues: readUpcomingDueArray(value.upcomingDues),
+    chits: readChitArray(value.chits)
   };
 }
 
@@ -323,6 +325,44 @@ function isUpcomingDue(value: unknown): value is UpcomingDue {
     typeof value.amount === "number" &&
     typeof value.source === "string"
   );
+}
+
+function isChit(value: unknown): value is Chit {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.providerType === "string" &&
+    typeof value.providerName === "string" &&
+    typeof value.chitName === "string" &&
+    typeof value.chitValue === "number" &&
+    typeof value.monthlyContribution === "number" &&
+    typeof value.totalDurationMonths === "number" &&
+    typeof value.startDate === "string" &&
+    typeof value.currentRunningMonth === "number" &&
+    typeof value.prizeReceived === "boolean" &&
+    typeof value.nextDueDate === "string" &&
+    typeof value.status === "string" &&
+    typeof value.createdAt === "string" &&
+    typeof value.updatedAt === "string"
+  );
+}
+
+function readChitArray(value: unknown): Chit[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("Backup chits data is invalid.");
+  }
+
+  return value.map((item, index) => {
+    if (!isChit(item)) {
+      throw new Error(`Invalid chit at index ${index}.`);
+    }
+
+    return item;
+  });
 }
 
 function readLoanArray(value: unknown): Loan[] {

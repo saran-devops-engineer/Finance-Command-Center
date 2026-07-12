@@ -1,6 +1,6 @@
 export const FINANCE_DATA_UPDATED_EVENT = "fcc:finance-data-updated";
 
-export type FinanceDataScope = "profile" | "loan" | "money" | "payment" | "restore";
+export type FinanceDataScope = "profile" | "loan" | "chit" | "money" | "payment" | "restore";
 
 export function notifyFinanceDataUpdated(scope?: FinanceDataScope) {
   if (typeof window === "undefined") {
