@@ -150,7 +150,7 @@ export function ChitDetailScreen({ chitId }: ChitDetailScreenProps) {
         isFadingOut ? "opacity-0" : "opacity-100"
       )}
     >
-      <SaveSuccessBanner show={showSavedBanner} message="Chit saved." />
+      {showSavedBanner ? <SaveSuccessBanner message="Chit saved." /> : null}
 
       <header className="space-y-4 pt-4">
         <Link
