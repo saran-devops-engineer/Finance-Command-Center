@@ -10,6 +10,9 @@ import { GoldLoanFormFields } from "@/features/loans/gold-loan-form-fields";
 import { HomeLoanFormFields } from "@/features/loans/home-loan-form-fields";
 import { LoanFormFields } from "@/features/loans/loan-form-fields";
 import { spacing } from "@/lib/design-tokens";
+import {
+  trackLoanCreatedEvent
+} from "@/core/analytics/loan-analytics-events";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { financeRepository } from "@/repositories";
 import {
@@ -126,6 +129,7 @@ export function AddLoanScreen() {
       await financeRepository.saveLoan(loan);
       await syncLoanCommitments(financeRepository, null, loan);
       notifyFinanceDataUpdated("loan");
+      trackLoanCreatedEvent(loan);
       router.replace("/loans");
       return;
     }
@@ -143,6 +147,7 @@ export function AddLoanScreen() {
       await financeRepository.saveLoan(loan);
       await syncLoanCommitments(financeRepository, null, loan);
       notifyFinanceDataUpdated("loan");
+      trackLoanCreatedEvent(loan);
       router.replace("/loans");
       return;
     }

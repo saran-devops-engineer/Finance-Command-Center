@@ -12,10 +12,10 @@ export function trackAppEvent<T extends AppEventName>(
   payload?: AppEventPayload<T>
 ) {
   const envelope = createAppEvent(event, payload);
-  analytics.track(envelope.name, {
-    ...(envelope.payload as Record<string, string | number | boolean | null | undefined>),
-    timestamp: envelope.timestamp
-  });
+  analytics.track(
+    envelope.name,
+    envelope.payload as Record<string, string | number | boolean | null | undefined> | undefined
+  );
 }
 
 export { AppEvent, createAppEvent };

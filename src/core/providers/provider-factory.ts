@@ -1,4 +1,5 @@
-import { createAnalyticsService, createNoOpAnalyticsProvider } from "@/core/analytics";
+import { createAnalyticsService } from "@/core/analytics";
+import { createAnalyticsProvider } from "@/core/analytics/analytics-provider-factory";
 import { createApiService, createRestApiProvider } from "@/core/api";
 import { createBackupService, createJsonBackupProvider } from "@/core/backup";
 import {
@@ -26,7 +27,7 @@ export function createProviderBundle(options: ProviderFactoryOptions = {}) {
   const configuration = createConfigurationService(configurationProvider);
   const errorProvider = createConsoleErrorProvider();
   const errorService = createErrorService(errorProvider);
-  const analyticsProvider = createNoOpAnalyticsProvider();
+  const analyticsProvider = createAnalyticsProvider(configuration);
   const analytics = createAnalyticsService(analyticsProvider);
   const apiProvider = createRestApiProvider(configuration);
   const api = createApiService(apiProvider, configuration);

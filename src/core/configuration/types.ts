@@ -10,6 +10,8 @@ export interface AppConfiguration {
   applicationVersion: string;
   minimumSupportedVersion: string;
   analyticsEnabled: boolean;
+  posthogKey: string;
+  posthogHost: string;
   notificationsEnabled: boolean;
   maintenanceMode: boolean;
   featureFlags: Record<string, boolean>;

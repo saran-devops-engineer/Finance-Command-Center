@@ -6,6 +6,7 @@ import type { ErrorService } from "@/core/error";
 import type { NotificationService } from "@/core/notifications";
 import type { FinanceRepository, FinanceMigrationResult } from "@/core/repository";
 import { createProviderBundle } from "@/core/providers/provider-factory";
+import { identifyAnalyticsUser } from "@/core/analytics/analytics-identity";
 import { preloadFinanceData } from "@/repositories/finance-preload";
 
 export interface ApplicationServices {
@@ -38,6 +39,12 @@ export function bootstrapApplication(
       await services.financeRepository.initializeDatabase();
       const migrationResult = await services.financeRepository.migrateFromLegacyStorage();
       await preloadFinanceData(services.financeRepository);
+
+      const profile = await services.financeRepository.getProfile();
+      if (profile?.onboardingCompleted) {
+        identifyAnalyticsUser(services.analytics, profile.displayName);
+      }
+
       return migrationResult;
     })();
   }

@@ -91,6 +91,31 @@ describe("Core Architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
+  it("allows PostHog SDK imports only inside PostHogProvider", () => {
+    const violations: string[] = [];
+
+    for (const filePath of sourceFiles) {
+      const relativePath = relativeSrcPath(filePath);
+      const contents = readFileSync(filePath, "utf8");
+
+      if (!contents.includes("posthog-js")) {
+        continue;
+      }
+
+      if (
+        relativePath === "core/analytics/posthog-provider.ts" ||
+        relativePath === "core/analytics/posthog-provider.test.ts" ||
+        relativePath === "core/architecture.test.ts"
+      ) {
+        continue;
+      }
+
+      violations.push(relativePath);
+    }
+
+    expect(violations).toEqual([]);
+  });
+
   it("exposes typed application events", async () => {
     const events = await import("@/core/events/app-events");
 

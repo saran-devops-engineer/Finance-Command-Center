@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { Calculator, CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpandableCard } from "@/components/ui/expandable-card";
@@ -89,6 +90,14 @@ export function WhatIfSimulator({ loan, initialStrategy = null }: WhatIfSimulato
   const [showComparison, setShowComparison] = useState(false);
   const [showFullCalculation, setShowFullCalculation] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const hasTrackedSimulatorOpen = useRef(false);
+
+  useEffect(() => {
+    if (isExpanded && !hasTrackedSimulatorOpen.current) {
+      hasTrackedSimulatorOpen.current = true;
+      trackApplicationEvent(AppEvent.SIMULATOR_OPENED, { loanId: loan.id });
+    }
+  }, [isExpanded, loan.id]);
 
   const amount = toNumber(prepaymentAmount);
   const monthlyExtraValue = toNumber(monthlyExtraAmount);
@@ -180,6 +189,30 @@ export function WhatIfSimulator({ loan, initialStrategy = null }: WhatIfSimulato
     setShowComparison(expandedStrategy === "compare");
     setShowFullCalculation(false);
     setShowSchedule(false);
+
+    if (expandedStrategy === "one-time" || expandedStrategy === "compare") {
+      trackApplicationEvent(AppEvent.ONE_TIME_PAYMENT_USED, { loanId: loan.id });
+
+      if (goal === "reduce-emi") {
+        trackApplicationEvent(AppEvent.REDUCE_EMI_USED, { loanId: loan.id });
+      }
+
+      if (goal === "reduce-tenure") {
+        trackApplicationEvent(AppEvent.REDUCE_TENURE_USED, { loanId: loan.id });
+      }
+    }
+
+    if (expandedStrategy === "monthly-extra") {
+      trackApplicationEvent(AppEvent.MONTHLY_EXTRA_PAYMENT_USED, { loanId: loan.id });
+    }
+
+    if (expandedStrategy === "annual-prepayment") {
+      trackApplicationEvent(AppEvent.ANNUAL_EXTRA_PAYMENT_USED, { loanId: loan.id });
+    }
+
+    if (expandedStrategy === "target-closure") {
+      trackApplicationEvent(AppEvent.TARGET_CLOSURE_USED, { loanId: loan.id });
+    }
   }
 
   function handleMonthlyExtraChange(nextValue: string) {

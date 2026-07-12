@@ -6,6 +6,7 @@ import { isInstallPromptDismissed } from "@/lib/pwa/install-prompt-dismissal";
 import { isStandaloneDisplayMode } from "@/lib/pwa/register-service-worker";
 import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 import { financeRepository } from "@/repositories";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 
 interface InstallWelcomeGateProps {
   children: ReactNode;
@@ -75,6 +76,7 @@ export function InstallWelcomeGate({ children }: InstallWelcomeGateProps) {
     try {
       const accepted = await promptInstall();
       if (accepted) {
+        trackApplicationEvent(AppEvent.APP_INSTALLED);
         setDecision("skip");
       }
     } finally {

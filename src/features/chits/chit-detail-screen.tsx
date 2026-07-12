@@ -13,6 +13,7 @@ import { SaveSuccessBanner } from "@/components/ui/save-success-banner";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { getChitProviderDisplay, getPrizeStatusLabel } from "@/lib/chit-display";
 import { getChitStatus, isActiveChit, isArchivedChit } from "@/lib/chit-status";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { card, spacing } from "@/lib/design-tokens";
 import { cn, formatInr } from "@/lib/utils";
 import { financeRepository } from "@/repositories";
@@ -98,6 +99,7 @@ export function ChitDetailScreen({ chitId }: ChitDetailScreenProps) {
     });
 
     await archiveChitRecord(financeRepository, chit.id, archiveReason);
+    trackApplicationEvent(AppEvent.CHIT_ARCHIVED, { chitId: chit.id });
     router.replace("/chits?view=archived");
   }
 

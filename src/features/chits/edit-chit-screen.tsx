@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChitFormFields } from "@/features/chits/chit-form-fields";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { spacing } from "@/lib/design-tokens";
 import { isActiveChit } from "@/lib/chit-status";
 import { financeRepository } from "@/repositories";
@@ -84,6 +85,7 @@ export function EditChitScreen({ chitId }: EditChitScreenProps) {
     setIsSaving(true);
     const chit = buildChitFromForm(form, existingChit);
     await saveChitUpdate(financeRepository, existingChit, chit);
+    trackApplicationEvent(AppEvent.CHIT_UPDATED, { chitId: chitId });
     router.replace(`/chits/${chitId}?saved=1`);
   }
 

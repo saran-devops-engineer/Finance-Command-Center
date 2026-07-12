@@ -10,6 +10,9 @@ import { GoldLoanFormFields } from "@/features/loans/gold-loan-form-fields";
 import { HomeLoanFormFields } from "@/features/loans/home-loan-form-fields";
 import { LoanFormFields } from "@/features/loans/loan-form-fields";
 import { spacing } from "@/lib/design-tokens";
+import {
+  trackLoanUpdatedEvent
+} from "@/core/analytics/loan-analytics-events";
 import { isActiveLoan } from "@/lib/loan-status";
 import { financeRepository } from "@/repositories";
 import {
@@ -137,6 +140,7 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
       setIsSaving(true);
       const updatedLoan = buildHomeLoanFromForm(homeForm, existingLoan);
       await saveLoanUpdate(financeRepository, existingLoan, updatedLoan);
+      trackLoanUpdatedEvent(updatedLoan);
       router.replace(`/loans/${loanId}?saved=1`);
       return;
     }
@@ -152,6 +156,7 @@ export function EditLoanScreen({ loanId }: EditLoanScreenProps) {
       setIsSaving(true);
       const updatedLoan = buildGoldLoanFromForm(goldForm, existingLoan);
       await saveLoanUpdate(financeRepository, existingLoan, updatedLoan);
+      trackLoanUpdatedEvent(updatedLoan);
       router.replace(`/loans/${loanId}?saved=1`);
       return;
     }

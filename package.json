@@ -17,6 +17,7 @@
     "idb": "latest",
     "lucide-react": "latest",
     "next": "15",
+    "posthog-js": "^1.399.2",
     "react": "19",
     "react-dom": "19",
     "tailwind-merge": "latest",

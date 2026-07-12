@@ -14,8 +14,14 @@ export type {
 export {
   AnalyticsService,
   createAnalyticsService,
+  createAnalyticsProvider,
   createNoOpAnalyticsProvider,
-  type AnalyticsProvider
+  createPostHogProvider,
+  identifyAnalyticsUser,
+  trackApplicationEvent,
+  reportApplicationError,
+  type AnalyticsProvider,
+  type AnalyticsProviderKind
 } from "@/core/analytics";
 
 export {

@@ -12,6 +12,7 @@ import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { card, radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { financeRepository, type BackupPreview } from "@/repositories";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { notifyFinanceDataRestored } from "@/lib/finance-data-events";
 import type { UserProfile } from "@/shared/domain/finance";
 
@@ -48,6 +49,7 @@ export default function ProfilePage() {
   const [lastRestoreAt, setLastRestoreAt] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [showSavedBanner, setShowSavedBanner] = useState(false);
+  const hasTrackedSettingsOpen = useRef(false);
 
   useEffect(() => {
     setShowSavedBanner(new URLSearchParams(window.location.search).get("saved") === "1");
@@ -71,6 +73,11 @@ export default function ProfilePage() {
 
   useEffect(() => {
     void loadProfile();
+
+    if (!hasTrackedSettingsOpen.current) {
+      hasTrackedSettingsOpen.current = true;
+      trackApplicationEvent(AppEvent.SETTINGS_OPENED);
+    }
   }, [loadProfile]);
 
   useFinanceDataReload(() => {
@@ -95,6 +102,8 @@ export default function ProfilePage() {
       await financeRepository.saveSettings({ lastBackupAt: backup.createdAt });
       setLastBackupAt(backup.createdAt);
       setBackupStatus("JSON backup created. Store the file somewhere safe.");
+      trackApplicationEvent(AppEvent.BACKUP_CREATED, { filename: backup.filename });
+      trackApplicationEvent(AppEvent.EXPORT_JSON);
     } catch (error) {
       setBackupStatus(getErrorMessage(error));
     } finally {
@@ -129,6 +138,8 @@ export default function ProfilePage() {
 
       // Phase 4 — refresh every subscribed screen from IndexedDB, then return to dashboard.
       notifyFinanceDataRestored();
+      trackApplicationEvent(AppEvent.BACKUP_RESTORED);
+      trackApplicationEvent(AppEvent.IMPORT_JSON);
       await loadProfile();
       router.replace("/");
     } catch (error) {

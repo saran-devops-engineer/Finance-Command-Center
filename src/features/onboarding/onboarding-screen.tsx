@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { AppEvent, identifyAnalyticsUser, trackApplicationEvent } from "@/core/analytics";
+import { getApplicationServices } from "@/repositories";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -130,6 +132,10 @@ export function OnboardingScreen() {
   const [form, setForm] = useState<OnboardingFormState>(initialState);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    trackApplicationEvent(AppEvent.ONBOARDING_STARTED);
+  }, []);
+
   const currentStep = steps[step];
   const canContinue = useMemo(() => {
     if (step === 0) {
@@ -185,6 +191,9 @@ export function OnboardingScreen() {
     if (due) {
       await financeRepository.saveUpcomingDue(due);
     }
+
+    identifyAnalyticsUser(getApplicationServices().analytics, profile.displayName);
+    trackApplicationEvent(AppEvent.ONBOARDING_COMPLETED);
 
     router.replace("/");
   }

@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { InstallWelcomeGate } from "@/components/install-welcome-gate";
 import { SplashScreen } from "@/features/splash/splash-screen";
 import { bootstrapApplication, getApplicationServices } from "@/core/application/application-container";
-import { AppEvent, trackAppEvent } from "@/core/events";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { registerServiceWorker, isStandaloneDisplayMode } from "@/lib/pwa/register-service-worker";
 import { waitForSplashDismissal } from "@/lib/pwa/splash-timing";
 
@@ -37,7 +37,7 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     const services = getApplicationServices();
     const bootstrapPromise = bootstrapApplication(services)
       .then(() => {
-        trackAppEvent(services.analytics, AppEvent.APP_OPENED);
+        trackApplicationEvent(AppEvent.APP_OPENED);
       })
       .catch((error) => {
         services.errorService.report(error, { phase: "bootstrap" });

@@ -18,7 +18,25 @@ function resolveEnvironment(): Environment {
   return "development";
 }
 
+function resolvePostHogKey() {
+  return (
+    process.env.NEXT_PUBLIC_POSTHOG_KEY ??
+    process.env.VITE_POSTHOG_KEY ??
+    ""
+  );
+}
+
+function resolvePostHogHost() {
+  return (
+    process.env.NEXT_PUBLIC_POSTHOG_HOST ??
+    process.env.VITE_POSTHOG_HOST ??
+    "https://app.posthog.com"
+  );
+}
+
 export function createDefaultConfigurationProvider(): ConfigurationProvider {
+  const posthogKey = resolvePostHogKey();
+
   return {
     getConfiguration(): AppConfiguration {
       return {
@@ -26,7 +44,9 @@ export function createDefaultConfigurationProvider(): ConfigurationProvider {
         environment: resolveEnvironment(),
         applicationVersion: APPLICATION_VERSION,
         minimumSupportedVersion: MINIMUM_SUPPORTED_VERSION,
-        analyticsEnabled: false,
+        analyticsEnabled: Boolean(posthogKey),
+        posthogKey,
+        posthogHost: resolvePostHogHost(),
         notificationsEnabled: false,
         maintenanceMode: false,
         featureFlags: {}

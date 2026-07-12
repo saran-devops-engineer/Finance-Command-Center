@@ -16,6 +16,10 @@ import { GoldLoanSimulator } from "@/features/loans/gold-loan-simulator";
 import { WhatIfSimulator } from "@/features/loans/what-if-simulator";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
+import {
+  trackLoanArchivedEvent,
+  trackLoanDeletedEvent
+} from "@/core/analytics/loan-analytics-events";
 import { cn, formatInr } from "@/lib/utils";
 import { getLoanStatus, isActiveLoan, isArchivedLoan } from "@/lib/loan-status";
 import {
@@ -121,6 +125,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
     });
 
     await softDeleteLoanRecord(financeRepository, loan.id);
+    trackLoanDeletedEvent(loan);
     router.replace("/loans");
   }
 
@@ -137,6 +142,7 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
     });
 
     await archiveLoanRecord(financeRepository, loan.id, archiveReason);
+    trackLoanArchivedEvent(loan);
     router.replace("/loans?view=archived");
   }
 

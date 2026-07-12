@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -97,6 +98,15 @@ export function HomeScreen() {
   useEffect(() => {
     void loadSnapshot();
   }, [loadSnapshot]);
+
+  const hasTrackedDashboardOpen = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading && state && !hasTrackedDashboardOpen.current) {
+      hasTrackedDashboardOpen.current = true;
+      trackApplicationEvent(AppEvent.HOME_DASHBOARD_OPENED);
+    }
+  }, [isLoading, state]);
 
   useFinanceDataReload(() => {
     void loadSnapshot();
