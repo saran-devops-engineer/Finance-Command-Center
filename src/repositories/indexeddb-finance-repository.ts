@@ -1,4 +1,4 @@
-import type { FinanceRepository } from "@/repositories/finance-repository";
+import type { FinanceRepository } from "@/core/repository/finance-repository";
 import {
   DEFAULT_DEVICE_PREFERENCES,
   DEFAULT_USER_APP_STATE,

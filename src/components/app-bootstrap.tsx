@@ -3,9 +3,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { InstallWelcomeGate } from "@/components/install-welcome-gate";
 import { SplashScreen } from "@/features/splash/splash-screen";
-import { isStandaloneDisplayMode, registerServiceWorker } from "@/lib/pwa/register-service-worker";
+import { bootstrapApplication, getApplicationServices } from "@/core/application/application-container";
+import { AppEvent, trackAppEvent } from "@/core/events";
+import { registerServiceWorker, isStandaloneDisplayMode } from "@/lib/pwa/register-service-worker";
 import { waitForSplashDismissal } from "@/lib/pwa/splash-timing";
-import { bootstrapFinanceRepository } from "@/repositories";
 
 interface AppBootstrapProps {
   children: ReactNode;
@@ -33,9 +34,14 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
 
     registerServiceWorker();
 
-    const bootstrapPromise = bootstrapFinanceRepository().catch((error) => {
-      console.error("[FCC] Bootstrap / migration failed:", error);
-    });
+    const services = getApplicationServices();
+    const bootstrapPromise = bootstrapApplication(services)
+      .then(() => {
+        trackAppEvent(services.analytics, AppEvent.APP_OPENED);
+      })
+      .catch((error) => {
+        services.errorService.report(error, { phase: "bootstrap" });
+      });
 
     void waitForSplashDismissal(bootstrapPromise).finally(() => {
       if (isMounted) {

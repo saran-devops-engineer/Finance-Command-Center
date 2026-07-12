@@ -1,4 +1,4 @@
-import type { FinanceRepository } from "@/repositories/finance-repository";
+import type { BackupRepositoryLike } from "@/core/backup/backup-provider.interface";
 import type { Chit } from "@/shared/domain/chit";
 import type {
   FinanceDataSnapshot,
@@ -19,7 +19,7 @@ import {
   type RestoredBackupSummary
 } from "@/storage/backup/backup-format";
 
-export async function createJsonBackup(params: { repository: FinanceRepository }) {
+export async function createJsonBackup(params: { repository: BackupRepositoryLike }) {
   const snapshot = await params.repository.createDataSnapshot();
   const createdAt = new Date().toISOString();
   const checksum = await createChecksum(snapshot);
@@ -56,7 +56,7 @@ export async function inspectJsonBackup(file: File): Promise<BackupPreview> {
 
 export async function restoreJsonBackup(params: {
   file: File;
-  repository: FinanceRepository;
+  repository: BackupRepositoryLike;
 }): Promise<RestoredBackupSummary> {
   const backup = await readAndValidateBackup(params.file);
   const snapshot = migrateBackupData(backup);
