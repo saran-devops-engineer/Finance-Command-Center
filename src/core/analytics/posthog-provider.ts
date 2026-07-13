@@ -11,7 +11,7 @@ import {
   mergeAnalyticsProperties
 } from "@/core/analytics/analytics-context";
 import { sanitizeAnalyticsTraits } from "@/core/analytics/analytics-identity";
-import { AppEvent } from "@/core/events/app-events";
+import { AppEvent } from "@/core/analytics/events";
 
 export function createPostHogProvider(configuration: ConfigurationService): AnalyticsProvider {
   let initialized = false;

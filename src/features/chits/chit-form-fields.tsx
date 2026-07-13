@@ -2,11 +2,13 @@
 
 import type { ReactNode } from "react";
 import { radius } from "@/lib/design-tokens";
+import { clarityMaskProps } from "@/lib/privacy/clarity-mask";
 import { cn, formatInr } from "@/lib/utils";
 import {
   REGISTERED_CHIT_PROVIDER_OPTIONS,
   getRegisteredProviderLabel
 } from "@/lib/chit-display";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 import { deriveChitMetrics } from "@/shared/finance/chit-calculations";
 import type { ChitFormState } from "@/shared/finance/chit-form";
 import { registeredProviderToName, toNumber } from "@/shared/finance/chit-form";
@@ -351,6 +353,7 @@ function Field({
         {label}
       </span>
       <input
+        {...(label === "Notes" || inputMode ? clarityMaskProps : {})}
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
         placeholder={placeholder}
@@ -447,7 +450,9 @@ function MetricRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border/50 pb-3 last:border-b-0 last:pb-0">
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="font-semibold">{value}</p>
+      <PrivacyMask as="p" className="font-semibold">
+        {value}
+      </PrivacyMask>
     </div>
   );
 }

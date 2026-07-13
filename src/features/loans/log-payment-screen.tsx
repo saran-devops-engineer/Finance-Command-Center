@@ -7,7 +7,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard } from "@/components/ui/metric-card";
-import { radius, spacing } from "@/lib/design-tokens";
+import { clarityMaskProps } from "@/lib/privacy/clarity-mask";
 import { formatInr, cn } from "@/lib/utils";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { financeRepository } from "@/repositories";
@@ -242,6 +242,7 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
             Note
           </span>
           <textarea
+            {...clarityMaskProps}
             value={form.note}
             onChange={(event) => updateField("note", event.target.value)}
             placeholder="Optional"

@@ -1,8 +1,8 @@
 "use client";
 
 import { radius } from "@/lib/design-tokens";
+import { clarityMaskProps } from "@/lib/privacy/clarity-mask";
 import { cn } from "@/lib/utils";
-import type { LoanFormState } from "@/shared/finance/loan-form";
 import { loanTypeOptions } from "@/shared/finance/loan-form";
 import type { LoanType } from "@/shared/domain/finance";
 
@@ -111,6 +111,7 @@ export function LoanFormFields({ form, errors, onChange }: LoanFormFieldsProps) 
           Notes
         </span>
         <textarea
+          {...clarityMaskProps}
           value={form.notes}
           onChange={(event) => onChange("notes", event.target.value)}
           placeholder="Optional context for future you"

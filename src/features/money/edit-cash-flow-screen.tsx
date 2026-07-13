@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { financeRepository } from "@/repositories";
 import type { MoneyBreakdown } from "@/shared/domain/finance";
@@ -60,6 +61,7 @@ function toMoneyBreakdown(form: CashFlowFormState): MoneyBreakdown {
 export function EditCashFlowScreen() {
   const router = useRouter();
   const [form, setForm] = useState<CashFlowFormState | null>(null);
+  const [originalBreakdown, setOriginalBreakdown] = useState<MoneyBreakdown | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -81,6 +83,7 @@ export function EditCashFlowScreen() {
       }
 
       setForm(toFormState(moneyBreakdown));
+      setOriginalBreakdown(moneyBreakdown);
     }
 
     void loadMoneyBreakdown();
@@ -100,7 +103,33 @@ export function EditCashFlowScreen() {
     }
 
     setIsSaving(true);
-    await financeRepository.saveMoneyBreakdown(toMoneyBreakdown(form));
+    const nextBreakdown = toMoneyBreakdown(form);
+    await financeRepository.saveMoneyBreakdown(nextBreakdown);
+
+    if (originalBreakdown) {
+      if (nextBreakdown.monthlyIncome !== originalBreakdown.monthlyIncome) {
+        trackApplicationEvent(AppEvent.INCOME_UPDATED);
+      }
+
+      const expenseFields: (keyof MoneyBreakdown)[] = [
+        "mandatoryExpenses",
+        "emis",
+        "loanPayments",
+        "insurance",
+        "rent",
+        "utilityBills",
+        "fixedCommitments"
+      ];
+
+      if (expenseFields.some((field) => nextBreakdown[field] !== originalBreakdown[field])) {
+        trackApplicationEvent(AppEvent.EXPENSE_UPDATED);
+      }
+
+      if (nextBreakdown.emergencyBuffer !== originalBreakdown.emergencyBuffer) {
+        trackApplicationEvent(AppEvent.BUFFER_UPDATED);
+      }
+    }
+
     notifyFinanceDataUpdated("money");
     router.replace("/");
   }

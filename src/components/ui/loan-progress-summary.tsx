@@ -1,3 +1,4 @@
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 import { cn, formatInr } from "@/lib/utils";
 
 export interface LoanProgressSummaryProps {
@@ -39,9 +40,12 @@ export function LoanProgressSummary({
           </span>
         </div>
 
-        <p className="min-w-0 whitespace-nowrap text-[clamp(0.5625rem,2.4vw,0.75rem)] font-semibold tabular-nums leading-none tracking-[-0.01em] text-foreground">
+        <PrivacyMask
+          as="p"
+          className="min-w-0 whitespace-nowrap text-[clamp(0.5625rem,2.4vw,0.75rem)] font-semibold tabular-nums leading-none tracking-[-0.01em] text-foreground"
+        >
           {formatInr(principalPaid)} of {formatInr(originalAmount)}
-        </p>
+        </PrivacyMask>
       </div>
     </div>
   );

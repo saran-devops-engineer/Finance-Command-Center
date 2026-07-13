@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Info, Star } from "lucide-react";
@@ -18,7 +18,8 @@ import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import {
   trackLoanArchivedEvent,
-  trackLoanDeletedEvent
+  trackLoanDeletedEvent,
+  trackLoanViewedEvent
 } from "@/core/analytics/loan-analytics-events";
 import { cn, formatInr } from "@/lib/utils";
 import { getLoanStatus, isActiveLoan, isArchivedLoan } from "@/lib/loan-status";
@@ -92,6 +93,15 @@ export function LoanDetailScreen({ loanId }: LoanDetailScreenProps) {
   useFinanceDataReload(() => {
     void loadLoan();
   });
+
+  const hasTrackedLoanViewed = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading && loan && !hasTrackedLoanViewed.current) {
+      hasTrackedLoanViewed.current = true;
+      trackLoanViewedEvent(loan);
+    }
+  }, [isLoading, loan]);
 
   const interestShare = loan
     ? Math.round((loan.interestPaid / Math.max(loan.interestPaid + loan.principalPaid, 1)) * 100)

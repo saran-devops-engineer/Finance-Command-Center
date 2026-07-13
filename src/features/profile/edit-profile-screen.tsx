@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { financeRepository } from "@/repositories";
 import { toNumber } from "@/shared/finance/loan-form";
@@ -102,6 +103,7 @@ export function EditProfileScreen() {
       updatedAt: new Date().toISOString()
     });
 
+    trackApplicationEvent(AppEvent.PROFILE_UPDATED);
     notifyFinanceDataUpdated("profile");
     router.replace("/profile?saved=1");
   }

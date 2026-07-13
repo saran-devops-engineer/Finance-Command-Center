@@ -34,15 +34,6 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
 
     registerServiceWorker();
 
-    console.log(
-      "POSTHOG KEY EXISTS:",
-      !!(process.env.NEXT_PUBLIC_POSTHOG_KEY ?? process.env.VITE_POSTHOG_KEY)
-    );
-    console.log(
-      "POSTHOG HOST:",
-      process.env.NEXT_PUBLIC_POSTHOG_HOST ?? process.env.VITE_POSTHOG_HOST
-    );
-
     const services = getApplicationServices();
     const bootstrapPromise = bootstrapApplication(services)
       .then(() => {

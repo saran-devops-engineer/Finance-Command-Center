@@ -193,6 +193,7 @@ export function OnboardingScreen() {
     }
 
     identifyAnalyticsUser(getApplicationServices().analytics, profile.displayName);
+    trackApplicationEvent(AppEvent.PROFILE_CREATED);
     trackApplicationEvent(AppEvent.ONBOARDING_COMPLETED);
 
     router.replace("/");

@@ -17,11 +17,21 @@ export {
   createAnalyticsProvider,
   createNoOpAnalyticsProvider,
   createPostHogProvider,
+  createClarityProvider,
+  createCompositeAnalyticsProvider,
   identifyAnalyticsUser,
   trackApplicationEvent,
+  trackScreenViewed,
   reportApplicationError,
+  AppEvent,
+  ScreenName,
+  EVENT_CATEGORIES,
+  EVENT_BUSINESS_QUESTIONS,
+  TAXONOMY_EVENT_COUNT,
   type AnalyticsProvider,
-  type AnalyticsProviderKind
+  type AnalyticsProviderKind,
+  type AppEventName,
+  type ScreenNameValue
 } from "@/core/analytics";
 
 export {

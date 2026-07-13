@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Plus } from "lucide-react";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
 import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
+import { FinancialAmount } from "@/components/ui/financial-amount";
+import { ScreenName, trackScreenViewed } from "@/core/analytics";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { formatInr, cn } from "@/lib/utils";
 import {
@@ -31,6 +33,7 @@ export function LoansScreen() {
   const [archivedLoans, setArchivedLoans] = useState<Loan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<LoansView>("active");
+  const hasTrackedScreenView = useRef(false);
 
   const loadLoans = useCallback(async () => {
     const [profile, localActiveLoans, localArchivedLoans] = await Promise.all([
@@ -59,6 +62,13 @@ export function LoansScreen() {
   useEffect(() => {
     void loadLoans();
   }, [loadLoans]);
+
+  useEffect(() => {
+    if (!isLoading && !hasTrackedScreenView.current) {
+      hasTrackedScreenView.current = true;
+      trackScreenViewed(ScreenName.LOANS);
+    }
+  }, [isLoading]);
 
   useFinanceDataReload(() => {
     void loadLoans();
@@ -182,7 +192,9 @@ export function LoansScreen() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">Remaining</p>
-                        <p className="font-semibold">{formatInr(loan.outstandingBalance)}</p>
+                        <p className="font-semibold">
+                          <FinancialAmount amount={loan.outstandingBalance} />
+                        </p>
                       </div>
                     </div>
 

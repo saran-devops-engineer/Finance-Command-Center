@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppEvent, trackApplicationEvent } from "@/core/analytics";
+import { FinancialAmount } from "@/components/ui/financial-amount";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+import { ScreenName, trackScreenViewed } from "@/core/analytics";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -104,7 +106,7 @@ export function HomeScreen() {
   useEffect(() => {
     if (!isLoading && state && !hasTrackedDashboardOpen.current) {
       hasTrackedDashboardOpen.current = true;
-      trackApplicationEvent(AppEvent.HOME_DASHBOARD_OPENED);
+      trackScreenViewed(ScreenName.HOME);
     }
   }, [isLoading, state]);
 
@@ -173,7 +175,7 @@ export function HomeScreen() {
               Financial Health
             </p>
             <p className="mt-2 text-4xl font-semibold tracking-[-0.05em]">
-              {formatInr(snapshot.availableMoney)}
+              <FinancialAmount amount={snapshot.availableMoney} />
             </p>
           </div>
           <div className="rounded-full border border-border px-3 py-1 text-xs font-medium">
@@ -239,7 +241,7 @@ export function HomeScreen() {
                   </h3>
                 </div>
                 <p className="text-sm font-semibold">
-                  {formatInr(priorityLoan.outstandingBalance)}
+                  <FinancialAmount amount={priorityLoan.outstandingBalance} />
                 </p>
               </div>
 
@@ -248,7 +250,7 @@ export function HomeScreen() {
                 originalAmount={priorityLoan.originalAmount}
               />
 
-              <p className="text-xs text-muted-foreground">
+              <PrivacyMask as="p" className="text-xs text-muted-foreground">
                 {priorityLoan.type === "gold"
                   ? `${priorityLoan.annualInterestRate}% p.a. · Interest ${formatInr(
                       Math.round(
@@ -261,7 +263,7 @@ export function HomeScreen() {
                   : `${priorityLoan.annualInterestRate}% p.a. · EMI ${formatInr(
                       priorityLoan.monthlyEmi
                     )}`}
-              </p>
+              </PrivacyMask>
             </Card>
           </Link>
         ) : (
@@ -310,7 +312,8 @@ export function HomeScreen() {
                         </h3>
                       </div>
                       <p className="text-sm font-semibold">
-                        {formatInr(featuredChit.monthlyContribution)}/mo
+                        <FinancialAmount amount={featuredChit.monthlyContribution} />
+                        /mo
                       </p>
                     </div>
 

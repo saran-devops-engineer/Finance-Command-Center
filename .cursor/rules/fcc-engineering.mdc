@@ -1,0 +1,17 @@
+---
+description: Finance Command Center engineering context and constraints
+alwaysApply: true
+---
+
+Before making changes, read:
+- `docs/SESSION_HANDOFF.md` — machine handoff, architecture state, recent work
+- `docs/AI_CONTEXT.md` — product rules, frozen UI foundation
+- `EVENT_TAXONOMY.md` — analytics events (never use magic strings)
+
+Hard rules:
+- Features use `AnalyticsService` only — never import PostHog or Clarity directly
+- All analytics via `AppEvent.*` from `@/core/analytics/events`
+- Chits are standalone entities — not loans
+- UI Foundation V1.0 is frozen — no redesign unless explicitly asked
+- No git commits unless the user requests them
+- Minimize scope; match existing code conventions

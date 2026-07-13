@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
@@ -70,6 +70,15 @@ export function ChitDetailScreen({ chitId }: ChitDetailScreenProps) {
     void loadChit();
   });
 
+  const hasTrackedChitViewed = useRef(false);
+
+  useEffect(() => {
+    if (!isLoading && chit && !hasTrackedChitViewed.current) {
+      hasTrackedChitViewed.current = true;
+      trackApplicationEvent(AppEvent.CHIT_VIEWED, { chit_id: chit.id });
+    }
+  }, [isLoading, chit]);
+
   async function confirmDeleteChit() {
     if (!chit) {
       return;
@@ -83,6 +92,7 @@ export function ChitDetailScreen({ chitId }: ChitDetailScreenProps) {
     });
 
     await softDeleteChitRecord(financeRepository, chit.id);
+    trackApplicationEvent(AppEvent.CHIT_DELETED, { chit_id: chit.id });
     router.replace("/chits");
   }
 
@@ -99,7 +109,7 @@ export function ChitDetailScreen({ chitId }: ChitDetailScreenProps) {
     });
 
     await archiveChitRecord(financeRepository, chit.id, archiveReason);
-    trackApplicationEvent(AppEvent.CHIT_ARCHIVED, { chitId: chit.id });
+    trackApplicationEvent(AppEvent.CHIT_ARCHIVED, { chit_id: chit.id });
     router.replace("/chits?view=archived");
   }
 

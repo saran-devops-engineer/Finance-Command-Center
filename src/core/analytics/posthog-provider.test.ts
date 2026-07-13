@@ -3,7 +3,7 @@ import { createConfigurationService } from "@/core/configuration/configuration-s
 import { createDefaultConfigurationProvider } from "@/core/configuration/default-configuration-provider";
 import { createPostHogProvider } from "@/core/analytics/posthog-provider";
 import { createAnalyticsProvider } from "@/core/analytics/analytics-provider-factory";
-import { AppEvent } from "@/core/events/app-events";
+import { AppEvent } from "@/core/analytics/events";
 
 const posthogMocks = vi.hoisted(() => ({
   init: vi.fn(),
@@ -90,17 +90,18 @@ describe("PostHog analytics provider", () => {
     const provider = createPostHogProvider(configuration);
 
     await provider.initialize();
-    provider.track(AppEvent.HOME_LOAN_CREATED, { loanId: "loan-1" });
+    provider.track(AppEvent.HOME_LOAN_CREATED, { loan_id: "loan-1" });
 
     expect(posthogMocks.capture).toHaveBeenCalledWith(
       AppEvent.HOME_LOAN_CREATED,
       expect.objectContaining({
-        loanId: "loan-1",
-        appVersion: "0.1.0",
+        loan_id: "loan-1",
+        app_version: "0.1.0",
         platform: expect.any(String),
         browser: expect.any(String),
-        operatingSystem: expect.any(String),
-        timestamp: expect.any(String)
+        operating_system: expect.any(String),
+        timestamp: expect.any(String),
+        analytics_provider: "posthog"
       })
     );
   });

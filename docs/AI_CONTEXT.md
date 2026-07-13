@@ -56,6 +56,8 @@ General Rules
 
 ## AI Engineering Workspace
 
+**Switching machines?** Read `docs/SESSION_HANDOFF.md` first — it captures engineering state this chat cannot carry to a new laptop.
+
 Read this file first, then open the most relevant supporting document before making changes:
 
 - `docs/PRODUCT_VISION.md` for product intent and target user.
@@ -64,6 +66,8 @@ Read this file first, then open the most relevant supporting document before mak
 - `docs/UX_REVIEW.md` for current UX assessment and improvement backlog.
 - `docs/ROADMAP.md` for phased delivery.
 - `docs/ARCHITECTURE.md` for system structure and boundaries.
+- `docs/SESSION_HANDOFF.md` for machine handoff, core/analytics state, and recent engineering work.
+- `EVENT_TAXONOMY.md` for the frozen analytics event contract (Engineering Standard #2).
 - `docs/CODING_STANDARDS.md` for implementation rules.
 - `docs/BACKUP_SCHEMA.md` for the locked backup file format (do not change without approval).
 - `docs/PROMPTS/*.md` for feature-specific agent instructions.

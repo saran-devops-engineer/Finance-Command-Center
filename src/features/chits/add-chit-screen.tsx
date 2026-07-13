@@ -62,7 +62,7 @@ export function AddChitScreen() {
     setIsSaving(true);
     const chit = buildChitFromForm(form);
     await saveChitUpdate(financeRepository, null, chit);
-    trackApplicationEvent(AppEvent.CHIT_CREATED, { chitId: chit.id });
+    trackApplicationEvent(AppEvent.CHIT_CREATED, { chit_id: chit.id });
     router.replace("/chits");
   }
 

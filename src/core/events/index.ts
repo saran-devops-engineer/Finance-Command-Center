@@ -4,7 +4,7 @@ import {
   createAppEvent,
   type AppEventName,
   type AppEventPayload
-} from "@/core/events/app-events";
+} from "@/core/analytics/events";
 
 export function trackAppEvent<T extends AppEventName>(
   analytics: AnalyticsService,
@@ -19,7 +19,7 @@ export function trackAppEvent<T extends AppEventName>(
 }
 
 export { AppEvent, createAppEvent };
-export type { AppEventName, AppEventPayload, AppEventPayloadMap } from "@/core/events/app-events";
+export type { AppEventName, AppEventPayload, AppEventPayloadMap } from "@/core/analytics/events";
 
 export {
   FINANCE_DATA_UPDATED_EVENT,

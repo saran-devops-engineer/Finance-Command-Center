@@ -85,7 +85,7 @@ export function EditChitScreen({ chitId }: EditChitScreenProps) {
     setIsSaving(true);
     const chit = buildChitFromForm(form, existingChit);
     await saveChitUpdate(financeRepository, existingChit, chit);
-    trackApplicationEvent(AppEvent.CHIT_UPDATED, { chitId: chitId });
+    trackApplicationEvent(AppEvent.CHIT_UPDATED, { chit_id: chitId });
     router.replace(`/chits/${chitId}?saved=1`);
   }
 

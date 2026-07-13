@@ -1,4 +1,4 @@
-import type { AppEventName, AppEventPayload } from "@/core/events/app-events";
+import type { AppEventName, AppEventPayload } from "@/core/analytics/events";
 import { trackAppEvent } from "@/core/events";
 import { getApplicationServices } from "@/core/application/application-container";
 

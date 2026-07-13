@@ -1,5 +1,6 @@
 "use client";
 
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 import { createContext, useContext, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { card, metric, radius, spacing } from "@/lib/design-tokens";
@@ -49,22 +50,28 @@ export function MetricCard({
             {label}
           </p>
 
-          <p
-            className={cn(
-              "w-full min-w-0 font-semibold tracking-[-0.02em]",
-              valueKind === "number"
-                ? cn(
-                    "overflow-hidden text-ellipsis whitespace-nowrap tabular-nums leading-none",
-                    columns === 3 ? metric.value3Col : metric.value2Col
-                  )
-                : cn(
-                    "line-clamp-2 leading-snug",
-                    columns === 3 ? metric.textValue3Col : metric.textValue2Col
-                  )
-            )}
-          >
-            {value}
-          </p>
+          {valueKind === "number" ? (
+            <PrivacyMask
+              as="p"
+              className={cn(
+                "w-full min-w-0 font-semibold tracking-[-0.02em]",
+                "overflow-hidden text-ellipsis whitespace-nowrap tabular-nums leading-none",
+                columns === 3 ? metric.value3Col : metric.value2Col
+              )}
+            >
+              {value}
+            </PrivacyMask>
+          ) : (
+            <p
+              className={cn(
+                "w-full min-w-0 font-semibold tracking-[-0.02em]",
+                "line-clamp-2 leading-snug",
+                columns === 3 ? metric.textValue3Col : metric.textValue2Col
+              )}
+            >
+              {value}
+            </p>
+          )}
 
           {helper ? (
             <p

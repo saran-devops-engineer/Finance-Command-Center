@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { ScreenName, trackScreenViewed } from "@/core/analytics";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { getChitProviderDisplay, getPrizeStatusLabel } from "@/lib/chit-display";
 import { card, radius, spacing } from "@/lib/design-tokens";
@@ -24,6 +25,7 @@ export function ChitsScreen() {
   const [archivedChits, setArchivedChits] = useState<Chit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<ChitsView>("active");
+  const hasTrackedScreenView = useRef(false);
 
   const loadChits = useCallback(async () => {
     const [profile, localActiveChits, localArchivedChits] = await Promise.all([
@@ -52,6 +54,13 @@ export function ChitsScreen() {
   useEffect(() => {
     void loadChits();
   }, [loadChits]);
+
+  useEffect(() => {
+    if (!isLoading && !hasTrackedScreenView.current) {
+      hasTrackedScreenView.current = true;
+      trackScreenViewed(ScreenName.CHITS);
+    }
+  }, [isLoading]);
 
   useFinanceDataReload(() => {
     void loadChits();

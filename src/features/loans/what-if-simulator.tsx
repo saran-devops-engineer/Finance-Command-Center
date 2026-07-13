@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useMemo, useState, useEffect, useRef } from "react";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import { Calculator, CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -95,7 +96,7 @@ export function WhatIfSimulator({ loan, initialStrategy = null }: WhatIfSimulato
   useEffect(() => {
     if (isExpanded && !hasTrackedSimulatorOpen.current) {
       hasTrackedSimulatorOpen.current = true;
-      trackApplicationEvent(AppEvent.SIMULATOR_OPENED, { loanId: loan.id });
+      trackApplicationEvent(AppEvent.SIMULATOR_OPENED, { loan_id: loan.id });
     }
   }, [isExpanded, loan.id]);
 
@@ -191,27 +192,27 @@ export function WhatIfSimulator({ loan, initialStrategy = null }: WhatIfSimulato
     setShowSchedule(false);
 
     if (expandedStrategy === "one-time" || expandedStrategy === "compare") {
-      trackApplicationEvent(AppEvent.ONE_TIME_PAYMENT_USED, { loanId: loan.id });
+      trackApplicationEvent(AppEvent.ONE_TIME_PAYMENT_USED, { loan_id: loan.id });
 
       if (goal === "reduce-emi") {
-        trackApplicationEvent(AppEvent.REDUCE_EMI_USED, { loanId: loan.id });
+        trackApplicationEvent(AppEvent.REDUCE_EMI_USED, { loan_id: loan.id });
       }
 
       if (goal === "reduce-tenure") {
-        trackApplicationEvent(AppEvent.REDUCE_TENURE_USED, { loanId: loan.id });
+        trackApplicationEvent(AppEvent.REDUCE_TENURE_USED, { loan_id: loan.id });
       }
     }
 
     if (expandedStrategy === "monthly-extra") {
-      trackApplicationEvent(AppEvent.MONTHLY_EXTRA_PAYMENT_USED, { loanId: loan.id });
+      trackApplicationEvent(AppEvent.MONTHLY_EXTRA_PAYMENT_USED, { loan_id: loan.id });
     }
 
     if (expandedStrategy === "annual-prepayment") {
-      trackApplicationEvent(AppEvent.ANNUAL_EXTRA_PAYMENT_USED, { loanId: loan.id });
+      trackApplicationEvent(AppEvent.ANNUAL_EXTRA_PAYMENT_USED, { loan_id: loan.id });
     }
 
     if (expandedStrategy === "target-closure") {
-      trackApplicationEvent(AppEvent.TARGET_CLOSURE_USED, { loanId: loan.id });
+      trackApplicationEvent(AppEvent.TARGET_CLOSURE_USED, { loan_id: loan.id });
     }
   }
 
@@ -610,7 +611,9 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
   return (
     <div className={cn("bg-white/10", radius.inner, "px-4 py-3")}>
       <p className="text-[0.68rem] uppercase tracking-[0.16em] opacity-60">{label}</p>
-      <p className="mt-1 text-base font-semibold">{value}</p>
+      <p className="mt-1 text-base font-semibold">
+        <PrivacyMask>{value}</PrivacyMask>
+      </p>
     </div>
   );
 }

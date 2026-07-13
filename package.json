@@ -18,6 +18,7 @@
     "lucide-react": "latest",
     "next": "15",
     "posthog-js": "^1.399.2",
+    "@microsoft/clarity": "^1.0.2",
     "react": "19",
     "react-dom": "19",
     "tailwind-merge": "latest",

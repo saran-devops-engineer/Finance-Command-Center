@@ -12,6 +12,7 @@ export interface AppConfiguration {
   analyticsEnabled: boolean;
   posthogKey: string;
   posthogHost: string;
+  clarityProjectId: string;
   notificationsEnabled: boolean;
   maintenanceMode: boolean;
   featureFlags: Record<string, boolean>;

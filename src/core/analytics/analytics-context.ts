@@ -20,6 +20,21 @@ export function getAnalyticsDistinctId() {
   return distinctId;
 }
 
+export function resolveAnalyticsProviderName(configuration: ConfigurationService): string {
+  const config = configuration.getConfig();
+  const providers: string[] = [];
+
+  if (config.analyticsEnabled && config.posthogKey) {
+    providers.push("posthog");
+  }
+
+  if (config.clarityProjectId) {
+    providers.push("clarity");
+  }
+
+  return providers.length > 0 ? providers.join("+") : "noop";
+}
+
 function detectBrowser() {
   if (typeof navigator === "undefined") {
     return "unknown";
@@ -80,13 +95,15 @@ export function buildAnalyticsContextProperties(
   configuration: ConfigurationService
 ): AnalyticsEventProperties {
   return {
-    appVersion: configuration.getApplicationVersion() || APPLICATION_VERSION,
-    platform: typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches
-      ? "installed-pwa"
-      : "web",
+    app_version: configuration.getApplicationVersion() || APPLICATION_VERSION,
+    platform:
+      typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches
+        ? "installed-pwa"
+        : "web",
     browser: detectBrowser(),
-    operatingSystem: detectOperatingSystem(),
-    timestamp: new Date().toISOString()
+    operating_system: detectOperatingSystem(),
+    timestamp: new Date().toISOString(),
+    analytics_provider: resolveAnalyticsProviderName(configuration)
   };
 }
 

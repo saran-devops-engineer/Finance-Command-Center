@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { ScreenName, trackScreenViewed } from "@/core/analytics";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
@@ -43,6 +44,7 @@ interface RankedInsight {
 export default function InsightsPage() {
   const router = useRouter();
   const [state, setState] = useState<InsightsState | null>(null);
+  const hasTrackedScreenView = useRef(false);
 
   const loadInsights = useCallback(async () => {
     const [profile, moneyBreakdown, loans, chits, upcomingDues] = await Promise.all([
@@ -74,6 +76,13 @@ export default function InsightsPage() {
   useEffect(() => {
     void loadInsights();
   }, [loadInsights]);
+
+  useEffect(() => {
+    if (state && !hasTrackedScreenView.current) {
+      hasTrackedScreenView.current = true;
+      trackScreenViewed(ScreenName.INSIGHTS);
+    }
+  }, [state]);
 
   useFinanceDataReload(() => {
     void loadInsights();

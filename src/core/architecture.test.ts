@@ -116,12 +116,38 @@ describe("Core Architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
+  it("allows Clarity SDK imports only inside ClarityProvider", () => {
+    const violations: string[] = [];
+
+    for (const filePath of sourceFiles) {
+      const relativePath = relativeSrcPath(filePath);
+      const contents = readFileSync(filePath, "utf8");
+
+      if (!contents.includes("@microsoft/clarity")) {
+        continue;
+      }
+
+      if (
+        relativePath === "core/analytics/clarity-provider.ts" ||
+        relativePath === "core/analytics/clarity-provider.test.ts" ||
+        relativePath === "core/architecture.test.ts"
+      ) {
+        continue;
+      }
+
+      violations.push(relativePath);
+    }
+
+    expect(violations).toEqual([]);
+  });
+
   it("exposes typed application events", async () => {
-    const events = await import("@/core/events/app-events");
+    const events = await import("@/core/analytics/events");
 
     expect(events.AppEvent.APP_OPENED).toBe("APP_OPENED");
     expect(events.AppEvent.CHIT_CREATED).toBe("CHIT_CREATED");
     expect(events.AppEvent.EXPORT_JSON).toBe("EXPORT_JSON");
+    expect(events.AppEvent.SCREEN_VIEWED).toBe("SCREEN_VIEWED");
   });
 
   it("wires application services through the container", async () => {

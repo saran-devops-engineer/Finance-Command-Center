@@ -34,8 +34,17 @@ function resolvePostHogHost() {
   );
 }
 
+function resolveClarityProjectId() {
+  return (
+    process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ??
+    process.env.VITE_CLARITY_PROJECT_ID ??
+    ""
+  );
+}
+
 export function createDefaultConfigurationProvider(): ConfigurationProvider {
   const posthogKey = resolvePostHogKey();
+  const clarityProjectId = resolveClarityProjectId();
 
   return {
     getConfiguration(): AppConfiguration {
@@ -44,9 +53,10 @@ export function createDefaultConfigurationProvider(): ConfigurationProvider {
         environment: resolveEnvironment(),
         applicationVersion: APPLICATION_VERSION,
         minimumSupportedVersion: MINIMUM_SUPPORTED_VERSION,
-        analyticsEnabled: Boolean(posthogKey),
+        analyticsEnabled: Boolean(posthogKey || clarityProjectId),
         posthogKey,
         posthogHost: resolvePostHogHost(),
+        clarityProjectId,
         notificationsEnabled: false,
         maintenanceMode: false,
         featureFlags: {}

@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { FinancialAmount } from "@/components/ui/financial-amount";
+import { ScreenName, trackScreenViewed } from "@/core/analytics";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
@@ -21,6 +23,7 @@ export default function MoneyPage() {
   const router = useRouter();
   const [moneyBreakdown, setMoneyBreakdown] = useState<MoneyBreakdown | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const hasTrackedScreenView = useRef(false);
 
   const loadMoney = useCallback(async () => {
     const [profile, localMoneyBreakdown] = await Promise.all([
@@ -40,6 +43,13 @@ export default function MoneyPage() {
   useEffect(() => {
     void loadMoney();
   }, [loadMoney]);
+
+  useEffect(() => {
+    if (!isLoading && moneyBreakdown && !hasTrackedScreenView.current) {
+      hasTrackedScreenView.current = true;
+      trackScreenViewed(ScreenName.MONEY);
+    }
+  }, [isLoading, moneyBreakdown]);
 
   useFinanceDataReload(() => {
     void loadMoney();
@@ -101,7 +111,7 @@ export default function MoneyPage() {
               Safe to use
             </p>
             <p className="text-4xl font-semibold tracking-[-0.05em]">
-              {formatInr(availableMoney)}
+              <FinancialAmount amount={availableMoney} />
             </p>
             <p className="text-sm leading-6 text-muted-foreground">
               {decisionCopy}

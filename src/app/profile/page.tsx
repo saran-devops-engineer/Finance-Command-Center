@@ -12,7 +12,7 @@ import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { card, radius, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
 import { financeRepository, type BackupPreview } from "@/repositories";
-import { AppEvent, trackApplicationEvent } from "@/core/analytics";
+import { AppEvent, ScreenName, trackApplicationEvent, trackScreenViewed } from "@/core/analytics";
 import { notifyFinanceDataRestored } from "@/lib/finance-data-events";
 import type { UserProfile } from "@/shared/domain/finance";
 
@@ -76,6 +76,7 @@ export default function ProfilePage() {
 
     if (!hasTrackedSettingsOpen.current) {
       hasTrackedSettingsOpen.current = true;
+      trackScreenViewed(ScreenName.PROFILE);
       trackApplicationEvent(AppEvent.SETTINGS_OPENED);
     }
   }, [loadProfile]);
