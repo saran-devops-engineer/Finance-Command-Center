@@ -8,6 +8,9 @@ import type {
 } from "@/shared/domain/finance";
 import type { UserAppState } from "@/repositories/app-settings";
 import type { Chit } from "@/shared/domain/chit";
+import type { IncomeProfile } from "@/shared/domain/income";
+import type { CommitmentRecord } from "@/shared/domain/commitment-record";
+import type { SchemaMeta } from "@/shared/domain/schema-version";
 import { migrateLegacyHomeLoan } from "@/shared/finance/home-loan-form";
 import { migrateGoldLoan } from "@/shared/finance/gold-loan-form";
 
@@ -35,7 +38,7 @@ interface FinanceCommandCenterDb extends DBSchema {
     value: UpcomingDue;
     indexes: { "by-due-date": string };
   };
-  /** Phase 2 — user/session state (pinned loan, backup timestamps). Not financial ledger data. */
+  /** User/session state (pinned loan, backup timestamps). Not financial ledger data. */
   appState: {
     key: string;
     value: UserAppState;
@@ -46,13 +49,34 @@ interface FinanceCommandCenterDb extends DBSchema {
     value: Chit;
     indexes: { "by-next-due-date": string; "by-status": Chit["status"] };
   };
+  /** V2 income profile (simple or advanced). */
+  incomeProfile: {
+    key: string;
+    value: IncomeProfile & { id: string };
+  };
+  /** V2 commitment records (manual + legacy-migrated + product-generated). */
+  commitments: {
+    key: string;
+    value: CommitmentRecord;
+    indexes: {
+      "by-next-due-date": string;
+      "by-review-status": CommitmentRecord["reviewStatus"];
+    };
+  };
+  /** Schema version metadata for V1→V2 migration tracking. */
+  schemaMeta: {
+    key: string;
+    value: SchemaMeta;
+  };
 }
 
 let databasePromise: Promise<IDBPDatabase<FinanceCommandCenterDb>> | null = null;
 
+export type FinanceDatabase = IDBPDatabase<FinanceCommandCenterDb>;
+
 export function getFinanceDatabase() {
   if (!databasePromise) {
-    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 6, {
+    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 7, {
       upgrade: async (database, oldVersion, _newVersion, transaction) => {
         if (!database.objectStoreNames.contains("profile")) {
           database.createObjectStore("profile", { keyPath: "id" });
@@ -92,6 +116,20 @@ export function getFinanceDatabase() {
           chits.createIndex("by-status", "status");
         }
 
+        if (!database.objectStoreNames.contains("incomeProfile")) {
+          database.createObjectStore("incomeProfile", { keyPath: "id" });
+        }
+
+        if (!database.objectStoreNames.contains("commitments")) {
+          const commitments = database.createObjectStore("commitments", { keyPath: "id" });
+          commitments.createIndex("by-next-due-date", "nextDueDate");
+          commitments.createIndex("by-review-status", "reviewStatus");
+        }
+
+        if (!database.objectStoreNames.contains("schemaMeta")) {
+          database.createObjectStore("schemaMeta", { keyPath: "id" });
+        }
+
         if (oldVersion < 3) {
           const loanStore = transaction.objectStore("loans");
           const loans = await loanStore.getAll();
@@ -118,4 +156,9 @@ export function getFinanceDatabase() {
   }
 
   return databasePromise;
+}
+
+/** Test helper — reset singleton between Vitest cases. */
+export function resetFinanceDatabaseForTests() {
+  databasePromise = null;
 }

@@ -11,6 +11,7 @@ import { ProfileEvents, type ProfileEventPayloadMap } from "./profile-events";
 import { SettingsEvents, type SettingsEventPayloadMap } from "./settings-events";
 import { FeedbackEvents, type FeedbackEventPayloadMap } from "./feedback-events";
 import { ErrorEvents, type ErrorEventPayloadMap } from "./error-events";
+import { MigrationEvents, type MigrationEventPayloadMap } from "./migration-events";
 import type { EventCategory } from "./event-properties";
 
 export { StandardActions, type StandardAction } from "./standard-actions";
@@ -27,6 +28,7 @@ export { ProfileEvents, type ProfileEventName, type ProfileEventPayloadMap } fro
 export { SettingsEvents, type SettingsEventName, type SettingsEventPayloadMap } from "./settings-events";
 export { FeedbackEvents, type FeedbackEventName, type FeedbackEventPayloadMap } from "./feedback-events";
 export { ErrorEvents, type ErrorEventName, type ErrorEventPayloadMap } from "./error-events";
+export { MigrationEvents, type MigrationEventName, type MigrationEventPayloadMap } from "./migration-events";
 export {
   ScreenName,
   type ScreenNameValue,
@@ -36,7 +38,7 @@ export {
 } from "./event-properties";
 
 /**
- * FCC Event Taxonomy V1 — the official analytics language.
+ * FCC Event Taxonomy — the official analytics language.
  * Every track() call must use AppEvent.* — never magic strings.
  */
 export const AppEvent = {
@@ -52,7 +54,8 @@ export const AppEvent = {
   ...ProfileEvents,
   ...SettingsEvents,
   ...FeedbackEvents,
-  ...ErrorEvents
+  ...ErrorEvents,
+  ...MigrationEvents
 } as const;
 
 export type AppEventPayloadMap = ApplicationEventPayloadMap &
@@ -67,7 +70,8 @@ export type AppEventPayloadMap = ApplicationEventPayloadMap &
   ProfileEventPayloadMap &
   SettingsEventPayloadMap &
   FeedbackEventPayloadMap &
-  ErrorEventPayloadMap;
+  ErrorEventPayloadMap &
+  MigrationEventPayloadMap;
 
 export type AppEventName = keyof AppEventPayloadMap;
 
@@ -133,7 +137,14 @@ export const EVENT_CATEGORIES: Record<AppEventName, EventCategory> = {
   THEME_CHANGED: "Settings",
   ANALYTICS_CHANGED: "Settings",
   FEEDBACK_SUBMITTED: "Feedback",
-  ERROR_OCCURRED: "Errors"
+  ERROR_OCCURRED: "Errors",
+  MIGRATION_STARTED: "Migration",
+  MIGRATION_COMPLETED: "Migration",
+  MIGRATION_FAILED: "Migration",
+  LEGACY_COMMITMENT_REVIEWED: "Commitments",
+  INCOME_SOURCE_ADDED: "Income",
+  COMMITMENT_CREATED: "Commitments",
+  PRODUCT_CREATED: "Products"
 };
 
 export const EVENT_BUSINESS_QUESTIONS: Record<AppEventName, string> = {
@@ -181,7 +192,14 @@ export const EVENT_BUSINESS_QUESTIONS: Record<AppEventName, string> = {
   THEME_CHANGED: "Do users customize appearance?",
   ANALYTICS_CHANGED: "Do users control analytics preferences?",
   FEEDBACK_SUBMITTED: "Are users sharing product feedback?",
-  ERROR_OCCURRED: "Where is the application failing for users?"
+  ERROR_OCCURRED: "Where is the application failing for users?",
+  MIGRATION_STARTED: "How often do users enter schema migration?",
+  MIGRATION_COMPLETED: "Do schema migrations complete successfully?",
+  MIGRATION_FAILED: "Where do schema migrations fail?",
+  LEGACY_COMMITMENT_REVIEWED: "Are users clearing legacy migration review items?",
+  INCOME_SOURCE_ADDED: "Are users adding advanced income sources?",
+  COMMITMENT_CREATED: "Are users creating manual commitments?",
+  PRODUCT_CREATED: "Which product types are users creating?"
 };
 
 /** Events defined in taxonomy but not yet emitted by any feature. */

@@ -7,8 +7,12 @@ import type {
   UpcomingDue,
   UserProfile
 } from "@/shared/domain/finance";
+import type { IncomeProfile } from "@/shared/domain/income";
+import type { CommitmentRecord } from "@/shared/domain/commitment-record";
+import type { SchemaMeta } from "@/shared/domain/schema-version";
 import type { AppSettings } from "@/repositories/app-settings";
 import type { BackupPreview, RestoredBackupSummary } from "@/storage/backup/backup-format";
+import type { SchemaMigrationResult } from "@/storage/migration";
 
 export interface FinanceBackupExport {
   blob: Blob;
@@ -30,12 +34,25 @@ export interface FinanceMigrationResult {
 export interface FinanceRepository {
   initializeDatabase(): Promise<void>;
   migrateFromLegacyStorage(): Promise<FinanceMigrationResult>;
+  /** Runs V1→V2 domain schema migration. Idempotent. Never deletes V1 data. */
+  migrateDataSchema(): Promise<SchemaMigrationResult>;
   clearDatabase(): Promise<void>;
 
   getProfile(): Promise<UserProfile | null>;
   saveProfile(value: UserProfile): Promise<void>;
   getMoneyBreakdown(): Promise<MoneyBreakdown | null>;
   saveMoneyBreakdown(value: MoneyBreakdown): Promise<void>;
+
+  getIncomeProfile(): Promise<IncomeProfile | null>;
+  saveIncomeProfile(value: IncomeProfile): Promise<void>;
+
+  listCommitments(): Promise<CommitmentRecord[]>;
+  listCommitmentsNeedingReview(): Promise<CommitmentRecord[]>;
+  getCommitment(id: string): Promise<CommitmentRecord | null>;
+  saveCommitment(value: CommitmentRecord): Promise<void>;
+  deleteCommitment(id: string): Promise<void>;
+
+  getSchemaMeta(): Promise<SchemaMeta | null>;
 
   getSettings(): Promise<AppSettings>;
   saveSettings(value: Partial<AppSettings>): Promise<AppSettings>;

@@ -4,6 +4,7 @@ import { isActiveLoan, normalizeLoan } from "@/lib/loan-status";
 import type { FinanceRepository } from "@/repositories";
 import { buildLoanDue, getLoanMonthlyCommitment } from "@/shared/finance/loan-form";
 import type { Loan } from "@/shared/domain/finance";
+import { syncProductGeneratedCommitments } from "@/services/commitment-sync/sync-product-commitments";
 
 export async function syncLoanCommitments(
   repository: FinanceRepository,
@@ -27,6 +28,7 @@ export async function syncLoanCommitments(
   }
 
   await repository.saveUpcomingDue(buildLoanDue(nextLoan));
+  await syncProductGeneratedCommitments(repository);
 }
 
 export async function saveLoanUpdate(
@@ -39,10 +41,7 @@ export async function saveLoanUpdate(
   notifyFinanceDataUpdated("loan");
 }
 
-export async function softDeleteLoanRecord(
-  repository: FinanceRepository,
-  loanId: string
-) {
+export async function softDeleteLoanRecord(repository: FinanceRepository, loanId: string) {
   const loan = await repository.getLoan(loanId);
 
   if (!loan || !isActiveLoan(loan)) {
@@ -60,6 +59,7 @@ export async function softDeleteLoanRecord(
 
   await repository.deleteUpcomingDue(`due-${loan.id}`);
   await repository.softDeleteLoan(loan.id);
+  await syncProductGeneratedCommitments(repository);
 
   if ((await getPinnedLoanId()) === loan.id) {
     await setPinnedLoanId(null);
@@ -91,6 +91,7 @@ export async function archiveLoanRecord(
 
   await repository.deleteUpcomingDue(`due-${loan.id}`);
   await repository.archiveLoan(loan.id, archiveReason);
+  await syncProductGeneratedCommitments(repository);
 
   if ((await getPinnedLoanId()) === loan.id) {
     await setPinnedLoanId(null);

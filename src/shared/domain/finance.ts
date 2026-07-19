@@ -117,13 +117,22 @@ export interface FinancialSnapshot {
 }
 
 export interface FinanceDataSnapshot {
-  schemaVersion: 1;
+  /** 1 = V1 MoneyBreakdown model; 2 = V2 IncomeProfile + CommitmentRecord (+ V1 fields retained). */
+  schemaVersion: 1 | 2;
   exportedAt: string;
   profile: UserProfile | null;
+  /**
+   * V1 cash-flow fields — retained for backward compatibility.
+   * Never deleted by V1→V2 migration.
+   */
   moneyBreakdown: MoneyBreakdown | null;
   loans: Loan[];
   loanPayments: LoanPayment[];
   upcomingDues: UpcomingDue[];
   /** Chit Management V1 — optional for backward-compatible backups. */
   chits?: import("@/shared/domain/chit").Chit[];
+  /** V2 income model — present after schema migration. */
+  incomeProfile?: import("@/shared/domain/income").IncomeProfile | null;
+  /** V2 commitment records — present after schema migration. */
+  commitments?: import("@/shared/domain/commitment-record").CommitmentRecord[];
 }

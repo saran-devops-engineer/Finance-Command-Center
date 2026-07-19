@@ -1,5 +1,7 @@
 import type { BackupRepositoryLike } from "@/core/backup/backup-provider.interface";
 import type { Chit } from "@/shared/domain/chit";
+import type { CommitmentRecord } from "@/shared/domain/commitment-record";
+import type { IncomeProfile } from "@/shared/domain/income";
 import type {
   FinanceDataSnapshot,
   Loan,
@@ -20,7 +22,7 @@ import {
 } from "@/storage/backup/backup-format";
 
 export async function createJsonBackup(params: { repository: BackupRepositoryLike }) {
-  const snapshot = await params.repository.createDataSnapshot();
+  const snapshot = validateBackupData(await params.repository.createDataSnapshot());
   const createdAt = new Date().toISOString();
   const checksum = await createChecksum(snapshot);
   const backup: FinanceCommandCenterBackupV1 = {
@@ -155,12 +157,13 @@ function validateBackupData(value: unknown): FinanceDataSnapshot {
     throw new Error("Backup data is missing.");
   }
 
-  if (value.schemaVersion !== 1) {
+  const schemaVersion = value.schemaVersion;
+  if (schemaVersion !== 1 && schemaVersion !== 2) {
     throw new Error("Unsupported backup data schema.");
   }
 
   return {
-    schemaVersion: 1,
+    schemaVersion,
     exportedAt:
       typeof value.exportedAt === "string" ? value.exportedAt : new Date().toISOString(),
     profile: isUserProfile(value.profile) ? value.profile : null,
@@ -168,7 +171,9 @@ function validateBackupData(value: unknown): FinanceDataSnapshot {
     loans: readLoanArray(value.loans),
     loanPayments: readLoanPaymentArray(value.loanPayments),
     upcomingDues: readUpcomingDueArray(value.upcomingDues),
-    chits: readChitArray(value.chits)
+    chits: readChitArray(value.chits),
+    incomeProfile: isIncomeProfile(value.incomeProfile) ? value.incomeProfile : null,
+    commitments: readCommitmentArray(value.commitments)
   };
 }
 
@@ -193,11 +198,12 @@ async function validateChecksum(backup: FinanceCommandCenterBackupV1) {
 }
 
 function migrateBackupData(backup: FinanceCommandCenterBackupV1): FinanceDataSnapshot {
-  if (backup.backupVersion === "1.0") {
-    return backup.data;
+  if (backup.backupVersion !== "1.0") {
+    throw new Error("Unsupported backup version.");
   }
 
-  throw new Error("Unsupported backup version.");
+  // Detect schema inside data payload; V1→V2 upgrade runs after replace via repository.migrateDataSchema().
+  return backup.data;
 }
 
 function createPreview(backup: FinanceCommandCenterBackupV1): BackupPreview {
@@ -217,7 +223,11 @@ function createMetadata(snapshot: FinanceDataSnapshot): BackupMetadata {
     loanCount: snapshot.loans.length,
     loanPaymentCount: snapshot.loanPayments.length,
     upcomingDueCount: snapshot.upcomingDues.length,
-    incomeSources: snapshot.moneyBreakdown?.monthlyIncome ? 1 : 0,
+    incomeSources: snapshot.incomeProfile?.sources.length
+      ? snapshot.incomeProfile.sources.length
+      : snapshot.moneyBreakdown?.monthlyIncome
+        ? 1
+        : 0,
     expenseCategories: countExpenseCategories(snapshot),
     hasProfile: Boolean(snapshot.profile),
     hasMoneyBreakdown: Boolean(snapshot.moneyBreakdown)
@@ -401,6 +411,54 @@ function readUpcomingDueArray(value: unknown): UpcomingDue[] {
   return value.map((item, index) => {
     if (!isUpcomingDue(item)) {
       throw new Error(`Invalid upcoming due at index ${index}.`);
+    }
+
+    return item;
+  });
+}
+
+function isIncomeProfile(value: unknown): value is IncomeProfile {
+  return (
+    isRecord(value) &&
+    (value.mode === "simple" || value.mode === "advanced") &&
+    typeof value.simpleMonthlyIncome === "number" &&
+    Array.isArray(value.sources) &&
+    typeof value.updatedAt === "string"
+  );
+}
+
+function isCommitmentRecord(value: unknown): value is CommitmentRecord {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.title === "string" &&
+    typeof value.category === "string" &&
+    typeof value.amount === "number" &&
+    typeof value.frequency === "string" &&
+    typeof value.nextDueDate === "string" &&
+    typeof value.priority === "string" &&
+    isRecord(value.source) &&
+    typeof value.source.kind === "string" &&
+    typeof value.reviewStatus === "string" &&
+    typeof value.reminderEnabled === "boolean" &&
+    typeof value.editable === "boolean" &&
+    typeof value.createdAt === "string" &&
+    typeof value.updatedAt === "string"
+  );
+}
+
+function readCommitmentArray(value: unknown): CommitmentRecord[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("Backup commitments data is invalid.");
+  }
+
+  return value.map((item, index) => {
+    if (!isCommitmentRecord(item)) {
+      throw new Error(`Invalid commitment at index ${index}.`);
     }
 
     return item;

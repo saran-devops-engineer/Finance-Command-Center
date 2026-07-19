@@ -168,7 +168,23 @@ describe("Chit Management Engine V1", () => {
     ];
 
     const insights = generateFinancialInsights(
-      { loans: [], chits, commitments: [], referenceDate },
+      {
+        loans: [],
+        chits,
+        commitments: [],
+        referenceDate,
+        moneyBreakdown: {
+          monthlyIncome: 85000,
+          mandatoryExpenses: 10000,
+          emis: 20000,
+          loanPayments: 0,
+          insurance: 2000,
+          rent: 15000,
+          utilityBills: 3000,
+          fixedCommitments: 5000,
+          emergencyBuffer: 40000
+        }
+      },
       5
     );
 

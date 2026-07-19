@@ -15,7 +15,16 @@ const RUNTIME_CACHE = `fcc-runtime-${CACHE_VERSION}`;
 const ACTIVE_CACHES = [STATIC_CACHE, PAGE_CACHE, RUNTIME_CACHE];
 
 /** Shell routes precached on install for core offline navigation. */
-const PRECACHE_PAGES = ["/", "/loans", "/money", "/insights", "/profile", "/offline.html"];
+const PRECACHE_PAGES = [
+  "/",
+  "/products",
+  "/commitments",
+  "/loans",
+  "/money",
+  "/insights",
+  "/profile",
+  "/offline.html"
+];
 
 /** Public assets always available offline. */
 const PRECACHE_STATIC = [

@@ -5,7 +5,6 @@ import { FinancialAmount } from "@/components/ui/financial-amount";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import { ScreenName, trackScreenViewed } from "@/core/analytics";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,10 +13,7 @@ import { LoanProgressSummary } from "@/components/ui/loan-progress-summary";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { formatInr, cn } from "@/lib/utils";
 import { card, spacing } from "@/lib/design-tokens";
-import { getPinnedLoanId } from "@/lib/pinned-loan";
 import { financeRepository, buildHomeStateFromBootstrapCache } from "@/repositories";
-import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
-import { buildFinancialCommitments, groupFinancialCommitments } from "@/engines/commitment";
 import { generateFinancialInsights } from "@/engines/financial-insights";
 import { FinancialInsightsSection } from "@/features/home/financial-insights-section";
 import { UpcomingCommitmentsSection } from "@/features/home/upcoming-commitments-section";
@@ -33,8 +29,17 @@ import type {
   UserProfile
 } from "@/shared/domain/finance";
 import type { Chit } from "@/shared/domain/chit";
+import type { CommitmentRecord } from "@/shared/domain/commitment-record";
+import { CommitmentReviewStatus } from "@/shared/domain/commitment-record";
 import { getChitProviderDisplay, getPrizeStatusLabel } from "@/lib/chit-display";
 import { deriveChitMetrics } from "@/shared/finance/chit-calculations";
+import type { CashFlowSummary } from "@/services/cash-flow/calculate-cash-flow";
+import {
+  commitmentRecordsToFinancial,
+  groupCommitmentRecordsAsFinancial
+} from "@/services/cash-flow/commitment-record-bridge";
+import { loadCommandCenterState } from "@/services/dashboard/load-command-center-state";
+import { AppRoute } from "@/navigation";
 
 const healthCopy = {
   healthy: "Healthy",
@@ -42,58 +47,66 @@ const healthCopy = {
   critical: "Critical"
 } as const;
 
+interface HomeState {
+  profile: UserProfile;
+  loans: Loan[];
+  chits: Chit[];
+  commitments: CommitmentRecord[];
+  moneyBreakdown: MoneyBreakdown;
+  cashFlow: CashFlowSummary;
+  snapshot: FinancialSnapshot;
+  pinnedLoanId: string | null;
+}
+
 export function HomeScreen() {
   const router = useRouter();
   const initialBootstrapState = buildHomeStateFromBootstrapCache();
-  const [state, setState] = useState<{
-    profile: UserProfile;
-    loans: Loan[];
-    chits: Chit[];
-    moneyBreakdown: MoneyBreakdown;
-    snapshot: FinancialSnapshot;
-  } | null>(() =>
+  const [state, setState] = useState<HomeState | null>(() =>
     initialBootstrapState
       ? {
           profile: initialBootstrapState.profile,
           loans: initialBootstrapState.loans,
           chits: [],
+          commitments: [],
           moneyBreakdown: initialBootstrapState.moneyBreakdown,
-          snapshot: initialBootstrapState.snapshot
+          cashFlow: {
+            totalMonthlyIncome: initialBootstrapState.moneyBreakdown.monthlyIncome,
+            totalMonthlyCommitments: initialBootstrapState.snapshot.mandatoryCommitments,
+            availableCash: initialBootstrapState.snapshot.availableMoney,
+            emergencyBuffer: initialBootstrapState.moneyBreakdown.emergencyBuffer,
+            commitmentRatio:
+              initialBootstrapState.moneyBreakdown.monthlyIncome > 0
+                ? initialBootstrapState.snapshot.mandatoryCommitments /
+                  initialBootstrapState.moneyBreakdown.monthlyIncome
+                : 0,
+            incomeSourceCount: 1,
+            commitmentCount: 0
+          },
+          snapshot: initialBootstrapState.snapshot,
+          pinnedLoanId: initialBootstrapState.pinnedLoanId
         }
       : null
-  );
-  const [pinnedLoanId, setPinnedLoanIdState] = useState<string | null>(
-    () => initialBootstrapState?.pinnedLoanId ?? null
   );
   const [isLoading, setIsLoading] = useState(() => !initialBootstrapState);
 
   const loadSnapshot = useCallback(async () => {
-    const [profile, moneyBreakdown, loans, chits, upcomingDues, settings] = await Promise.all([
-      financeRepository.getProfile(),
-      financeRepository.getMoneyBreakdown(),
-      financeRepository.listLoans(),
-      financeRepository.listChits(),
-      financeRepository.listUpcomingDues(),
-      financeRepository.getSettings()
-    ]);
+    const next = await loadCommandCenterState(financeRepository);
 
-    if (!profile?.onboardingCompleted || !moneyBreakdown) {
+    if (!next) {
       router.replace("/onboarding");
       return;
     }
 
     setState({
-      profile,
-      loans,
-      chits,
-      moneyBreakdown,
-      snapshot: createFinancialSnapshot({
-        money: moneyBreakdown,
-        loans,
-        upcomingDues
-      })
+      profile: next.profile,
+      loans: next.loans,
+      chits: next.chits,
+      commitments: next.commitments,
+      moneyBreakdown: next.moneyBreakdown,
+      cashFlow: next.cashFlow,
+      snapshot: next.snapshot,
+      pinnedLoanId: next.pinnedLoanId
     });
-    setPinnedLoanIdState(settings.pinnedLoanId);
     setIsLoading(false);
   }, [router]);
 
@@ -113,18 +126,6 @@ export function HomeScreen() {
   useFinanceDataReload(() => {
     void loadSnapshot();
   });
-
-  useEffect(() => {
-    function syncPinnedLoan() {
-      void getPinnedLoanId().then(setPinnedLoanIdState);
-    }
-
-    window.addEventListener("focus", syncPinnedLoan);
-
-    return () => {
-      window.removeEventListener("focus", syncPinnedLoan);
-    };
-  }, []);
 
   if (isLoading || !state) {
     return (
@@ -146,18 +147,23 @@ export function HomeScreen() {
     );
   }
 
-  const { profile, loans, chits, moneyBreakdown, snapshot } = state;
+  const { profile, loans, chits, commitments, moneyBreakdown, cashFlow, snapshot, pinnedLoanId } =
+    state;
   const displayName = getDisplayName(profile);
   const healthMessage = getMeaningfulHealthMessage(snapshot, loans, moneyBreakdown);
-  const commitments = buildFinancialCommitments({ loans, chits });
-  const commitmentGroups = groupFinancialCommitments(commitments);
+  const financialCommitments = commitmentRecordsToFinancial(commitments);
+  const commitmentGroups = groupCommitmentRecordsAsFinancial(commitments);
   const financialInsights = generateFinancialInsights({
     loans,
     chits,
     moneyBreakdown,
-    commitments
+    commitments: financialCommitments
   });
   const priorityLoan = getPriorityLoan(loans, pinnedLoanId);
+  const featuredChit = chits[0] ?? null;
+  const needsReviewCount = commitments.filter(
+    (item) => item.reviewStatus === CommitmentReviewStatus.NEEDS_REVIEW
+  ).length;
   const isPriorityLoanPinned = Boolean(
     priorityLoan && pinnedLoanId && priorityLoan.id === pinnedLoanId
   );
@@ -172,10 +178,10 @@ export function HomeScreen() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-              Financial Health
+              Available Cash
             </p>
             <p className="mt-2 text-4xl font-semibold tracking-[-0.05em]">
-              <FinancialAmount amount={snapshot.availableMoney} />
+              <FinancialAmount amount={cashFlow.availableCash} />
             </p>
           </div>
           <div className="rounded-full border border-border px-3 py-1 text-xs font-medium">
@@ -183,27 +189,42 @@ export function HomeScreen() {
           </div>
         </div>
 
+        <p className="text-sm leading-6 text-muted-foreground">
+          {formatInr(cashFlow.totalMonthlyIncome)} income −{" "}
+          {formatInr(cashFlow.totalMonthlyCommitments)} commitments
+        </p>
         <p className="text-sm leading-6 text-muted-foreground">{healthMessage}</p>
       </Card>
 
+      {needsReviewCount > 0 ? (
+        <Card className={cn("space-y-3", card.paddingCompact)}>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+            Needs attention
+          </p>
+          <h2 className="font-display text-2xl tracking-[-0.04em]">
+            {needsReviewCount} commitment{needsReviewCount === 1 ? "" : "s"} need review
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Confirm migrated obligations so available cash stays accurate.
+          </p>
+          <Button asChild variant="secondary" size="sm" className="w-full">
+            <Link href={AppRoute.COMMITMENTS}>Review commitments</Link>
+          </Button>
+        </Card>
+      ) : null}
+
       <div className={cn("grid grid-cols-2 gap-2", spacing.metricGrid)}>
-        <Button asChild variant="secondary" size="sm" className="gap-1 px-2 text-xs">
-          <Link href="/loans/new">
-            <Plus className="h-4 w-4 shrink-0" />
-            Add Loan
-          </Link>
-        </Button>
-        <Button asChild variant="secondary" size="sm" className="gap-1 px-2 text-xs">
-          <Link href="/chits/new">
-            <Plus className="h-4 w-4 shrink-0" />
-            Add Chit
-          </Link>
+        <Button asChild variant="secondary" size="sm" className="px-2 text-xs">
+          <Link href={AppRoute.PRODUCTS}>Products</Link>
         </Button>
         <Button asChild variant="secondary" size="sm" className="px-2 text-xs">
-          <Link href="/money/edit">Add Income</Link>
+          <Link href={AppRoute.COMMITMENTS}>Commitments</Link>
         </Button>
         <Button asChild variant="secondary" size="sm" className="px-2 text-xs">
-          <Link href="/money/edit">Add Expense</Link>
+          <Link href={AppRoute.INSIGHTS}>Insights</Link>
+        </Button>
+        <Button asChild variant="secondary" size="sm" className="px-2 text-xs">
+          <Link href={AppRoute.PROFILE}>Profile</Link>
         </Button>
       </div>
 
@@ -214,10 +235,10 @@ export function HomeScreen() {
       <section className={spacing.section}>
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Active Loans
+            Recent Products
           </p>
-          <Link href="/loans" className="text-xs font-medium">
-            View all loans
+          <Link href={AppRoute.PRODUCTS} className="text-xs font-medium">
+            View all
           </Link>
         </div>
 
@@ -266,38 +287,12 @@ export function HomeScreen() {
               </PrivacyMask>
             </Card>
           </Link>
-        ) : (
-          <Card className={cn("space-y-2", card.paddingCompact)}>
-            <h3 className="font-display text-2xl tracking-[-0.04em]">No active loans yet.</h3>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Add a loan when you are ready to track payoff progress here.
-            </p>
-          </Card>
-        )}
-      </section>
+        ) : null}
 
-      <section className={spacing.section}>
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Your Chits
-          </p>
-          <Link href="/chits" className="text-xs font-medium">
-            View all chits
-          </Link>
-        </div>
-
-        {chits.length === 0 ? (
-          <Card className={cn("space-y-2", card.paddingCompact)}>
-            <h3 className="font-display text-2xl tracking-[-0.04em]">No active chits yet.</h3>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Add a chit to track monthly contributions and prize status.
-            </p>
-          </Card>
-        ) : (
-          <Link href={`/chits/${chits[0]?.id}`} className="block">
+        {featuredChit ? (
+          <Link href={`/chits/${featuredChit.id}`} className="block">
             <Card className={cn("space-y-3", card.paddingCompact)}>
               {(() => {
-                const featuredChit = chits[0]!;
                 const metrics = deriveChitMetrics(featuredChit);
 
                 return (
@@ -340,9 +335,20 @@ export function HomeScreen() {
               })()}
             </Card>
           </Link>
-        )}
-      </section>
+        ) : null}
 
+        {!priorityLoan && !featuredChit ? (
+          <Card className={cn("space-y-2", card.paddingCompact)}>
+            <h3 className="font-display text-2xl tracking-[-0.04em]">No products yet.</h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Add a loan or chit from Products when you are ready to track them here.
+            </p>
+            <Button asChild variant="secondary" size="sm" className="w-full">
+              <Link href={AppRoute.PRODUCTS}>Open Products</Link>
+            </Button>
+          </Card>
+        ) : null}
+      </section>
     </div>
   );
 }

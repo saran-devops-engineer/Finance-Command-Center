@@ -217,8 +217,12 @@ Create `.cursor/rules/fcc-engineering.mdc` with pointers to this file and taxono
 1. **Chit Management Engine V1** — full CRUD, dashboard, insights wiring
 2. **Core Architecture Foundation** — `src/core/` provider pattern, container, boundary tests
 3. **PostHog Analytics Sprint 1** — provider, identity, bootstrap wiring
-4. **Event Taxonomy V1** — 45 events, Engineering Standard #2, full migration
+4. **Event Taxonomy V1** — events catalog, Engineering Standard #2, full migration
 5. **Microsoft Clarity Sprint 2** — composite provider, privacy masking
+6. **Domain Architecture Phase 1** — Products/Commitments navigation + product registry
+7. **Domain Architecture Phase 2** — Schema V2, IncomeProfile + CommitmentRecord stores, V1→V2 migration framework, backup detect-schema + migrate-on-restore
+8. **Domain Architecture Phase 3** — Onboarding redesigned: Profile → Products (optional) → Manual commitments; removed Other EMI / Insurance duplicate entry
+9. **Domain Architecture Phase 4** — Product commitment generators + sync; Commitments screen with needs-review / product / manual CRUD
 
 ---
 

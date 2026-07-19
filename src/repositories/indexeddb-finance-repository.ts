@@ -28,17 +28,40 @@ import type {
   UserProfile
 } from "@/shared/domain/finance";
 import type { Chit } from "@/shared/domain/chit";
+import type { IncomeProfile } from "@/shared/domain/income";
+import type { CommitmentRecord } from "@/shared/domain/commitment-record";
+import { CommitmentReviewStatus } from "@/shared/domain/commitment-record";
+import {
+  CURRENT_DATA_SCHEMA_VERSION,
+  SCHEMA_META_ID,
+  type SchemaMeta
+} from "@/shared/domain/schema-version";
 import {
   createJsonBackup,
   inspectJsonBackup,
   restoreJsonBackup
 } from "@/storage/backup/backup-service";
 import { getFinanceDatabase } from "@/storage/indexeddb/database";
+import { migrateSchemaV1ToV2 } from "@/storage/migration";
 import { filterActiveChits, filterArchivedChits, normalizeChit } from "@/lib/chit-status";
 import { filterActiveLoans, filterArchivedLoans, normalizeLoan } from "@/lib/loan-status";
 
 const MONEY_BREAKDOWN_ID = "current-month";
 const PROFILE_ID = "primary";
+const INCOME_PROFILE_ID = "primary";
+
+const ALL_STORES = [
+  "profile",
+  "moneyBreakdown",
+  "loans",
+  "loanPayments",
+  "upcomingDues",
+  "appState",
+  "chits",
+  "incomeProfile",
+  "commitments",
+  "schemaMeta"
+] as const;
 
 /** @internal Concrete IndexedDB adapter — import `financeRepository` from `@/repositories` instead. */
 export const indexedDbFinanceRepository: FinanceRepository = {
@@ -60,32 +83,58 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     });
   },
 
-  async clearDatabase() {
+  async migrateDataSchema() {
+    const [moneyBreakdown, existingIncomeProfile, existingCommitments, existingSchemaMeta] =
+      await Promise.all([
+        indexedDbFinanceRepository.getMoneyBreakdown(),
+        indexedDbFinanceRepository.getIncomeProfile(),
+        indexedDbFinanceRepository.listCommitments(),
+        indexedDbFinanceRepository.getSchemaMeta()
+      ]);
+
+    const result = migrateSchemaV1ToV2({
+      moneyBreakdown,
+      existingIncomeProfile,
+      existingCommitments,
+      existingSchemaMeta
+    });
+
+    if (!result.migrated) {
+      return result;
+    }
+
     invalidateFinanceBootstrapCache();
     const database = await getFinanceDatabase();
     const transaction = database.transaction(
-      [
-        "profile",
-        "moneyBreakdown",
-        "loans",
-        "loanPayments",
-        "upcomingDues",
-        "appState",
-        "chits"
-      ],
+      ["incomeProfile", "commitments", "schemaMeta"],
       "readwrite"
     );
 
-    await Promise.all([
-      transaction.objectStore("profile").clear(),
-      transaction.objectStore("moneyBreakdown").clear(),
-      transaction.objectStore("loans").clear(),
-      transaction.objectStore("loanPayments").clear(),
-      transaction.objectStore("upcomingDues").clear(),
-      transaction.objectStore("appState").clear(),
-      transaction.objectStore("chits").clear()
-    ]);
+    if (result.incomeProfile) {
+      await transaction.objectStore("incomeProfile").put({
+        ...result.incomeProfile,
+        id: INCOME_PROFILE_ID
+      });
+    }
 
+    await transaction.objectStore("commitments").clear();
+    await Promise.all(
+      result.commitments.map((commitment) =>
+        transaction.objectStore("commitments").put(commitment)
+      )
+    );
+    await transaction.objectStore("schemaMeta").put(result.schemaMeta);
+    await transaction.done;
+
+    return result;
+  },
+
+  async clearDatabase() {
+    invalidateFinanceBootstrapCache();
+    const database = await getFinanceDatabase();
+    const transaction = database.transaction([...ALL_STORES], "readwrite");
+
+    await Promise.all(ALL_STORES.map((store) => transaction.objectStore(store).clear()));
     await transaction.done;
   },
 
@@ -142,6 +191,7 @@ export const indexedDbFinanceRepository: FinanceRepository = {
 
   async restoreBackup(file) {
     const result = await restoreJsonBackup({ file, repository: indexedDbFinanceRepository });
+    await indexedDbFinanceRepository.migrateDataSchema();
 
     const verified = await indexedDbFinanceRepository.createDataSnapshot();
     verifyRestoredSnapshot(result.snapshot, verified);
@@ -206,6 +256,59 @@ export const indexedDbFinanceRepository: FinanceRepository = {
       id: MONEY_BREAKDOWN_ID,
       updatedAt: new Date().toISOString()
     });
+  },
+
+  async getIncomeProfile() {
+    const database = await getFinanceDatabase();
+    const record = await database.get("incomeProfile", INCOME_PROFILE_ID);
+    if (!record) {
+      return null;
+    }
+
+    const { id: _id, ...profile } = record;
+    return profile;
+  },
+
+  async saveIncomeProfile(value: IncomeProfile) {
+    invalidateFinanceBootstrapCache();
+    const database = await getFinanceDatabase();
+    await database.put("incomeProfile", { ...value, id: INCOME_PROFILE_ID });
+  },
+
+  async listCommitments() {
+    const database = await getFinanceDatabase();
+    return database.getAll("commitments");
+  },
+
+  async listCommitmentsNeedingReview() {
+    const database = await getFinanceDatabase();
+    return database.getAllFromIndex(
+      "commitments",
+      "by-review-status",
+      CommitmentReviewStatus.NEEDS_REVIEW
+    );
+  },
+
+  async getCommitment(id: string) {
+    const database = await getFinanceDatabase();
+    return (await database.get("commitments", id)) ?? null;
+  },
+
+  async saveCommitment(value: CommitmentRecord) {
+    invalidateFinanceBootstrapCache();
+    const database = await getFinanceDatabase();
+    await database.put("commitments", value);
+  },
+
+  async deleteCommitment(id: string) {
+    invalidateFinanceBootstrapCache();
+    const database = await getFinanceDatabase();
+    await database.delete("commitments", id);
+  },
+
+  async getSchemaMeta() {
+    const database = await getFinanceDatabase();
+    return (await database.get("schemaMeta", SCHEMA_META_ID)) ?? null;
   },
 
   async listLoans() {
@@ -377,13 +480,26 @@ export const indexedDbFinanceRepository: FinanceRepository = {
 
   async createDataSnapshot() {
     const database = await getFinanceDatabase();
-    const [profile, moneyRecord, loans, loanPayments, upcomingDues, chits] = await Promise.all([
+    const [
+      profile,
+      moneyRecord,
+      loans,
+      loanPayments,
+      upcomingDues,
+      chits,
+      incomeRecord,
+      commitments,
+      schemaMeta
+    ] = await Promise.all([
       database.get("profile", PROFILE_ID),
       database.get("moneyBreakdown", MONEY_BREAKDOWN_ID),
       database.getAll("loans"),
       database.getAll("loanPayments"),
       database.getAllFromIndex("upcomingDues", "by-due-date"),
-      database.getAll("chits")
+      database.getAll("chits"),
+      database.get("incomeProfile", INCOME_PROFILE_ID),
+      database.getAll("commitments"),
+      database.get("schemaMeta", SCHEMA_META_ID)
     ]);
     const moneyBreakdown = moneyRecord
       ? {
@@ -399,15 +515,21 @@ export const indexedDbFinanceRepository: FinanceRepository = {
         }
       : null;
 
+    const incomeProfile = incomeRecord
+      ? (({ id: _id, ...rest }: IncomeProfile & { id: string }) => rest)(incomeRecord)
+      : null;
+
     return {
-      schemaVersion: 1,
+      schemaVersion: schemaMeta?.schemaVersion ?? CURRENT_DATA_SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       profile: profile ?? null,
       moneyBreakdown,
       loans,
       loanPayments,
       upcomingDues,
-      chits: chits.map(normalizeChit)
+      chits: chits.map(normalizeChit),
+      incomeProfile,
+      commitments
     };
   },
 
@@ -415,7 +537,17 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     invalidateFinanceBootstrapCache();
     const database = await getFinanceDatabase();
     const transaction = database.transaction(
-      ["profile", "moneyBreakdown", "loans", "loanPayments", "upcomingDues", "chits"],
+      [
+        "profile",
+        "moneyBreakdown",
+        "loans",
+        "loanPayments",
+        "upcomingDues",
+        "chits",
+        "incomeProfile",
+        "commitments",
+        "schemaMeta"
+      ],
       "readwrite"
     );
 
@@ -425,7 +557,10 @@ export const indexedDbFinanceRepository: FinanceRepository = {
       transaction.objectStore("loans").clear(),
       transaction.objectStore("loanPayments").clear(),
       transaction.objectStore("upcomingDues").clear(),
-      transaction.objectStore("chits").clear()
+      transaction.objectStore("chits").clear(),
+      transaction.objectStore("incomeProfile").clear(),
+      transaction.objectStore("commitments").clear(),
+      transaction.objectStore("schemaMeta").clear()
     ]);
 
     if (value.profile) {
@@ -440,6 +575,13 @@ export const indexedDbFinanceRepository: FinanceRepository = {
       });
     }
 
+    if (value.incomeProfile) {
+      await transaction.objectStore("incomeProfile").put({
+        ...value.incomeProfile,
+        id: INCOME_PROFILE_ID
+      });
+    }
+
     await Promise.all([
       ...value.loans.map((loan) =>
         transaction.objectStore("loans").put(normalizeLoan(loan))
@@ -448,8 +590,24 @@ export const indexedDbFinanceRepository: FinanceRepository = {
         transaction.objectStore("loanPayments").put(payment)
       ),
       ...value.upcomingDues.map((due) => transaction.objectStore("upcomingDues").put(due)),
-      ...(value.chits ?? []).map((chit) => transaction.objectStore("chits").put(normalizeChit(chit)))
+      ...(value.chits ?? []).map((chit) => transaction.objectStore("chits").put(normalizeChit(chit))),
+      ...(value.commitments ?? []).map((commitment) =>
+        transaction.objectStore("commitments").put(commitment)
+      )
     ]);
+
+    if (value.schemaVersion === 2 || value.incomeProfile || (value.commitments?.length ?? 0) > 0) {
+      const meta: SchemaMeta = {
+        id: SCHEMA_META_ID,
+        schemaVersion: 2,
+        migratedAt: new Date().toISOString(),
+        migrationNotes: ["Restored from backup."],
+        needsReviewCount: (value.commitments ?? []).filter(
+          (item) => item.reviewStatus === CommitmentReviewStatus.NEEDS_REVIEW
+        ).length
+      };
+      await transaction.objectStore("schemaMeta").put(meta);
+    }
 
     await transaction.done;
   }
@@ -507,10 +665,6 @@ async function hasIndexedDbFinancialData(): Promise<boolean> {
   return Boolean(profile) || Boolean(money) || loans.length > 0 || chits.length > 0;
 }
 
-/**
- * Device-only preferences — the ONLY localStorage usage allowed by Phase 2.
- * Keys: theme, installPromptDismissedAt, appVersion, featureFlags.
- */
 function readDevicePreferences(): DevicePreferences {
   if (typeof window === "undefined") {
     return { ...DEFAULT_DEVICE_PREFERENCES, featureFlags: {} };
@@ -540,7 +694,6 @@ function writeDevicePreferences(prefs: DevicePreferences) {
     return;
   }
 
-  // Persist only the Phase 2 allow-list — never financial or user-session fields.
   const payload: DevicePreferences = {
     theme: prefs.theme,
     installPromptDismissedAt: prefs.installPromptDismissedAt,

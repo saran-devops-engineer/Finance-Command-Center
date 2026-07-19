@@ -9,9 +9,11 @@ import { Card } from "@/components/ui/card";
 import { MetricCard } from "@/components/ui/metric-card";
 import { clarityMaskProps } from "@/lib/privacy/clarity-mask";
 import { formatInr, cn } from "@/lib/utils";
+import { radius, spacing } from "@/lib/design-tokens";
 import { notifyFinanceDataUpdated } from "@/lib/finance-data-events";
 import { financeRepository } from "@/repositories";
 import { applyLoanPayment } from "@/services/loan-payment/apply-payment";
+import { syncProductGeneratedCommitments } from "@/services/commitment-sync/sync-product-commitments";
 import type { Loan, LoanPaymentKind } from "@/shared/domain/finance";
 
 interface LogPaymentScreenProps {
@@ -136,6 +138,8 @@ export function LogPaymentScreen({ loanId }: LogPaymentScreenProps) {
     if (form.kind === "emi") {
       await financeRepository.deleteUpcomingDue(`due-${loan.id}`);
     }
+
+    await syncProductGeneratedCommitments(financeRepository);
 
     notifyFinanceDataUpdated("payment");
     router.replace(`/loans/${loan.id}`);

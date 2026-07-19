@@ -25,8 +25,56 @@ import { isGoldLoan } from "@/shared/finance/gold-loan-form";
 import type { Loan } from "@/shared/domain/finance";
 
 type LoansView = "active" | "archived";
+type LoansScreenVariant = "all" | "standard" | "gold";
 
-export function LoansScreen() {
+interface LoansScreenProps {
+  /** Filters list when rendered under /products/[productType]. Default preserves legacy /loans behavior. */
+  variant?: LoansScreenVariant;
+}
+
+function filterLoansByVariant(loans: Loan[], variant: LoansScreenVariant): Loan[] {
+  if (variant === "standard") {
+    return loans.filter((loan) => !isGoldLoan(loan));
+  }
+
+  if (variant === "gold") {
+    return loans.filter((loan) => isGoldLoan(loan));
+  }
+
+  return loans;
+}
+
+function getLoansScreenCopy(variant: LoansScreenVariant) {
+  if (variant === "gold") {
+    return {
+      eyebrow: "Products",
+      title: "Your gold loans",
+      loadingTitle: "Reading your gold loans.",
+      addHref: "/loans/new",
+      screenName: ScreenName.GOLD_LOAN
+    };
+  }
+
+  if (variant === "standard") {
+    return {
+      eyebrow: "Products",
+      title: "Your loans",
+      loadingTitle: "Reading your loans.",
+      addHref: "/loans/new",
+      screenName: ScreenName.LOANS
+    };
+  }
+
+  return {
+    eyebrow: "Liabilities",
+    title: "Your loans",
+    loadingTitle: "Reading your loans.",
+    addHref: "/loans/new",
+    screenName: ScreenName.LOANS
+  };
+}
+
+export function LoansScreen({ variant = "all" }: LoansScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeLoans, setActiveLoans] = useState<Loan[]>([]);
@@ -34,6 +82,7 @@ export function LoansScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<LoansView>("active");
   const hasTrackedScreenView = useRef(false);
+  const copy = getLoansScreenCopy(variant);
 
   const loadLoans = useCallback(async () => {
     const [profile, localActiveLoans, localArchivedLoans] = await Promise.all([
@@ -47,10 +96,10 @@ export function LoansScreen() {
       return;
     }
 
-    setActiveLoans(localActiveLoans);
-    setArchivedLoans(localArchivedLoans);
+    setActiveLoans(filterLoansByVariant(localActiveLoans, variant));
+    setArchivedLoans(filterLoansByVariant(localArchivedLoans, variant));
     setIsLoading(false);
-  }, [router]);
+  }, [router, variant]);
 
   useEffect(() => {
     const requestedView = searchParams.get("view");
@@ -66,9 +115,9 @@ export function LoansScreen() {
   useEffect(() => {
     if (!isLoading && !hasTrackedScreenView.current) {
       hasTrackedScreenView.current = true;
-      trackScreenViewed(ScreenName.LOANS);
+      trackScreenViewed(copy.screenName);
     }
-  }, [isLoading]);
+  }, [isLoading, copy.screenName]);
 
   useFinanceDataReload(() => {
     void loadLoans();
@@ -95,7 +144,7 @@ export function LoansScreen() {
             Loading
           </p>
           <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">
-            Reading your loans.
+            {copy.loadingTitle}
           </h1>
         </header>
       </div>
@@ -106,14 +155,16 @@ export function LoansScreen() {
     <div className={spacing.page}>
       <header className="space-y-2 pt-4">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-          Liabilities
+          {copy.eyebrow}
         </p>
         <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">
-          Your loans
+          {copy.title}
         </h1>
-        <Link href="/chits" className="inline-block text-sm font-medium text-primary">
-          View your chits
-        </Link>
+        {variant === "all" ? (
+          <Link href="/chits" className="inline-block text-sm font-medium text-primary">
+            View your chits
+          </Link>
+        ) : null}
       </header>
 
       <LoanViewTabs view={view} onChange={setView} />
@@ -155,7 +206,7 @@ export function LoansScreen() {
           ) : null}
 
           <Button asChild className="w-full gap-2">
-            <Link href="/loans/new">
+            <Link href={copy.addHref}>
               <Plus className="h-4 w-4" />
               Add loan
             </Link>

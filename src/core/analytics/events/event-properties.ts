@@ -7,6 +7,8 @@
 
 export const ScreenName = {
   HOME: "Home",
+  PRODUCTS: "Products",
+  COMMITMENTS: "Commitments",
   LOANS: "Loans",
   GOLD_LOAN: "Gold Loan",
   CHITS: "Chits",
@@ -46,4 +48,8 @@ export type EventCategory =
   | "Profile"
   | "Settings"
   | "Feedback"
-  | "Errors";
+  | "Errors"
+  | "Migration"
+  | "Commitments"
+  | "Products"
+  | "Income";

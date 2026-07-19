@@ -10,7 +10,7 @@ import { getAnalyticsDistinctId } from "@/core/analytics/analytics-context";
 type ClarityClient = {
   init: (projectId: string) => void;
   event: (eventName: string) => void;
-  set: (key: string, value: string | string[]) => void;
+  setTag: (key: string, value: string | string[]) => void;
   identify: (
     customId: string,
     customSessionId?: string,
@@ -47,7 +47,7 @@ export function createClarityProvider(configuration: ConfigurationService): Anal
         return;
       }
 
-      clarity.set(key, String(value));
+      clarity.setTag(key, String(value));
     });
   }
 
@@ -66,7 +66,7 @@ export function createClarityProvider(configuration: ConfigurationService): Anal
 
       await safeRunAsync(async () => {
         const clarityModule = await import("@microsoft/clarity");
-        clarity = clarityModule.default as ClarityClient;
+        clarity = clarityModule.default as unknown as ClarityClient;
         clarity.init(projectId);
         clarity.identify(getAnalyticsDistinctId());
         initialized = true;

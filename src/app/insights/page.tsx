@@ -7,15 +7,19 @@ import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, MetricCardGrid } from "@/components/ui/metric-card";
+import { FinancialAmount } from "@/components/ui/financial-amount";
 import { ScreenName, trackScreenViewed } from "@/core/analytics";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { financeRepository } from "@/repositories";
-import { buildFinancialCommitments } from "@/engines/commitment";
 import { generateAllFinancialInsights } from "@/engines/financial-insights";
 import { FinancialInsightsSection } from "@/features/home/financial-insights-section";
-import { createFinancialSnapshot } from "@/services/financial-snapshot/create-snapshot";
+import { loadCommandCenterState } from "@/services/dashboard/load-command-center-state";
+import { commitmentRecordsToFinancial } from "@/services/cash-flow/commitment-record-bridge";
+import type { CashFlowSummary } from "@/services/cash-flow/calculate-cash-flow";
+import type { CommitmentRecord } from "@/shared/domain/commitment-record";
+import { CommitmentReviewStatus } from "@/shared/domain/commitment-record";
 import type {
   FinancialSnapshot,
   Loan,
@@ -24,13 +28,18 @@ import type {
   UpcomingDue
 } from "@/shared/domain/finance";
 import type { Chit } from "@/shared/domain/chit";
+import { AppRoute } from "@/navigation";
+import { getPriorityLoan } from "@/features/home/home-helpers";
 
 interface InsightsState {
   snapshot: FinancialSnapshot;
   moneyBreakdown: MoneyBreakdown;
+  cashFlow: CashFlowSummary;
+  commitments: CommitmentRecord[];
   loans: Loan[];
   chits: Chit[];
   upcomingDues: UpcomingDue[];
+  pinnedLoanId: string | null;
 }
 
 interface RankedInsight {
@@ -47,29 +56,22 @@ export default function InsightsPage() {
   const hasTrackedScreenView = useRef(false);
 
   const loadInsights = useCallback(async () => {
-    const [profile, moneyBreakdown, loans, chits, upcomingDues] = await Promise.all([
-      financeRepository.getProfile(),
-      financeRepository.getMoneyBreakdown(),
-      financeRepository.listLoans(),
-      financeRepository.listChits(),
-      financeRepository.listUpcomingDues()
-    ]);
+    const next = await loadCommandCenterState(financeRepository);
 
-    if (!profile?.onboardingCompleted || !moneyBreakdown) {
+    if (!next) {
       router.replace("/onboarding");
       return;
     }
 
     setState({
-      moneyBreakdown,
-      loans,
-      chits,
-      upcomingDues,
-      snapshot: createFinancialSnapshot({
-        money: moneyBreakdown,
-        loans,
-        upcomingDues
-      })
+      moneyBreakdown: next.moneyBreakdown,
+      cashFlow: next.cashFlow,
+      commitments: next.commitments,
+      loans: next.loans,
+      chits: next.chits,
+      upcomingDues: next.upcomingDues,
+      snapshot: next.snapshot,
+      pinnedLoanId: next.pinnedLoanId
     });
   }, [router]);
 
@@ -97,9 +99,14 @@ export default function InsightsPage() {
         loans: state.loans,
         chits: state.chits,
         moneyBreakdown: state.moneyBreakdown,
-        commitments: buildFinancialCommitments({ loans: state.loans, chits: state.chits })
+        commitments: commitmentRecordsToFinancial(state.commitments)
       })
     : [];
+  const priorityLoan = state ? getPriorityLoan(state.loans, state.pinnedLoanId) : null;
+  const needsReviewCount =
+    state?.commitments.filter(
+      (item) => item.reviewStatus === CommitmentReviewStatus.NEEDS_REVIEW
+    ).length ?? 0;
 
   return (
     <MobileShell>
@@ -112,9 +119,39 @@ export default function InsightsPage() {
             What matters this month
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            Clear, rule-based guidance from your on-device financial data.
+            Calculated from income and commitments — no data entry here.
           </p>
         </header>
+
+        {state ? (
+          <Card className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Cash flow
+              </p>
+              <p className="text-4xl font-semibold tracking-[-0.05em]">
+                <FinancialAmount amount={state.cashFlow.availableCash} />
+              </p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Available after monthly commitments
+              </p>
+            </div>
+            <MetricCardGrid columns={3}>
+              <MetricCard
+                label="Income"
+                value={formatInr(state.cashFlow.totalMonthlyIncome, { compact: true })}
+              />
+              <MetricCard
+                label="Commitments"
+                value={formatInr(state.cashFlow.totalMonthlyCommitments, { compact: true })}
+              />
+              <MetricCard
+                label="Used"
+                value={`${Math.round(state.cashFlow.commitmentRatio * 100)}%`}
+              />
+            </MetricCardGrid>
+          </Card>
+        ) : null}
 
         {financialInsights.length > 0 ? (
           <FinancialInsightsSection insights={financialInsights} showViewAll={false} />
@@ -215,6 +252,88 @@ export default function InsightsPage() {
           ) : null}
         </section>
 
+        {state ? (
+          <section className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              Upcoming commitments
+            </p>
+            <Card className="space-y-4">
+              <MetricCardGrid>
+                <MetricCard
+                  label="This month burden"
+                  value={formatInr(state.cashFlow.totalMonthlyCommitments)}
+                />
+                <MetricCard
+                  label="Needs review"
+                  value={String(needsReviewCount)}
+                />
+              </MetricCardGrid>
+              <Button asChild variant="secondary" size="sm" className="w-full">
+                <Link href={AppRoute.COMMITMENTS}>Open Commitments</Link>
+              </Button>
+            </Card>
+          </section>
+        ) : null}
+
+        {state ? (
+          <section className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              Financial health
+            </p>
+            <Card className="space-y-3">
+              <h2 className="font-display text-3xl tracking-[-0.04em] capitalize">
+                {state.snapshot.healthStatus}
+              </h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {state.snapshot.healthReason}
+              </p>
+              <MetricCardGrid>
+                <MetricCard
+                  label="Debt to income"
+                  value={`${Math.round(state.snapshot.debtToIncomeRatio * 100)}%`}
+                />
+                <MetricCard
+                  label="Buffer"
+                  value={formatInr(state.cashFlow.emergencyBuffer, { compact: true })}
+                />
+              </MetricCardGrid>
+            </Card>
+          </section>
+        ) : null}
+
+        {priorityLoan ? (
+          <section className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              What if
+            </p>
+            <Card className="space-y-4">
+              <h2 className="font-display text-3xl tracking-[-0.04em]">
+                Simulate payoff on {priorityLoan.name}
+              </h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Explore extra payments without changing your live ledger.
+              </p>
+              <Button asChild variant="secondary" size="sm" className="w-full">
+                <Link href={`/loans/${priorityLoan.id}?strategy=monthly-extra`}>
+                  Open simulator
+                </Link>
+              </Button>
+            </Card>
+          </section>
+        ) : null}
+
+        <section className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Future trends
+          </p>
+          <Card className="space-y-2">
+            <h2 className="font-display text-3xl tracking-[-0.04em]">Coming later</h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Longer-range cash-flow trends will appear here once more history is available.
+            </p>
+          </Card>
+        </section>
+
         {weeklyReview ? (
           <section className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
@@ -278,7 +397,7 @@ function getWhyItMatters(recommendation: Recommendation, state: InsightsState) {
   }
 
   if (recommendation.category === "cash-flow") {
-    return `${formatInr(state.snapshot.availableMoney)} is available after commitments.`;
+    return `${formatInr(state.cashFlow.availableCash)} is available after commitments.`;
   }
 
   if (recommendation.category === "buffer") {
@@ -291,20 +410,20 @@ function getWhyItMatters(recommendation: Recommendation, state: InsightsState) {
 function getRecommendationHref(recommendation: Recommendation, state: InsightsState) {
   if (recommendation.category === "debt") {
     const loan = getHighestInterestLoan(state.loans);
-    return loan ? `/loans/${loan.id}` : "/loans";
+    return loan ? `/loans/${loan.id}` : AppRoute.PRODUCTS;
   }
 
   if (recommendation.category === "cash-flow" || recommendation.category === "buffer") {
-    return "/money";
+    return AppRoute.COMMITMENTS;
   }
 
   if (recommendation.category === "due-date") {
     const due = getUrgentDue(state.upcomingDues);
     const relatedLoan = due ? state.loans.find((loan) => due.id.includes(loan.id)) : null;
-    return relatedLoan ? `/loans/${relatedLoan.id}` : "/loans";
+    return relatedLoan ? `/loans/${relatedLoan.id}` : AppRoute.COMMITMENTS;
   }
 
-  return "/";
+  return AppRoute.HOME;
 }
 
 function getImpactLabel(recommendation: Recommendation, state: InsightsState) {
@@ -314,7 +433,7 @@ function getImpactLabel(recommendation: Recommendation, state: InsightsState) {
   }
 
   if (recommendation.category === "cash-flow") {
-    return state.snapshot.availableMoney >= 0 ? "Decision room" : "Shortfall risk";
+    return state.cashFlow.availableCash >= 0 ? "Decision room" : "Shortfall risk";
   }
 
   if (recommendation.category === "due-date") {
@@ -326,16 +445,18 @@ function getImpactLabel(recommendation: Recommendation, state: InsightsState) {
 }
 
 function getWeeklyReview(state: InsightsState) {
-  const commitments = buildFinancialCommitments({ loans: state.loans, chits: state.chits });
-  const dueSoonCount = commitments.filter((commitment) => commitment.status === "due-soon").length;
+  const financialCommitments = commitmentRecordsToFinancial(state.commitments);
+  const dueSoonCount = financialCommitments.filter(
+    (commitment) => commitment.status === "due-soon"
+  ).length;
 
   return {
     title: "Your week in one sentence.",
     description:
-      state.snapshot.availableMoney >= 0
+      state.cashFlow.availableCash >= 0
         ? `You have room to decide, but ${dueSoonCount} upcoming commitment${dueSoonCount === 1 ? "" : "s"} should stay protected.`
         : "This week is tight. Focus on mandatory commitments before optional spending.",
-    availableMoney: state.snapshot.availableMoney,
+    availableMoney: state.cashFlow.availableCash,
     dueSoonCount
   };
 }

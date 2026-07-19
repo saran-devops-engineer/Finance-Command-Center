@@ -1,4 +1,5 @@
 import type { AnalyticsService } from "@/core/analytics";
+import { AppEvent, trackApplicationEvent } from "@/core/analytics";
 import type { ApiService } from "@/core/api";
 import type { BackupService } from "@/core/backup";
 import type { ConfigurationService } from "@/core/configuration";
@@ -38,6 +39,35 @@ export function bootstrapApplication(
       await services.analytics.initialize();
       await services.financeRepository.initializeDatabase();
       const migrationResult = await services.financeRepository.migrateFromLegacyStorage();
+
+      try {
+        const existingMeta = await services.financeRepository.getSchemaMeta();
+        const needsSchemaMigration = !existingMeta || existingMeta.schemaVersion < 2;
+
+        if (needsSchemaMigration) {
+          trackApplicationEvent(AppEvent.MIGRATION_STARTED, {
+            from_schema_version: existingMeta?.schemaVersion ?? 1,
+            to_schema_version: 2
+          });
+          const schemaResult = await services.financeRepository.migrateDataSchema();
+          if (schemaResult.migrated) {
+            trackApplicationEvent(AppEvent.MIGRATION_COMPLETED, {
+              from_schema_version: schemaResult.fromVersion,
+              to_schema_version: schemaResult.toVersion,
+              commitments_created: schemaResult.commitmentsCreated,
+              needs_review_count: schemaResult.needsReviewCount
+            });
+          }
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Schema migration failed.";
+        trackApplicationEvent(AppEvent.MIGRATION_FAILED, {
+          message,
+          from_schema_version: 1
+        });
+        services.errorService.report(error instanceof Error ? error : new Error(message));
+      }
+
       await preloadFinanceData(services.financeRepository);
 
       const profile = await services.financeRepository.getProfile();

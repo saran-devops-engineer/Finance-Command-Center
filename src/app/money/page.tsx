@@ -13,30 +13,25 @@ import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { spacing } from "@/lib/design-tokens";
 import { formatInr } from "@/lib/utils";
 import { financeRepository } from "@/repositories";
-import type { MoneyBreakdown } from "@/shared/domain/finance";
-import {
-  calculateAvailableMoney,
-  calculateMandatoryCommitments
-} from "@/services/financial-snapshot/available-money";
+import { loadCommandCenterState } from "@/services/dashboard/load-command-center-state";
+import type { CashFlowSummary } from "@/services/cash-flow/calculate-cash-flow";
+import { AppRoute } from "@/navigation";
 
 export default function MoneyPage() {
   const router = useRouter();
-  const [moneyBreakdown, setMoneyBreakdown] = useState<MoneyBreakdown | null>(null);
+  const [cashFlow, setCashFlow] = useState<CashFlowSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedScreenView = useRef(false);
 
   const loadMoney = useCallback(async () => {
-    const [profile, localMoneyBreakdown] = await Promise.all([
-      financeRepository.getProfile(),
-      financeRepository.getMoneyBreakdown()
-    ]);
+    const next = await loadCommandCenterState(financeRepository);
 
-    if (!profile?.onboardingCompleted || !localMoneyBreakdown) {
+    if (!next) {
       router.replace("/onboarding");
       return;
     }
 
-    setMoneyBreakdown(localMoneyBreakdown);
+    setCashFlow(next.cashFlow);
     setIsLoading(false);
   }, [router]);
 
@@ -45,33 +40,25 @@ export default function MoneyPage() {
   }, [loadMoney]);
 
   useEffect(() => {
-    if (!isLoading && moneyBreakdown && !hasTrackedScreenView.current) {
+    if (!isLoading && cashFlow && !hasTrackedScreenView.current) {
       hasTrackedScreenView.current = true;
       trackScreenViewed(ScreenName.MONEY);
     }
-  }, [isLoading, moneyBreakdown]);
+  }, [isLoading, cashFlow]);
 
   useFinanceDataReload(() => {
     void loadMoney();
   });
 
-  const mandatoryCommitments = moneyBreakdown
-    ? calculateMandatoryCommitments(moneyBreakdown)
-    : 0;
-  const availableMoney = moneyBreakdown ? calculateAvailableMoney(moneyBreakdown) : 0;
-  const commitmentRatio = moneyBreakdown?.monthlyIncome
-    ? mandatoryCommitments / moneyBreakdown.monthlyIncome
-    : 0;
-  const decisionCopy = moneyBreakdown
+  const decisionCopy = cashFlow
     ? getMoneyDecisionCopy({
-        availableMoney,
-        mandatoryCommitments
+        availableMoney: cashFlow.availableCash,
+        mandatoryCommitments: cashFlow.totalMonthlyCommitments
       })
     : null;
-  const commitmentItems = moneyBreakdown ? getCommitmentItems(moneyBreakdown) : [];
-  const allocation = getSuggestedAllocation(availableMoney);
-  const emergencyTarget = mandatoryCommitments * 3;
-  const emergencyGap = Math.max(emergencyTarget - (moneyBreakdown?.emergencyBuffer ?? 0), 0);
+  const allocation = getSuggestedAllocation(cashFlow?.availableCash ?? 0);
+  const emergencyTarget = (cashFlow?.totalMonthlyCommitments ?? 0) * 3;
+  const emergencyGap = Math.max(emergencyTarget - (cashFlow?.emergencyBuffer ?? 0), 0);
 
   if (isLoading) {
     return (
@@ -101,61 +88,48 @@ export default function MoneyPage() {
             How much can you safely use?
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            A calm monthly view of income, commitments, and money left for decisions.
+            Calculated as income minus commitments. Edit obligations on Commitments;
+            update income in Profile.
           </p>
         </header>
 
         <Card className="space-y-4">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-              Safe to use
+              Available cash
             </p>
             <p className="text-4xl font-semibold tracking-[-0.05em]">
-              <FinancialAmount amount={availableMoney} />
+              <FinancialAmount amount={cashFlow?.availableCash ?? 0} />
             </p>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {decisionCopy}
-            </p>
+            <p className="text-sm leading-6 text-muted-foreground">{decisionCopy}</p>
           </div>
 
           <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
               className="h-full rounded-full bg-primary"
-              style={{ width: `${Math.min(commitmentRatio * 100, 100)}%` }}
+              style={{
+                width: `${Math.min((cashFlow?.commitmentRatio ?? 0) * 100, 100)}%`
+              }}
             />
           </div>
 
           <MetricCardGrid columns={3}>
             <MetricCard
               label="Income"
-              value={formatInr(moneyBreakdown?.monthlyIncome ?? 0, { compact: true })}
+              value={formatInr(cashFlow?.totalMonthlyIncome ?? 0, { compact: true })}
             />
             <MetricCard
               label="Committed"
-              value={formatInr(mandatoryCommitments, { compact: true })}
+              value={formatInr(cashFlow?.totalMonthlyCommitments ?? 0, { compact: true })}
             />
-            <MetricCard label="Used" value={`${Math.round(commitmentRatio * 100)}%`} />
+            <MetricCard
+              label="Used"
+              value={`${Math.round((cashFlow?.commitmentRatio ?? 0) * 100)}%`}
+            />
           </MetricCardGrid>
         </Card>
 
-        <section className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Commitment breakdown
-          </p>
-          <Card className="divide-y divide-border/70 p-0">
-            {commitmentItems.map((item) => (
-              <div key={item.label} className="flex items-center justify-between gap-4 p-5">
-                <div>
-                  <p className="font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.description}</p>
-                </div>
-                <p className="font-semibold">{formatInr(item.value)}</p>
-              </div>
-            ))}
-          </Card>
-        </section>
-
-        {availableMoney > 0 ? (
+        {(cashFlow?.availableCash ?? 0) > 0 ? (
           <section className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
               Suggested allocation
@@ -191,7 +165,7 @@ export default function MoneyPage() {
                 </p>
               </div>
               <p className="text-right font-semibold">
-                {formatInr(moneyBreakdown?.emergencyBuffer ?? 0)}
+                {formatInr(cashFlow?.emergencyBuffer ?? 0)}
               </p>
             </div>
             <MetricCardGrid>
@@ -201,9 +175,17 @@ export default function MoneyPage() {
           </Card>
         </section>
 
-        <Button asChild className="w-full">
-          <Link href="/money/edit">Edit cash flow</Link>
-        </Button>
+        <div className="grid gap-2">
+          <Button asChild className="w-full">
+            <Link href={AppRoute.COMMITMENTS}>Manage commitments</Link>
+          </Button>
+          <Button asChild variant="secondary" className="w-full">
+            <Link href={AppRoute.INSIGHTS}>View insights</Link>
+          </Button>
+          <Button asChild variant="secondary" className="w-full">
+            <Link href="/profile/edit">Update income in Profile</Link>
+          </Button>
+        </div>
       </div>
     </MobileShell>
   );
@@ -222,26 +204,6 @@ function getMoneyDecisionCopy(params: {
   }
 
   return `${formatInr(params.availableMoney)} remains after ${formatInr(params.mandatoryCommitments)} in mandatory commitments.`;
-}
-
-function getCommitmentItems(breakdown: MoneyBreakdown) {
-  return [
-    {
-      label: "Loans and EMIs",
-      description: "Loan payments and other EMIs",
-      value: breakdown.loanPayments + breakdown.emis
-    },
-    {
-      label: "Living commitments",
-      description: "Rent, utilities, and mandatory expenses",
-      value: breakdown.rent + breakdown.utilityBills + breakdown.mandatoryExpenses
-    },
-    {
-      label: "Protection",
-      description: "Insurance and fixed commitments",
-      value: breakdown.insurance + breakdown.fixedCommitments
-    }
-  ];
 }
 
 function getSuggestedAllocation(availableMoney: number) {

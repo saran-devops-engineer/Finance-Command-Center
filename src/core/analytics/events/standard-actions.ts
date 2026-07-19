@@ -18,6 +18,8 @@ export const StandardActions = {
   SUBMITTED: "SUBMITTED",
   CHANGED: "CHANGED",
   FAILED: "FAILED",
+  ADDED: "ADDED",
+  REVIEWED: "REVIEWED",
   ERROR_OCCURRED: "ERROR_OCCURRED"
 } as const;
 

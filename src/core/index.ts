@@ -73,14 +73,12 @@ export {
 } from "@/core/error";
 
 export {
-  AppEvent,
   trackAppEvent,
   createAppEvent,
   FINANCE_DATA_UPDATED_EVENT,
   notifyFinanceDataRestored,
   notifyFinanceDataUpdated,
   subscribeFinanceDataUpdated,
-  type AppEventName,
   type FinanceDataScope
 } from "@/core/events";
 

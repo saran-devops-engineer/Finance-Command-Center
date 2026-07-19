@@ -52,7 +52,7 @@ function isAllowedMagicStringFile(relativePath: string) {
 
 describe("FCC Event Taxonomy V1", () => {
   it("defines the frozen event catalog", () => {
-    expect(TAXONOMY_EVENT_COUNT).toBe(45);
+    expect(TAXONOMY_EVENT_COUNT).toBe(52);
     expect(Object.keys(AppEvent)).toHaveLength(TAXONOMY_EVENT_COUNT);
     expect(Object.keys(EVENT_CATEGORIES)).toHaveLength(TAXONOMY_EVENT_COUNT);
     expect(Object.keys(EVENT_BUSINESS_QUESTIONS)).toHaveLength(TAXONOMY_EVENT_COUNT);
@@ -68,6 +68,14 @@ describe("FCC Event Taxonomy V1", () => {
       "ANALYTICS_CHANGED",
       "FEEDBACK_SUBMITTED"
     ]);
+  });
+
+  it("includes schema migration events in the frozen catalog", () => {
+    expect(AppEvent.MIGRATION_STARTED).toBe("MIGRATION_STARTED");
+    expect(AppEvent.MIGRATION_COMPLETED).toBe("MIGRATION_COMPLETED");
+    expect(AppEvent.MIGRATION_FAILED).toBe("MIGRATION_FAILED");
+    expect(EVENT_CATEGORIES.MIGRATION_STARTED).toBe("Migration");
+    expect(EVENT_BUSINESS_QUESTIONS.MIGRATION_COMPLETED).toContain("schema migrations");
   });
 
   it("forbids hardcoded analytics event strings outside the taxonomy", () => {

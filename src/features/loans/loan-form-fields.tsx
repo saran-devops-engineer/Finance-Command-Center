@@ -3,7 +3,7 @@
 import { radius } from "@/lib/design-tokens";
 import { clarityMaskProps } from "@/lib/privacy/clarity-mask";
 import { cn } from "@/lib/utils";
-import { loanTypeOptions } from "@/shared/finance/loan-form";
+import { loanTypeOptions, type LoanFormState } from "@/shared/finance/loan-form";
 import type { LoanType } from "@/shared/domain/finance";
 
 interface LoanFormFieldsProps {

@@ -9,7 +9,7 @@ import {
   validateHomeLoanForm
 } from "@/shared/finance/home-loan-form";
 import { normalizeLoan } from "@/lib/loan-status";
-import { homeLoanSnapshotFromPersistedLoan } from "@/engines/loan/home-loan/adapters/from-persisted-loan";
+import { snapshotFromPersistedLoan as homeLoanSnapshotFromPersistedLoan } from "@/engines/loan/home-loan/adapters/from-persisted-loan";
 
 describe("Home Loan Data Model V1", () => {
   it("validates required home loan fields", () => {

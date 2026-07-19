@@ -20,7 +20,7 @@ const bankingTestSnapshot: HomeLoanSimulationSnapshot = {
 describe("Home Loan Amortization Engine", () => {
   it("computes monthly interest rate as annual / 12 / 100", () => {
     expect(monthlyInterestRate(12)).toBeCloseTo(0.01, 10);
-    expect(monthlyInterestRate(12.35)).toBeCloseTo(0.1235 / 12 / 100, 10);
+    expect(monthlyInterestRate(12.35)).toBeCloseTo(12.35 / 12 / 100, 10);
   });
 
   it("uses the standard EMI formula", () => {

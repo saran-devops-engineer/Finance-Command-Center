@@ -44,6 +44,17 @@ export function verifyRestoredSnapshot(
     );
   }
 
+  // V2 fields are additive. When the restored snapshot already includes them, verify counts.
+  if (expected.commitments !== undefined) {
+    const expectedCommitmentCount = expected.commitments.length;
+    const actualCommitmentCount = actual.commitments?.length ?? 0;
+    if (expectedCommitmentCount !== actualCommitmentCount) {
+      throw new Error(
+        `Restore verification failed: expected ${expectedCommitmentCount} commitments, found ${actualCommitmentCount}.`
+      );
+    }
+  }
+
   const expectedLoanIds = new Set(expected.loans.map((loan) => loan.id));
   for (const loan of actual.loans) {
     if (!expectedLoanIds.has(loan.id)) {

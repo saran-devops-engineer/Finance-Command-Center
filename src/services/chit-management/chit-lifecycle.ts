@@ -3,6 +3,7 @@ import { isActiveChit, normalizeChit } from "@/lib/chit-status";
 import type { FinanceRepository } from "@/repositories";
 import { getChitMonthlyCashFlowAmount } from "@/shared/finance/chit-calculations";
 import type { Chit } from "@/shared/domain/chit";
+import { syncProductGeneratedCommitments } from "@/services/commitment-sync/sync-product-commitments";
 
 async function syncChitCashFlow(
   repository: FinanceRepository,
@@ -34,6 +35,7 @@ export async function saveChitUpdate(
 ) {
   await repository.saveChit(normalizeChit(nextChit));
   await syncChitCashFlow(repository, previousChit, nextChit);
+  await syncProductGeneratedCommitments(repository);
   notifyFinanceDataUpdated("chit");
 }
 
@@ -54,6 +56,7 @@ export async function archiveChitRecord(
   });
 
   await repository.archiveChit(chitId, archiveReason);
+  await syncProductGeneratedCommitments(repository);
   notifyFinanceDataUpdated("chit");
   return true;
 }
@@ -71,6 +74,7 @@ export async function softDeleteChitRecord(repository: FinanceRepository, chitId
   });
 
   await repository.softDeleteChit(chitId);
+  await syncProductGeneratedCommitments(repository);
   notifyFinanceDataUpdated("chit");
   return true;
 }

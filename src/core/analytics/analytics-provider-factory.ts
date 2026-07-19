@@ -27,6 +27,7 @@ function resolveEnabledProviders(configuration: ConfigurationService): Analytics
 }
 
 function resolveAnalyticsProviderKind(
+  providerCount: number,
   configuration: ConfigurationService,
   override?: AnalyticsProviderKind
 ): AnalyticsProviderKind {
@@ -34,13 +35,11 @@ function resolveAnalyticsProviderKind(
     return override;
   }
 
-  const providers = resolveEnabledProviders(configuration);
-
-  if (providers.length === 0) {
+  if (providerCount === 0) {
     return "noop";
   }
 
-  if (providers.length === 1) {
+  if (providerCount === 1) {
     const config = configuration.getConfig();
     return config.posthogKey ? "posthog" : "clarity";
   }
@@ -52,9 +51,7 @@ export function createAnalyticsProvider(
   configuration: ConfigurationService,
   options: AnalyticsProviderFactoryOptions = {}
 ): AnalyticsProvider {
-  const kind = resolveAnalyticsProviderKind(configuration, options.kind);
-
-  if (kind === "noop") {
+  if (options.kind === "noop") {
     return createNoOpAnalyticsProvider();
   }
 
@@ -67,8 +64,9 @@ export function createAnalyticsProvider(
   }
 
   const providers = resolveEnabledProviders(configuration);
+  const kind = resolveAnalyticsProviderKind(providers.length, configuration, options.kind);
 
-  if (providers.length === 0) {
+  if (kind === "noop" || providers.length === 0) {
     return createNoOpAnalyticsProvider();
   }
 

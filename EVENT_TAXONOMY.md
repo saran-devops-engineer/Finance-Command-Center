@@ -83,8 +83,12 @@ Full mapping: `EVENT_BUSINESS_QUESTIONS` in `src/core/analytics/events/index.ts`
 | **Settings** | `SETTINGS_OPENED`, `THEME_CHANGED`, `ANALYTICS_CHANGED` |
 | **Feedback** | `FEEDBACK_SUBMITTED` |
 | **Errors** | `ERROR_OCCURRED` |
+| **Migration** | `MIGRATION_STARTED`, `MIGRATION_COMPLETED`, `MIGRATION_FAILED` |
+| **Commitments** | `LEGACY_COMMITMENT_REVIEWED`, `COMMITMENT_CREATED` |
+| **Income** | `INCOME_SOURCE_ADDED` |
+| **Products** | `PRODUCT_CREATED` |
 
-**Total events: 45**
+**Total events: 52**
 
 ---
 

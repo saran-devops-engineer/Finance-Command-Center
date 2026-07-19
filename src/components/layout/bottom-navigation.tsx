@@ -1,21 +1,23 @@
 "use client";
 
-import { BarChart3, CreditCard, Home, Lightbulb, UserRound } from "lucide-react";
+import { Home, Layers, CalendarClock, Lightbulb, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { radius, shell } from "@/lib/design-tokens";
+import { BOTTOM_NAV_ITEMS, getActiveNavDomain } from "@/navigation";
 
-const navItems = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/loans", label: "Loans", icon: CreditCard },
-  { href: "/money", label: "Money", icon: BarChart3 },
-  { href: "/insights", label: "Insights", icon: Lightbulb },
-  { href: "/profile", label: "Profile", icon: UserRound }
-] as const;
+const NAV_ICONS = {
+  home: Home,
+  products: Layers,
+  commitments: CalendarClock,
+  insights: Lightbulb,
+  profile: UserRound
+} as const;
 
 export function BottomNavigation() {
   const pathname = usePathname();
+  const activeDomain = getActiveNavDomain(pathname);
 
   return (
     <nav
@@ -31,9 +33,9 @@ export function BottomNavigation() {
           radius.card
         )}
       >
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
+        {BOTTOM_NAV_ITEMS.map((item) => {
+          const Icon = NAV_ICONS[item.domain];
+          const isActive = activeDomain === item.domain;
 
           return (
             <Link

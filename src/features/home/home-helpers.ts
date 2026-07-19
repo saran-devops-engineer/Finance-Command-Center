@@ -121,13 +121,13 @@ export function getRecommendationHref(
   }
 
   if (recommendation.category === "cash-flow" || recommendation.category === "buffer") {
-    return "/money";
+    return "/insights";
   }
 
   if (recommendation.category === "due-date") {
     const due = getMostUrgentDue(upcomingDues);
     const relatedLoan = due ? loans.find((loan) => due.id.includes(loan.id)) : null;
-    return relatedLoan ? `/loans/${relatedLoan.id}` : "/loans";
+    return relatedLoan ? `/loans/${relatedLoan.id}` : "/commitments";
   }
 
   return "/insights";
