@@ -24,12 +24,63 @@ export const AppRoute = {
   CHITS: "/chits"
 } as const;
 
-export const BOTTOM_NAV_ITEMS = [
-  { href: AppRoute.HOME, label: "Home", domain: VisibleDomain.HOME },
-  { href: AppRoute.PRODUCTS, label: "Products", domain: VisibleDomain.PRODUCTS },
-  { href: AppRoute.COMMITMENTS, label: "Commitments", domain: VisibleDomain.COMMITMENTS },
-  { href: AppRoute.INSIGHTS, label: "Insights", domain: VisibleDomain.INSIGHTS },
-  { href: AppRoute.PROFILE, label: "Profile", domain: VisibleDomain.PROFILE }
+export const BottomNavIcon = {
+  HOME: "home",
+  PRODUCTS: "products",
+  COMMITMENTS: "commitments",
+  INSIGHTS: "insights",
+  PROFILE: "profile"
+} as const;
+
+export type BottomNavIconId = (typeof BottomNavIcon)[keyof typeof BottomNavIcon];
+
+/** Configuration for a single bottom-navigation destination. */
+export interface BottomNavItemConfig {
+  href: string;
+  /** Full domain name — page titles, screen readers, tooltips. */
+  label: string;
+  /** Compact tab-bar label sized for narrow viewports (320px+). */
+  navLabel: string;
+  domain: VisibleDomainId;
+  icon: BottomNavIconId;
+}
+
+export const BOTTOM_NAV_ITEMS: readonly BottomNavItemConfig[] = [
+  {
+    href: AppRoute.HOME,
+    label: "Home",
+    navLabel: "Home",
+    domain: VisibleDomain.HOME,
+    icon: BottomNavIcon.HOME
+  },
+  {
+    href: AppRoute.PRODUCTS,
+    label: "Products",
+    navLabel: "Products",
+    domain: VisibleDomain.PRODUCTS,
+    icon: BottomNavIcon.PRODUCTS
+  },
+  {
+    href: AppRoute.COMMITMENTS,
+    label: "Commitments",
+    navLabel: "Due",
+    domain: VisibleDomain.COMMITMENTS,
+    icon: BottomNavIcon.COMMITMENTS
+  },
+  {
+    href: AppRoute.INSIGHTS,
+    label: "Insights",
+    navLabel: "Insights",
+    domain: VisibleDomain.INSIGHTS,
+    icon: BottomNavIcon.INSIGHTS
+  },
+  {
+    href: AppRoute.PROFILE,
+    label: "Profile",
+    navLabel: "Profile",
+    domain: VisibleDomain.PROFILE,
+    icon: BottomNavIcon.PROFILE
+  }
 ] as const;
 
 export function getProductTypeListPath(productTypeId: ProductTypeIdValue): string {

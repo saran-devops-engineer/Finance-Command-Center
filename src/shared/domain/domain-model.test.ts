@@ -17,7 +17,7 @@ import {
   isComingSoonProductType,
   isKnownProductTypeId
 } from "@/products";
-import { getActiveNavDomain, AppRoute } from "@/navigation";
+import { getActiveNavDomain, AppRoute, BOTTOM_NAV_ITEMS } from "@/navigation";
 
 describe("FCC V2 domain model", () => {
   it("defines five visible domains", () => {
@@ -108,6 +108,12 @@ describe("FCC V2 navigation", () => {
   it("highlights Commitments for legacy money route", () => {
     expect(getActiveNavDomain(AppRoute.COMMITMENTS)).toBe(VisibleDomain.COMMITMENTS);
     expect(getActiveNavDomain(AppRoute.MONEY)).toBe(VisibleDomain.COMMITMENTS);
+  });
+
+  it("exposes compact nav labels separate from page titles", () => {
+    const commitments = BOTTOM_NAV_ITEMS.find((item) => item.domain === VisibleDomain.COMMITMENTS);
+    expect(commitments?.label).toBe("Commitments");
+    expect(commitments?.navLabel).toBe("Due");
   });
 });
 

@@ -1,6 +1,7 @@
 export {
   AppRoute,
   BOTTOM_NAV_ITEMS,
+  BottomNavIcon,
   getProductTypeListPath,
   getProductDetailPath,
   getLegacyProductDetailPath,
@@ -8,3 +9,5 @@ export {
   isBottomNavRoute,
   parseProductTypeFromPath
 } from "@/navigation/routes";
+
+export type { BottomNavItemConfig, BottomNavIconId } from "@/navigation/routes";

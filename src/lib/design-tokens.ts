@@ -37,5 +37,7 @@ export const metric = {
 } as const;
 
 export const shell = {
-  maxWidth: "max-w-[430px]"
+  maxWidth: "max-w-[430px]",
+  /** Reserved space above the fixed bottom navigation (content padding). */
+  bottomNavReserve: "pb-[var(--fcc-bottom-nav-offset)]"
 } as const;

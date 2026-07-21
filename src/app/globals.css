@@ -15,6 +15,14 @@
   --destructive: 4 62% 42%;
   --success: 142 43% 31%;
   --warning: 37 74% 42%;
+
+  /* Bottom navigation — single source for bar height + safe-area offset */
+  --fcc-bottom-nav-bar-height: 4rem;
+  --fcc-bottom-nav-gutter: 0.625rem;
+  --fcc-bottom-nav-offset: calc(
+    var(--fcc-bottom-nav-bar-height) + var(--fcc-bottom-nav-gutter) +
+      env(safe-area-inset-bottom, 0px)
+  );
 }
 
 * {
@@ -49,5 +57,5 @@ a {
 }
 
 .safe-area-shell {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+  padding-bottom: var(--fcc-bottom-nav-offset);
 }
