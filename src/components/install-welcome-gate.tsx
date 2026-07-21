@@ -63,7 +63,11 @@ export function InstallWelcomeGate({ children }: InstallWelcomeGateProps) {
   }, [isInstalled]);
 
   if (decision === "pending") {
-    return null;
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background px-6">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
   }
 
   if (decision === "skip") {

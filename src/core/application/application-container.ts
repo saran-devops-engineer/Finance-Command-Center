@@ -25,6 +25,17 @@ export interface ApplicationServices {
 let applicationServices: ApplicationServices | null = null;
 let bootstrapPromise: Promise<FinanceMigrationResult> | null = null;
 
+const ANALYTICS_INIT_TIMEOUT_MS = 4_000;
+
+async function initializeAnalyticsWithTimeout(services: ApplicationServices) {
+  await Promise.race([
+    services.analytics.initialize(),
+    new Promise<void>((resolve) => {
+      window.setTimeout(resolve, ANALYTICS_INIT_TIMEOUT_MS);
+    })
+  ]);
+}
+
 export function getApplicationServices(): ApplicationServices {
   if (!applicationServices) {
     applicationServices = createProviderBundle();
@@ -38,7 +49,7 @@ export function bootstrapApplication(
 ): Promise<FinanceMigrationResult> {
   if (!bootstrapPromise) {
     bootstrapPromise = (async () => {
-      await services.analytics.initialize();
+      await initializeAnalyticsWithTimeout(services);
       await services.financeRepository.initializeDatabase();
       const migrationResult = await services.financeRepository.migrateFromLegacyStorage();
 
@@ -73,14 +84,13 @@ export function bootstrapApplication(
 
       await preloadFinanceData(services.financeRepository);
 
-      try {
-        await syncFinancialNotificationsFromTimeline(services.financeRepository);
-      } catch (error) {
+      // Notification sync is deferred — it must never block first paint.
+      void syncFinancialNotificationsFromTimeline(services.financeRepository).catch((error) => {
         services.errorService.report(
           error instanceof Error ? error : new Error("Notification sync failed."),
           { phase: "notification-sync" }
         );
-      }
+      });
 
       const profile = await services.financeRepository.getProfile();
       if (profile?.onboardingCompleted) {

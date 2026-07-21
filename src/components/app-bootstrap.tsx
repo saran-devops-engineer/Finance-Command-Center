@@ -12,6 +12,18 @@ interface AppBootstrapProps {
   children: ReactNode;
 }
 
+/** Never block the UI indefinitely if IndexedDB, migration, or analytics stalls. */
+const BOOTSTRAP_TIMEOUT_MS = 12_000;
+
+function withBootstrapTimeout<T>(promise: Promise<T>): Promise<T | undefined> {
+  return Promise.race([
+    promise,
+    new Promise<undefined>((resolve) => {
+      window.setTimeout(() => resolve(undefined), BOOTSTRAP_TIMEOUT_MS);
+    })
+  ]);
+}
+
 /**
  * App launch gate:
  * 1. Splash screen when installed (Phase 8)
@@ -25,7 +37,6 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
   const [showSplash, setShowSplash] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
     const isStandalone = isStandaloneDisplayMode();
 
     if (isStandalone) {
@@ -35,24 +46,20 @@ export function AppBootstrap({ children }: AppBootstrapProps) {
     registerServiceWorker();
 
     const services = getApplicationServices();
-    const bootstrapPromise = bootstrapApplication(services)
-      .then(() => {
-        trackApplicationEvent(AppEvent.APP_OPENED);
-      })
-      .catch((error) => {
-        services.errorService.report(error, { phase: "bootstrap" });
-      });
+    const bootstrapPromise = withBootstrapTimeout(
+      bootstrapApplication(services)
+        .then(() => {
+          trackApplicationEvent(AppEvent.APP_OPENED);
+        })
+        .catch((error) => {
+          services.errorService.report(error, { phase: "bootstrap" });
+        })
+    );
 
     void waitForSplashDismissal(bootstrapPromise).finally(() => {
-      if (isMounted) {
-        setIsReady(true);
-        setShowSplash(false);
-      }
+      setIsReady(true);
+      setShowSplash(false);
     });
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   if (!isReady) {
