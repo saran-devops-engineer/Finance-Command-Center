@@ -11,6 +11,12 @@ import type { Chit } from "@/shared/domain/chit";
 import type { IncomeProfile } from "@/shared/domain/income";
 import type { CommitmentRecord } from "@/shared/domain/commitment-record";
 import type { SchemaMeta } from "@/shared/domain/schema-version";
+import type {
+  FinancialTimeline,
+  FinancialTimelineSettings,
+  TimelineActivity,
+  TimelineEvent
+} from "@/shared/domain/financial-timeline";
 import { migrateLegacyHomeLoan } from "@/shared/finance/home-loan-form";
 import { migrateGoldLoan } from "@/shared/finance/gold-loan-form";
 
@@ -68,6 +74,58 @@ interface FinanceCommandCenterDb extends DBSchema {
     key: string;
     value: SchemaMeta;
   };
+  /** V3 — one timeline per recurring financial product. */
+  financialTimelines: {
+    key: string;
+    value: FinancialTimeline;
+    indexes: {
+      "by-product-id": string;
+      "by-product-type-id": FinancialTimeline["productTypeId"];
+      "by-status": FinancialTimeline["status"];
+    };
+  };
+  /** V3 — expected and confirmed recurring events. */
+  timelineEvents: {
+    key: string;
+    value: TimelineEvent;
+    indexes: {
+      "by-timeline-id": string;
+      "by-status": TimelineEvent["status"];
+      "by-due-date": string;
+    };
+  };
+  /** V3 — immutable activity log for timeline history. */
+  timelineActivities: {
+    key: string;
+    value: TimelineActivity;
+    indexes: { "by-timeline-id": string };
+  };
+  /** V3 — global Financial Timeline settings. */
+  timelineSettings: {
+    key: string;
+    value: FinancialTimelineSettings;
+  };
+  /** V4 — financial notification queue. */
+  notificationQueue: {
+    key: string;
+    value: import("@/notifications/models").FinancialNotification;
+    indexes: {
+      "by-status": import("@/notifications/models").FinancialNotification["status"];
+      "by-scheduled-delivery": string;
+      "by-timeline-id": string;
+    };
+  };
+  /** V4 — notification delivery history. */
+  notificationHistory: {
+    key: string;
+    value: import("@/notifications/models").NotificationHistoryEntry;
+    indexes: { "by-notification-id": string; "by-occurred-at": string };
+  };
+  /** V4 — global notification settings. */
+  notificationSettings: {
+    key: string;
+    value: import("@/notifications/models").FinancialNotificationSettings;
+  };
 }
 
 let databasePromise: Promise<IDBPDatabase<FinanceCommandCenterDb>> | null = null;
@@ -76,7 +134,7 @@ export type FinanceDatabase = IDBPDatabase<FinanceCommandCenterDb>;
 
 export function getFinanceDatabase() {
   if (!databasePromise) {
-    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 7, {
+    databasePromise = openDB<FinanceCommandCenterDb>("finance-command-center", 9, {
       upgrade: async (database, oldVersion, _newVersion, transaction) => {
         if (!database.objectStoreNames.contains("profile")) {
           database.createObjectStore("profile", { keyPath: "id" });
@@ -128,6 +186,46 @@ export function getFinanceDatabase() {
 
         if (!database.objectStoreNames.contains("schemaMeta")) {
           database.createObjectStore("schemaMeta", { keyPath: "id" });
+        }
+
+        if (!database.objectStoreNames.contains("financialTimelines")) {
+          const timelines = database.createObjectStore("financialTimelines", { keyPath: "id" });
+          timelines.createIndex("by-product-id", "productId");
+          timelines.createIndex("by-product-type-id", "productTypeId");
+          timelines.createIndex("by-status", "status");
+        }
+
+        if (!database.objectStoreNames.contains("timelineEvents")) {
+          const events = database.createObjectStore("timelineEvents", { keyPath: "id" });
+          events.createIndex("by-timeline-id", "timelineId");
+          events.createIndex("by-status", "status");
+          events.createIndex("by-due-date", "dueDate");
+        }
+
+        if (!database.objectStoreNames.contains("timelineActivities")) {
+          const activities = database.createObjectStore("timelineActivities", { keyPath: "id" });
+          activities.createIndex("by-timeline-id", "timelineId");
+        }
+
+        if (!database.objectStoreNames.contains("timelineSettings")) {
+          database.createObjectStore("timelineSettings", { keyPath: "id" });
+        }
+
+        if (!database.objectStoreNames.contains("notificationQueue")) {
+          const notificationQueue = database.createObjectStore("notificationQueue", { keyPath: "id" });
+          notificationQueue.createIndex("by-status", "status");
+          notificationQueue.createIndex("by-scheduled-delivery", "scheduledDeliveryAt");
+          notificationQueue.createIndex("by-timeline-id", "timelineId");
+        }
+
+        if (!database.objectStoreNames.contains("notificationHistory")) {
+          const notificationHistory = database.createObjectStore("notificationHistory", { keyPath: "id" });
+          notificationHistory.createIndex("by-notification-id", "notificationId");
+          notificationHistory.createIndex("by-occurred-at", "occurredAt");
+        }
+
+        if (!database.objectStoreNames.contains("notificationSettings")) {
+          database.createObjectStore("notificationSettings", { keyPath: "id" });
         }
 
         if (oldVersion < 3) {

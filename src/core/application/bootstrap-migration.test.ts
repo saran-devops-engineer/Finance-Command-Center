@@ -71,7 +71,7 @@ describe("bootstrap schema migration analytics", () => {
 
     expect(trackApplicationEvent).toHaveBeenCalledWith(AppEvent.MIGRATION_STARTED, {
       from_schema_version: 1,
-      to_schema_version: 2
+      to_schema_version: 4
     });
     expect(trackApplicationEvent).toHaveBeenCalledWith(AppEvent.MIGRATION_COMPLETED, {
       from_schema_version: 1,

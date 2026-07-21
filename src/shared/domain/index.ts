@@ -69,3 +69,5 @@ export type {
 } from "@/shared/domain/finance";
 
 export type { Chit, ChitDerivedMetrics, ChitStatus } from "@/shared/domain/chit";
+
+export * from "@/shared/domain/financial-timeline";

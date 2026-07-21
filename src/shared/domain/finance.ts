@@ -117,8 +117,8 @@ export interface FinancialSnapshot {
 }
 
 export interface FinanceDataSnapshot {
-  /** 1 = V1 MoneyBreakdown model; 2 = V2 IncomeProfile + CommitmentRecord (+ V1 fields retained). */
-  schemaVersion: 1 | 2;
+  /** 1 = V1 MoneyBreakdown model; 2 = V2 IncomeProfile + CommitmentRecord; 3 = Financial Timeline; 4 = Financial Notifications. */
+  schemaVersion: 1 | 2 | 3 | 4;
   exportedAt: string;
   profile: UserProfile | null;
   /**
@@ -135,4 +135,13 @@ export interface FinanceDataSnapshot {
   incomeProfile?: import("@/shared/domain/income").IncomeProfile | null;
   /** V2 commitment records — present after schema migration. */
   commitments?: import("@/shared/domain/commitment-record").CommitmentRecord[];
+  /** V3 financial timelines — present after timeline migration. */
+  financialTimelines?: import("@/shared/domain/financial-timeline").FinancialTimeline[];
+  timelineEvents?: import("@/shared/domain/financial-timeline").TimelineEvent[];
+  timelineActivities?: import("@/shared/domain/financial-timeline").TimelineActivity[];
+  timelineSettings?: import("@/shared/domain/financial-timeline").FinancialTimelineSettings;
+  /** V4 notification queue — present after FNS migration. */
+  notificationQueue?: import("@/notifications/models").FinancialNotification[];
+  notificationHistory?: import("@/notifications/models").NotificationHistoryEntry[];
+  notificationSettings?: import("@/notifications/models").FinancialNotificationSettings;
 }

@@ -211,6 +211,26 @@ export default function ProfilePage() {
 
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Reminders
+          </p>
+          <Card className="divide-y divide-border/70 p-0">
+            <Link
+              href="/notifications"
+              className="flex items-center justify-between gap-4 p-5 transition hover:bg-white/30"
+            >
+              <div>
+                <p className="font-medium">Notification Center</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Timeline-based reminders that work offline
+                </p>
+              </div>
+              <span className="text-sm text-muted-foreground">Open</span>
+            </Link>
+          </Card>
+        </section>
+
+        <section className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
             Data & privacy
           </p>
           <Card className="divide-y divide-border/70 p-0">

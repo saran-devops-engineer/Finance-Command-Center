@@ -33,8 +33,8 @@ describe("FCC V2 domain model", () => {
     );
   });
 
-  it("uses V2 as the live schema version after Phase 2", () => {
-    expect(CURRENT_DATA_SCHEMA_VERSION).toBe(DataSchemaVersion.V2);
+  it("uses V4 as the live schema version after Financial Notification System", () => {
+    expect(CURRENT_DATA_SCHEMA_VERSION).toBe(DataSchemaVersion.V4);
   });
 
   it("calculates total monthly income in simple mode", () => {

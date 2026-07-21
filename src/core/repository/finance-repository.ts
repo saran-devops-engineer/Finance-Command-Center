@@ -10,6 +10,12 @@ import type {
 import type { IncomeProfile } from "@/shared/domain/income";
 import type { CommitmentRecord } from "@/shared/domain/commitment-record";
 import type { SchemaMeta } from "@/shared/domain/schema-version";
+import type {
+  FinancialTimeline,
+  FinancialTimelineSettings,
+  TimelineActivity,
+  TimelineEvent
+} from "@/shared/domain/financial-timeline";
 import type { AppSettings } from "@/repositories/app-settings";
 import type { BackupPreview, RestoredBackupSummary } from "@/storage/backup/backup-format";
 import type { SchemaMigrationResult } from "@/storage/migration";
@@ -78,6 +84,27 @@ export interface FinanceRepository {
   listUpcomingDues(): Promise<UpcomingDue[]>;
   saveUpcomingDue(value: UpcomingDue): Promise<void>;
   deleteUpcomingDue(id: string): Promise<void>;
+
+  listFinancialTimelines(): Promise<FinancialTimeline[]>;
+  getFinancialTimeline(id: string): Promise<FinancialTimeline | null>;
+  getFinancialTimelineByProduct(productTypeId: string, productId: string): Promise<FinancialTimeline | null>;
+  saveFinancialTimeline(value: FinancialTimeline): Promise<void>;
+
+  listTimelineEvents(timelineId: string): Promise<TimelineEvent[]>;
+  saveTimelineEvents(events: TimelineEvent[]): Promise<void>;
+
+  listTimelineActivities(timelineId: string): Promise<TimelineActivity[]>;
+  saveTimelineActivities(activities: TimelineActivity[]): Promise<void>;
+
+  getTimelineSettings(): Promise<FinancialTimelineSettings | null>;
+  saveTimelineSettings(value: FinancialTimelineSettings): Promise<void>;
+
+  listNotificationQueue(): Promise<import("@/notifications/models").FinancialNotification[]>;
+  saveNotificationQueue(items: import("@/notifications/models").FinancialNotification[]): Promise<void>;
+  listNotificationHistory(): Promise<import("@/notifications/models").NotificationHistoryEntry[]>;
+  saveNotificationHistory(items: import("@/notifications/models").NotificationHistoryEntry[]): Promise<void>;
+  getNotificationSettings(): Promise<import("@/notifications/models").FinancialNotificationSettings | null>;
+  saveNotificationSettings(value: import("@/notifications/models").FinancialNotificationSettings): Promise<void>;
 
   exportBackup(): Promise<FinanceBackupExport>;
   inspectBackup(file: File): Promise<BackupPreview>;

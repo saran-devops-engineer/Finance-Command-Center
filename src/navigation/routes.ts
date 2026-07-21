@@ -16,6 +16,7 @@ export const AppRoute = {
   COMMITMENTS: "/commitments",
   INSIGHTS: "/insights",
   PROFILE: "/profile",
+  NOTIFICATIONS: "/notifications",
   ONBOARDING: "/onboarding",
 
   /** Legacy routes — preserved for backward compatibility. */

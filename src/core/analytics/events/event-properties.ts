@@ -16,7 +16,8 @@ export const ScreenName = {
   SETTINGS: "Settings",
   MONEY: "Money",
   INSIGHTS: "Insights",
-  SIMULATOR: "Simulator"
+  SIMULATOR: "Simulator",
+  NOTIFICATIONS: "Notifications"
 } as const;
 
 export type ScreenNameValue = (typeof ScreenName)[keyof typeof ScreenName];

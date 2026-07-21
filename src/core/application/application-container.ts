@@ -9,6 +9,8 @@ import type { FinanceRepository, FinanceMigrationResult } from "@/core/repositor
 import { createProviderBundle } from "@/core/providers/provider-factory";
 import { identifyAnalyticsUser } from "@/core/analytics/analytics-identity";
 import { preloadFinanceData } from "@/repositories/finance-preload";
+import { syncFinancialNotificationsFromTimeline } from "@/notifications/services/timeline-sync-service";
+import { CURRENT_DATA_SCHEMA_VERSION } from "@/shared/domain/schema-version";
 
 export interface ApplicationServices {
   configuration: ConfigurationService;
@@ -42,12 +44,13 @@ export function bootstrapApplication(
 
       try {
         const existingMeta = await services.financeRepository.getSchemaMeta();
-        const needsSchemaMigration = !existingMeta || existingMeta.schemaVersion < 2;
+        const needsSchemaMigration =
+          !existingMeta || existingMeta.schemaVersion < CURRENT_DATA_SCHEMA_VERSION;
 
         if (needsSchemaMigration) {
           trackApplicationEvent(AppEvent.MIGRATION_STARTED, {
             from_schema_version: existingMeta?.schemaVersion ?? 1,
-            to_schema_version: 2
+            to_schema_version: CURRENT_DATA_SCHEMA_VERSION
           });
           const schemaResult = await services.financeRepository.migrateDataSchema();
           if (schemaResult.migrated) {
@@ -69,6 +72,15 @@ export function bootstrapApplication(
       }
 
       await preloadFinanceData(services.financeRepository);
+
+      try {
+        await syncFinancialNotificationsFromTimeline(services.financeRepository);
+      } catch (error) {
+        services.errorService.report(
+          error instanceof Error ? error : new Error("Notification sync failed."),
+          { phase: "notification-sync" }
+        );
+      }
 
       const profile = await services.financeRepository.getProfile();
       if (profile?.onboardingCompleted) {

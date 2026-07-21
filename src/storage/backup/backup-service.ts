@@ -3,6 +3,19 @@ import type { Chit } from "@/shared/domain/chit";
 import type { CommitmentRecord } from "@/shared/domain/commitment-record";
 import type { IncomeProfile } from "@/shared/domain/income";
 import type {
+  FinancialTimeline,
+  FinancialTimelineSettings,
+  TimelineActivity,
+  TimelineEvent
+} from "@/shared/domain/financial-timeline";
+import { TIMELINE_SETTINGS_ID } from "@/shared/domain/financial-timeline";
+import type {
+  FinancialNotification,
+  FinancialNotificationSettings,
+  NotificationHistoryEntry
+} from "@/notifications/models";
+import { NOTIFICATION_SETTINGS_ID } from "@/notifications/models";
+import type {
   FinanceDataSnapshot,
   Loan,
   LoanPayment,
@@ -158,7 +171,7 @@ function validateBackupData(value: unknown): FinanceDataSnapshot {
   }
 
   const schemaVersion = value.schemaVersion;
-  if (schemaVersion !== 1 && schemaVersion !== 2) {
+  if (schemaVersion !== 1 && schemaVersion !== 2 && schemaVersion !== 3 && schemaVersion !== 4) {
     throw new Error("Unsupported backup data schema.");
   }
 
@@ -173,7 +186,16 @@ function validateBackupData(value: unknown): FinanceDataSnapshot {
     upcomingDues: readUpcomingDueArray(value.upcomingDues),
     chits: readChitArray(value.chits),
     incomeProfile: isIncomeProfile(value.incomeProfile) ? value.incomeProfile : null,
-    commitments: readCommitmentArray(value.commitments)
+    commitments: readCommitmentArray(value.commitments),
+    financialTimelines: readTimelineArray(value.financialTimelines),
+    timelineEvents: readTimelineEventArray(value.timelineEvents),
+    timelineActivities: readTimelineActivityArray(value.timelineActivities),
+    timelineSettings: isTimelineSettings(value.timelineSettings) ? value.timelineSettings : undefined,
+    notificationQueue: readNotificationQueueArray(value.notificationQueue),
+    notificationHistory: readNotificationHistoryArray(value.notificationHistory),
+    notificationSettings: isNotificationSettings(value.notificationSettings)
+      ? value.notificationSettings
+      : undefined
   };
 }
 
@@ -463,6 +485,90 @@ function readCommitmentArray(value: unknown): CommitmentRecord[] | undefined {
 
     return item;
   });
+}
+
+function readTimelineArray(value: unknown): FinancialTimeline[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("Backup financial timelines data is invalid.");
+  }
+
+  return value as FinancialTimeline[];
+}
+
+function readTimelineEventArray(value: unknown): TimelineEvent[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("Backup timeline events data is invalid.");
+  }
+
+  return value as TimelineEvent[];
+}
+
+function readTimelineActivityArray(value: unknown): TimelineActivity[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("Backup timeline activities data is invalid.");
+  }
+
+  return value as TimelineActivity[];
+}
+
+function isTimelineSettings(value: unknown): value is FinancialTimelineSettings {
+  return (
+    isRecord(value) &&
+    value.id === TIMELINE_SETTINGS_ID &&
+    typeof value.defaultConfirmationMode === "string" &&
+    typeof value.smartAutoThreshold === "number" &&
+    typeof value.pendingReminderDays === "number" &&
+    typeof value.reviewOverdueDays === "number" &&
+    typeof value.showFreshnessIndicator === "boolean" &&
+    typeof value.updatedAt === "string"
+  );
+}
+
+function readNotificationQueueArray(value: unknown): FinancialNotification[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("Backup notification queue data is invalid.");
+  }
+
+  return value as FinancialNotification[];
+}
+
+function readNotificationHistoryArray(value: unknown): NotificationHistoryEntry[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("Backup notification history data is invalid.");
+  }
+
+  return value as NotificationHistoryEntry[];
+}
+
+function isNotificationSettings(value: unknown): value is FinancialNotificationSettings {
+  return (
+    isRecord(value) &&
+    value.id === NOTIFICATION_SETTINGS_ID &&
+    typeof value.enabled === "boolean" &&
+    typeof value.defaultProviderId === "string" &&
+    typeof value.privacyLevel === "string" &&
+    typeof value.updatedAt === "string"
+  );
 }
 
 function readNumber(value: unknown) {

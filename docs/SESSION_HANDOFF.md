@@ -223,6 +223,8 @@ Create `.cursor/rules/fcc-engineering.mdc` with pointers to this file and taxono
 7. **Domain Architecture Phase 2** — Schema V2, IncomeProfile + CommitmentRecord stores, V1→V2 migration framework, backup detect-schema + migrate-on-restore
 8. **Domain Architecture Phase 3** — Onboarding redesigned: Profile → Products (optional) → Manual commitments; removed Other EMI / Insurance duplicate entry
 9. **Domain Architecture Phase 4** — Product commitment generators + sync; Commitments screen with needs-review / product / manual CRUD
+10. **Financial Timeline Domain (Schema V3)** — foundational recurring-product architecture: expected vs confirmed events, confirmation strategies, confidence engine, activity log, freshness, V2→V3 migration bootstrap. See `docs/FINANCIAL_TIMELINE_ARCHITECTURE.md`.
+11. **Financial Notification System (Schema V4)** — timeline-driven reminders, rules engine, queue, provider pattern, notification center, privacy modes, offline-first delivery. See `docs/FINANCIAL_NOTIFICATION_SYSTEM_ARCHITECTURE.md`.
 
 ---
 
