@@ -15,10 +15,22 @@ import { cn, formatInr } from "@/lib/utils";
 import { financeRepository } from "@/repositories";
 import { deriveChitMetrics } from "@/shared/finance/chit-calculations";
 import type { Chit } from "@/shared/domain/chit";
+import type { ProductCreationTypeIdValue } from "@/products/creation";
+import {
+  getFamilyProductTypeNewPath,
+  type FinancialFamilyIdValue
+} from "@/products/families";
+import { ProductTypeListHeader } from "@/features/products/product-type-list-screen";
+import { ProductTypeEmptyState } from "@/features/products/coming-soon-product-type-screen";
 
 type ChitsView = "active" | "archived";
 
-export function ChitsScreen() {
+interface ChitsScreenProps {
+  familyId?: FinancialFamilyIdValue;
+  creationTypeId?: ProductCreationTypeIdValue;
+}
+
+export function ChitsScreen({ familyId, creationTypeId }: ChitsScreenProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeChits, setActiveChits] = useState<Chit[]>([]);
@@ -75,6 +87,11 @@ export function ChitsScreen() {
     0
   );
 
+  const addHref =
+    familyId && creationTypeId
+      ? getFamilyProductTypeNewPath(familyId, creationTypeId)
+      : "/products/new?family=community-finance";
+
   if (isLoading) {
     return (
       <div className={spacing.page}>
@@ -92,14 +109,19 @@ export function ChitsScreen() {
 
   return (
     <div className={spacing.page}>
-      <header className="space-y-2 pt-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-          Chit funds
-        </p>
-        <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">Your chits</h1>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Track chit contributions, prize status, and remaining months.
-        </p>
+      <header className="space-y-3 pt-4">
+        {familyId ? (
+          <ProductTypeListHeader familyId={familyId} productTypeLabel="Chit" />
+        ) : null}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Community Finance
+          </p>
+          <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">Your chits</h1>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Track chit contributions, prize status, and remaining months.
+          </p>
+        </div>
       </header>
 
       <ChitViewTabs view={view} onChange={setView} />
@@ -119,7 +141,7 @@ export function ChitsScreen() {
           </MetricCardGrid>
 
           <Button asChild className="w-full gap-2">
-            <Link href="/chits/new">
+            <Link href={addHref}>
               <Plus className="h-4 w-4" />
               Add chit
             </Link>
@@ -131,14 +153,22 @@ export function ChitsScreen() {
             </p>
             <div className={cn("flex flex-col", spacing.cardStack)}>
               {activeChits.length === 0 ? (
-                <Card className={cn("space-y-2", card.paddingCompact)}>
-                  <h2 className="font-display text-3xl tracking-[-0.04em]">
-                    No chits added yet.
-                  </h2>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    Add your first chit to track monthly contributions and prize status.
-                  </p>
-                </Card>
+                familyId && creationTypeId ? (
+                  <ProductTypeEmptyState
+                    familyId={familyId}
+                    creationTypeId={creationTypeId}
+                    message="No chit products added yet."
+                  />
+                ) : (
+                  <Card className={cn("space-y-2", card.paddingCompact)}>
+                    <h2 className="font-display text-3xl tracking-[-0.04em]">
+                      No chits added yet.
+                    </h2>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Add your first chit to track monthly contributions and prize status.
+                    </p>
+                  </Card>
+                )
               ) : null}
 
               {activeChits.map((chit) => (

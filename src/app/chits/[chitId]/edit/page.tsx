@@ -1,5 +1,5 @@
 import { MobileShell } from "@/components/layout/mobile-shell";
-import { EditChitScreen } from "@/features/chits/edit-chit-screen";
+import { ProductFormScreen } from "@/features/products/product-form-screen";
 
 interface EditChitPageProps {
   params: Promise<{ chitId: string }>;
@@ -10,7 +10,7 @@ export default async function EditChitPage({ params }: EditChitPageProps) {
 
   return (
     <MobileShell>
-      <EditChitScreen chitId={chitId} />
+      <ProductFormScreen mode="edit" chitId={chitId} backHref={`/chits/${chitId}`} />
     </MobileShell>
   );
 }

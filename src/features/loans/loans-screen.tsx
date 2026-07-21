@@ -23,13 +23,38 @@ import { financeRepository } from "@/repositories";
 import { computeMonthlyInterestBurden } from "@/shared/finance/gold-loan-calculations";
 import { isGoldLoan } from "@/shared/finance/gold-loan-form";
 import type { Loan } from "@/shared/domain/finance";
+import type { ProductCreationTypeIdValue } from "@/products/creation";
+import {
+  getFamilyProductTypeNewPath,
+  getFinancialFamilyPath,
+  loanMatchesCreationType,
+  type FinancialFamilyIdValue
+} from "@/products/families";
+import { ProductTypeListHeader } from "@/features/products/product-type-list-screen";
+import { ProductTypeEmptyState } from "@/features/products/coming-soon-product-type-screen";
 
 type LoansView = "active" | "archived";
 type LoansScreenVariant = "all" | "standard" | "gold";
 
 interface LoansScreenProps {
-  /** Filters list when rendered under /products/[productType]. Default preserves legacy /loans behavior. */
+  /** Filters list when rendered under legacy /products/[productType]. */
   variant?: LoansScreenVariant;
+  familyId?: FinancialFamilyIdValue;
+  creationTypeId?: ProductCreationTypeIdValue;
+  familyLabel?: string;
+  productTypeLabel?: string;
+}
+
+function filterLoans(
+  loans: Loan[],
+  variant: LoansScreenVariant,
+  creationTypeId?: ProductCreationTypeIdValue
+): Loan[] {
+  if (creationTypeId) {
+    return loans.filter((loan) => loanMatchesCreationType(loan, creationTypeId));
+  }
+
+  return filterLoansByVariant(loans, variant);
 }
 
 function filterLoansByVariant(loans: Loan[], variant: LoansScreenVariant): Loan[] {
@@ -44,13 +69,39 @@ function filterLoansByVariant(loans: Loan[], variant: LoansScreenVariant): Loan[
   return loans;
 }
 
-function getLoansScreenCopy(variant: LoansScreenVariant) {
+function getLoansScreenCopy(
+  variant: LoansScreenVariant,
+  productTypeLabel?: string,
+  creationTypeId?: ProductCreationTypeIdValue,
+  familyId?: FinancialFamilyIdValue
+) {
+  const addHref =
+    creationTypeId && familyId
+      ? getFamilyProductTypeNewPath(familyId, creationTypeId)
+      : "/products/new?family=loans";
+
+  if (productTypeLabel) {
+    return {
+      eyebrow: "Loans",
+      title: `Your ${productTypeLabel.toLowerCase()}s`,
+      loadingTitle: `Reading your ${productTypeLabel.toLowerCase()}s.`,
+      addHref,
+      addLabel: `Add ${productTypeLabel.toLowerCase()}`,
+      emptyTitle: `No ${productTypeLabel.toLowerCase()}s added yet.`,
+      emptyDescription: `Add your first ${productTypeLabel.toLowerCase()} to track balances, due dates, and payoff progress.`,
+      screenName: creationTypeId === "gold-loan" ? ScreenName.GOLD_LOAN : ScreenName.LOANS
+    };
+  }
+
   if (variant === "gold") {
     return {
       eyebrow: "Products",
       title: "Your gold loans",
       loadingTitle: "Reading your gold loans.",
-      addHref: "/loans/new",
+      addHref: "/products/new?family=loans",
+      addLabel: "Add loan",
+      emptyTitle: "No gold loans added yet.",
+      emptyDescription: "Add your first gold loan to track interest and renewal cycles.",
       screenName: ScreenName.GOLD_LOAN
     };
   }
@@ -60,7 +111,11 @@ function getLoansScreenCopy(variant: LoansScreenVariant) {
       eyebrow: "Products",
       title: "Your loans",
       loadingTitle: "Reading your loans.",
-      addHref: "/loans/new",
+      addHref: "/products/new?family=loans",
+      addLabel: "Add loan",
+      emptyTitle: "No loans added yet.",
+      emptyDescription:
+        "Add your first loan to track EMI, tenure, and payoff progress.",
       screenName: ScreenName.LOANS
     };
   }
@@ -69,12 +124,22 @@ function getLoansScreenCopy(variant: LoansScreenVariant) {
     eyebrow: "Liabilities",
     title: "Your loans",
     loadingTitle: "Reading your loans.",
-    addHref: "/loans/new",
+    addHref: "/products/new?family=loans",
+    addLabel: "Add loan",
+    emptyTitle: "No loans added yet.",
+    emptyDescription:
+      "Add your first loan to track EMI, tenure, and payoff progress.",
     screenName: ScreenName.LOANS
   };
 }
 
-export function LoansScreen({ variant = "all" }: LoansScreenProps) {
+export function LoansScreen({
+  variant = "all",
+  familyId,
+  creationTypeId,
+  familyLabel,
+  productTypeLabel
+}: LoansScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeLoans, setActiveLoans] = useState<Loan[]>([]);
@@ -82,7 +147,7 @@ export function LoansScreen({ variant = "all" }: LoansScreenProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<LoansView>("active");
   const hasTrackedScreenView = useRef(false);
-  const copy = getLoansScreenCopy(variant);
+  const copy = getLoansScreenCopy(variant, productTypeLabel, creationTypeId, familyId);
 
   const loadLoans = useCallback(async () => {
     const [profile, localActiveLoans, localArchivedLoans] = await Promise.all([
@@ -96,10 +161,10 @@ export function LoansScreen({ variant = "all" }: LoansScreenProps) {
       return;
     }
 
-    setActiveLoans(filterLoansByVariant(localActiveLoans, variant));
-    setArchivedLoans(filterLoansByVariant(localArchivedLoans, variant));
+    setActiveLoans(filterLoans(localActiveLoans, variant, creationTypeId));
+    setArchivedLoans(filterLoans(localArchivedLoans, variant, creationTypeId));
     setIsLoading(false);
-  }, [router, variant]);
+  }, [creationTypeId, router, variant]);
 
   useEffect(() => {
     const requestedView = searchParams.get("view");
@@ -153,18 +218,21 @@ export function LoansScreen({ variant = "all" }: LoansScreenProps) {
 
   return (
     <div className={spacing.page}>
-      <header className="space-y-2 pt-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-          {copy.eyebrow}
-        </p>
-        <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">
-          {copy.title}
-        </h1>
-        {variant === "all" ? (
-          <Link href="/chits" className="inline-block text-sm font-medium text-primary">
-            View your chits
-          </Link>
-        ) : null}
+      <header className="space-y-3 pt-4">
+        {familyId ? <ProductTypeListHeader familyId={familyId} productTypeLabel={productTypeLabel ?? "Loan"} /> : null}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            {copy.eyebrow}
+          </p>
+          <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">
+            {copy.title}
+          </h1>
+          {variant === "all" && !familyId ? (
+            <Link href="/products/community-finance/chit" className="inline-block text-sm font-medium text-primary">
+              View your chits
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <LoanViewTabs view={view} onChange={setView} />
@@ -208,7 +276,7 @@ export function LoansScreen({ variant = "all" }: LoansScreenProps) {
           <Button asChild className="w-full gap-2">
             <Link href={copy.addHref}>
               <Plus className="h-4 w-4" />
-              Add loan
+              {copy.addLabel}
             </Link>
           </Button>
 
@@ -218,15 +286,22 @@ export function LoansScreen({ variant = "all" }: LoansScreenProps) {
             </p>
             <div className={cn("flex flex-col", spacing.cardStack)}>
               {activeLoans.length === 0 ? (
-                <Card className={cn("space-y-2", card.paddingCompact)}>
-                  <h2 className="font-display text-3xl tracking-[-0.04em]">
-                    No loans added yet.
-                  </h2>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    Add your first loan from onboarding or the Home quick action to see a
-                    premium loan card here.
-                  </p>
-                </Card>
+                familyId && creationTypeId ? (
+                  <ProductTypeEmptyState
+                    familyId={familyId}
+                    creationTypeId={creationTypeId}
+                    message={copy.emptyDescription}
+                  />
+                ) : (
+                  <Card className={cn("space-y-2", card.paddingCompact)}>
+                    <h2 className="font-display text-3xl tracking-[-0.04em]">
+                      {copy.emptyTitle}
+                    </h2>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {copy.emptyDescription}
+                    </p>
+                  </Card>
+                )
               ) : null}
 
               {prioritizedLoans.map((loan) => (

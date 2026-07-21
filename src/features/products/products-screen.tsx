@@ -3,25 +3,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScreenName, trackScreenViewed } from "@/core/analytics";
 import { useFinanceDataReload } from "@/hooks/use-finance-data-reload";
 import { card, spacing } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
-import { getProductTypeListPath, PRODUCT_TYPE_CATALOG } from "@/products";
-import { ProductAvailability } from "@/shared/domain/product";
-import type { ProductTypeSummary } from "@/shared/domain/product";
+import {
+  buildFinancialFamilySummaries,
+  getAddFinancialProductPath,
+  getFinancialFamilyPath,
+  type FinancialFamilySummary
+} from "@/products/families";
 import { financeRepository } from "@/repositories";
-import { isGoldLoan } from "@/shared/finance/gold-loan-form";
 
 export function ProductsScreen() {
   const router = useRouter();
-  const [summaries, setSummaries] = useState<ProductTypeSummary[]>([]);
+  const [summaries, setSummaries] = useState<FinancialFamilySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedScreenView = useRef(false);
 
-  const loadProductSummaries = useCallback(async () => {
+  const loadFamilySummaries = useCallback(async () => {
     const [profile, loans, chits] = await Promise.all([
       financeRepository.getProfile(),
       financeRepository.listLoans(),
@@ -33,32 +36,13 @@ export function ProductsScreen() {
       return;
     }
 
-    const activeLoans = loans.filter((loan) => loan.status !== "archived" && loan.status !== "deleted");
-    const goldLoans = activeLoans.filter((loan) => isGoldLoan(loan));
-    const standardLoans = activeLoans.filter((loan) => !isGoldLoan(loan));
-    const activeChits = chits.filter((chit) => chit.status === "active");
-
-    const counts: Record<string, number> = {
-      loans: standardLoans.length,
-      "gold-loans": goldLoans.length,
-      chits: activeChits.length
-    };
-
-    setSummaries(
-      PRODUCT_TYPE_CATALOG.map((entry) => ({
-        productTypeId: entry.productTypeId,
-        label: entry.pluralLabel,
-        description: entry.description,
-        availability: entry.availability,
-        activeCount: counts[entry.productTypeId] ?? 0
-      }))
-    );
+    setSummaries(buildFinancialFamilySummaries(loans, chits));
     setIsLoading(false);
   }, [router]);
 
   useEffect(() => {
-    void loadProductSummaries();
-  }, [loadProductSummaries]);
+    void loadFamilySummaries();
+  }, [loadFamilySummaries]);
 
   useEffect(() => {
     if (!isLoading && !hasTrackedScreenView.current) {
@@ -68,7 +52,7 @@ export function ProductsScreen() {
   }, [isLoading]);
 
   useFinanceDataReload(() => {
-    void loadProductSummaries();
+    void loadFamilySummaries();
   });
 
   if (isLoading) {
@@ -93,16 +77,16 @@ export function ProductsScreen() {
           Products
         </p>
         <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">
-          What do you owe?
+          Your financial products
         </h1>
         <p className="text-sm leading-6 text-muted-foreground">
-          Financial instruments grouped by type. Select a product to view details, history, and actions.
+          Organized by financial family. Select a category to view product types, details, and actions.
         </p>
       </header>
 
-      <section className="space-y-3">
+      <section className="space-y-3" aria-label="Financial families">
         {summaries.map((summary) => (
-          <ProductTypeCard key={summary.productTypeId} summary={summary} />
+          <FinancialFamilyCard key={summary.familyId} summary={summary} />
         ))}
       </section>
 
@@ -110,56 +94,39 @@ export function ProductsScreen() {
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
           Quick add
         </p>
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            href="/loans/new"
-            className="rounded-[20px] border border-border bg-white/45 px-4 py-3 text-center text-sm font-medium"
-          >
-            Add loan
+        <Button asChild className="w-full">
+          <Link href={getAddFinancialProductPath()}>
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Add Financial Product
           </Link>
-          <Link
-            href="/chits/new"
-            className="rounded-[20px] border border-border bg-white/45 px-4 py-3 text-center text-sm font-medium"
-          >
-            Add chit
-          </Link>
-        </div>
+        </Button>
       </section>
     </div>
   );
 }
 
-function ProductTypeCard({ summary }: { summary: ProductTypeSummary }) {
-  const isComingSoon = summary.availability === ProductAvailability.COMING_SOON;
-  const href = getProductTypeListPath(summary.productTypeId);
-  const countLabel =
-    summary.activeCount > 0 ? `${summary.activeCount} active` : isComingSoon ? "Coming soon" : "None yet";
+function FinancialFamilyCard({ summary }: { summary: FinancialFamilySummary }) {
+  const href = getFinancialFamilyPath(summary.familyId);
 
   const content = (
-    <Card
-      className={cn(
-        "flex items-center justify-between gap-4",
-        card.paddingCompact,
-        isComingSoon && "opacity-70"
-      )}
-    >
+    <Card className={cn("flex items-center justify-between gap-4", card.paddingCompact)}>
       <div className="min-w-0 space-y-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-semibold">{summary.label}</h2>
-          <span className="text-xs text-muted-foreground">({countLabel})</span>
+          <span className="text-xs text-muted-foreground">({summary.countLabel})</span>
         </div>
         <p className="text-sm leading-6 text-muted-foreground">{summary.description}</p>
       </div>
-      {!isComingSoon ? <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" /> : null}
+      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
     </Card>
   );
 
-  if (isComingSoon) {
-    return content;
-  }
-
   return (
-    <Link href={href} className="block transition hover:opacity-90">
+    <Link
+      href={href}
+      className="block transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      aria-label={`${summary.label}, ${summary.countLabel}`}
+    >
       {content}
     </Link>
   );

@@ -35,7 +35,6 @@ export function HomeLoanFormFields({ form, errors, onChange }: HomeLoanFormField
           onChange={(value) => onChange("name", value)}
           placeholder="Plot Loan"
         />
-        <Field label="Loan type" value="Home Loan" readOnly />
         <Field
           label="Lender name"
           value={form.lender}

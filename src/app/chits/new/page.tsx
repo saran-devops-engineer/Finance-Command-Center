@@ -1,10 +1,15 @@
 import { MobileShell } from "@/components/layout/mobile-shell";
-import { AddChitScreen } from "@/features/chits/add-chit-screen";
+import { ProductFormScreen } from "@/features/products/product-form-screen";
+import { ProductCreationTypeId } from "@/products/creation";
 
 export default function NewChitPage() {
   return (
     <MobileShell>
-      <AddChitScreen />
+      <ProductFormScreen
+        mode="create"
+        initialCreationTypeId={ProductCreationTypeId.CHIT}
+        backHref="/chits"
+      />
     </MobileShell>
   );
 }

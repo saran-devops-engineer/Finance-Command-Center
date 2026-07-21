@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Finance Command Center",
-  "short_name": "FCC",
+  "name": "My Finance",
+  "short_name": "My Finance",
   "description": "A private, local-first financial decision support system.",
   "lang": "en-IN",
   "dir": "ltr",

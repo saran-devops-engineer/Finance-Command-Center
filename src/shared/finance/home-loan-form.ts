@@ -91,10 +91,6 @@ export function validateHomeLoanForm(form: HomeLoanFormState) {
     errors.push("Lender name is required.");
   }
 
-  if (!form.type) {
-    errors.push("Loan type is required.");
-  }
-
   if (originalAmount <= 0) {
     errors.push("Original loan amount must be greater than 0.");
   }

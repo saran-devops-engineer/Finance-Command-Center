@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AppBootstrap } from "@/components/app-bootstrap";
+import { INSTALLED_APP_NAME, SITE_TITLE } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
@@ -16,15 +17,15 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: {
-    default: "Finance Command Center",
-    template: "%s | Finance Command Center"
+    default: SITE_TITLE,
+    template: `%s | ${SITE_TITLE}`
   },
   description: "A private, local-first financial decision support system.",
-  applicationName: "Finance Command Center",
+  applicationName: SITE_TITLE,
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "FCC"
+    title: INSTALLED_APP_NAME
   },
   manifest: "/manifest.webmanifest",
   icons: {

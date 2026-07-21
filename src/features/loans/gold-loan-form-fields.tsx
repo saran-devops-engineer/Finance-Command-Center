@@ -42,7 +42,6 @@ export function GoldLoanFormFields({ form, errors, onChange }: GoldLoanFormField
           onChange={(value) => onChange("name", value)}
           placeholder="Gold Loan"
         />
-        <Field label="Loan type" value="Gold Loan" readOnly />
         <Field
           label="Lender name"
           value={form.lender}

@@ -5,6 +5,7 @@ import { useRef, type RefObject } from "react";
 import { Check, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { card, radius, spacing } from "@/lib/design-tokens";
+import { INSTALLED_APP_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 import { isIosDevice } from "@/lib/pwa/platform";
 
@@ -59,10 +60,10 @@ export function WelcomeScreen({
               Welcome
             </p>
             <h1 className="font-display text-4xl leading-tight tracking-[-0.04em]">
-              Welcome to Finance Command Center
+              Welcome to {INSTALLED_APP_NAME}
             </h1>
             <p className="mx-auto max-w-sm text-sm leading-6 text-muted-foreground">
-              For the best experience, install Finance Command Center on your Home Screen.
+              For the best experience, add {INSTALLED_APP_NAME} to your Home Screen.
             </p>
           </div>
         </div>
@@ -92,13 +93,13 @@ export function WelcomeScreen({
           disabled={!isIos && (!canNativeInstall || isInstalling)}
           onClick={() => void handleInstallClick()}
         >
-          {isInstalling ? "Opening install…" : "Install App"}
+          {isInstalling ? "Opening install…" : `Install ${INSTALLED_APP_NAME}`}
         </Button>
 
         {!isIos && !canNativeInstall ? (
           <p className="text-center text-xs leading-5 text-muted-foreground">
-            Install is not available in this browser session yet. Use your browser menu to
-            add this app to your Home Screen, or continue in the browser.
+            Install is not available in this browser session yet. Use your browser menu to add{" "}
+            {INSTALLED_APP_NAME} to your Home Screen, or continue in the browser.
           </p>
         ) : null}
 
@@ -122,7 +123,9 @@ function IosInstallInstructions({ ref }: { ref: RefObject<HTMLElement | null> })
         </div>
         <div>
           <p className="font-semibold">Install on iPhone or iPad</p>
-          <p className="text-xs text-muted-foreground">Safari · Add to Home Screen</p>
+          <p className="text-xs text-muted-foreground">
+            Add {INSTALLED_APP_NAME} to your Home Screen
+          </p>
         </div>
       </div>
 
@@ -148,8 +151,8 @@ function IosInstallInstructions({ ref }: { ref: RefObject<HTMLElement | null> })
             3
           </span>
           <span>
-            Open <strong className="text-foreground">Finance Command Center</strong> from your
-            Home Screen.
+            Open <strong className="text-foreground">{INSTALLED_APP_NAME}</strong> from your Home
+            Screen.
           </span>
         </li>
       </ol>

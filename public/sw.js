@@ -229,7 +229,7 @@ function normalizeCacheKey(url) {
 }
 
 function offlineFallbackResponse() {
-  return new Response("Finance Command Center is offline.", {
+  return new Response("My Finance is offline.", {
     status: 503,
     statusText: "Offline",
     headers: {

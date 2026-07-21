@@ -33,3 +33,5 @@ export {
   getProductTypeListPath,
   getLegacyProductDetailPath
 } from "@/products/paths";
+
+export * from "@/products/families";

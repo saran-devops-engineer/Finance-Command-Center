@@ -52,7 +52,7 @@ function isAllowedMagicStringFile(relativePath: string) {
 
 describe("FCC Event Taxonomy V1", () => {
   it("defines the frozen event catalog", () => {
-    expect(TAXONOMY_EVENT_COUNT).toBe(52);
+    expect(TAXONOMY_EVENT_COUNT).toBe(58);
     expect(Object.keys(AppEvent)).toHaveLength(TAXONOMY_EVENT_COUNT);
     expect(Object.keys(EVENT_CATEGORIES)).toHaveLength(TAXONOMY_EVENT_COUNT);
     expect(Object.keys(EVENT_BUSINESS_QUESTIONS)).toHaveLength(TAXONOMY_EVENT_COUNT);

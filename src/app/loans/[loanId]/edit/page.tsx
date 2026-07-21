@@ -1,5 +1,5 @@
 import { MobileShell } from "@/components/layout/mobile-shell";
-import { EditLoanScreen } from "@/features/loans/edit-loan-screen";
+import { ProductFormScreen } from "@/features/products/product-form-screen";
 
 interface EditLoanPageProps {
   params: Promise<{
@@ -12,7 +12,7 @@ export default async function EditLoanPage({ params }: EditLoanPageProps) {
 
   return (
     <MobileShell>
-      <EditLoanScreen loanId={loanId} />
+      <ProductFormScreen mode="edit" loanId={loanId} backHref={`/loans/${loanId}`} />
     </MobileShell>
   );
 }

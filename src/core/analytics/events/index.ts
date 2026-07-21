@@ -12,6 +12,7 @@ import { SettingsEvents, type SettingsEventPayloadMap } from "./settings-events"
 import { FeedbackEvents, type FeedbackEventPayloadMap } from "./feedback-events";
 import { ErrorEvents, type ErrorEventPayloadMap } from "./error-events";
 import { MigrationEvents, type MigrationEventPayloadMap } from "./migration-events";
+import { ProductEvents, type ProductEventPayloadMap } from "./product-events";
 import type { EventCategory } from "./event-properties";
 
 export { StandardActions, type StandardAction } from "./standard-actions";
@@ -29,6 +30,7 @@ export { SettingsEvents, type SettingsEventName, type SettingsEventPayloadMap } 
 export { FeedbackEvents, type FeedbackEventName, type FeedbackEventPayloadMap } from "./feedback-events";
 export { ErrorEvents, type ErrorEventName, type ErrorEventPayloadMap } from "./error-events";
 export { MigrationEvents, type MigrationEventName, type MigrationEventPayloadMap } from "./migration-events";
+export { ProductEvents, type ProductEventName, type ProductEventPayloadMap } from "./product-events";
 export {
   ScreenName,
   type ScreenNameValue,
@@ -55,7 +57,8 @@ export const AppEvent = {
   ...SettingsEvents,
   ...FeedbackEvents,
   ...ErrorEvents,
-  ...MigrationEvents
+  ...MigrationEvents,
+  ...ProductEvents
 } as const;
 
 export type AppEventPayloadMap = ApplicationEventPayloadMap &
@@ -71,7 +74,8 @@ export type AppEventPayloadMap = ApplicationEventPayloadMap &
   SettingsEventPayloadMap &
   FeedbackEventPayloadMap &
   ErrorEventPayloadMap &
-  MigrationEventPayloadMap;
+  MigrationEventPayloadMap &
+  ProductEventPayloadMap;
 
 export type AppEventName = keyof AppEventPayloadMap;
 
@@ -144,7 +148,13 @@ export const EVENT_CATEGORIES: Record<AppEventName, EventCategory> = {
   LEGACY_COMMITMENT_REVIEWED: "Commitments",
   INCOME_SOURCE_ADDED: "Income",
   COMMITMENT_CREATED: "Commitments",
-  PRODUCT_CREATED: "Products"
+  PRODUCT_CREATED: "Products",
+  FAMILY_OPENED: "Products",
+  PRODUCT_TYPE_OPENED: "Products",
+  PRODUCT_SELECTED: "Products",
+  PRODUCT_UPDATED: "Products",
+  PRODUCT_VALIDATION_FAILED: "Products",
+  PRODUCT_CREATION_CANCELLED: "Products"
 };
 
 export const EVENT_BUSINESS_QUESTIONS: Record<AppEventName, string> = {
@@ -199,7 +209,13 @@ export const EVENT_BUSINESS_QUESTIONS: Record<AppEventName, string> = {
   LEGACY_COMMITMENT_REVIEWED: "Are users clearing legacy migration review items?",
   INCOME_SOURCE_ADDED: "Are users adding advanced income sources?",
   COMMITMENT_CREATED: "Are users creating manual commitments?",
-  PRODUCT_CREATED: "Which product types are users creating?"
+  PRODUCT_CREATED: "Which product types are users creating?",
+  FAMILY_OPENED: "Which financial families do users explore?",
+  PRODUCT_TYPE_OPENED: "Which product types do users open?",
+  PRODUCT_SELECTED: "Which product types do users choose before creating?",
+  PRODUCT_UPDATED: "Do users maintain product records after creation?",
+  PRODUCT_VALIDATION_FAILED: "Where does product creation fail validation?",
+  PRODUCT_CREATION_CANCELLED: "Do users abandon product creation?"
 };
 
 /** Events defined in taxonomy but not yet emitted by any feature. */

@@ -1,25 +1,38 @@
 import { notFound, redirect } from "next/navigation";
-import { isActiveProductType, isKnownProductTypeId } from "@/products";
-import { ProductTypeId } from "@/shared/domain/product";
+import { MobileShell } from "@/components/layout/mobile-shell";
+import { ProductFormScreen } from "@/features/products/product-form-screen";
+import { ProductCreationTypeId } from "@/products/creation";
+import {
+  isFinancialFamilyId,
+  resolveLegacyProductTypeNewRedirect
+} from "@/products/families";
+import type { FinancialFamilyIdValue } from "@/products/families";
 
-interface ProductNewPageProps {
+interface ProductFamilyNewPageProps {
   params: Promise<{ productType: string }>;
 }
 
-export default async function ProductNewPage({ params }: ProductNewPageProps) {
+export default async function ProductFamilyNewPage({ params }: ProductFamilyNewPageProps) {
   const { productType } = await params;
 
-  if (!isKnownProductTypeId(productType) || !isActiveProductType(productType)) {
+  const legacyRedirect = resolveLegacyProductTypeNewRedirect(productType);
+  if (legacyRedirect && !isFinancialFamilyId(productType)) {
+    redirect(legacyRedirect);
+  }
+
+  if (!isFinancialFamilyId(productType)) {
     notFound();
   }
 
-  if (productType === ProductTypeId.LOANS || productType === ProductTypeId.GOLD_LOANS) {
-    redirect("/loans/new");
-  }
+  const familyId = productType as FinancialFamilyIdValue;
 
-  if (productType === ProductTypeId.CHITS) {
-    redirect("/chits/new");
-  }
-
-  notFound();
+  return (
+    <MobileShell>
+      <ProductFormScreen
+        mode="create"
+        familyFilter={familyId}
+        backHref={`/products/${familyId}`}
+      />
+    </MobileShell>
+  );
 }

@@ -62,23 +62,23 @@ export const PRODUCT_ROUTE_CONFIG: Record<ProductTypeIdValue, ProductRouteConfig
     legacyListPath: "/loans",
     detailPathTemplate: "/products/loans/{id}",
     legacyDetailPathTemplate: "/loans/{id}",
-    newPathTemplate: "/products/loans/new"
+    newPathTemplate: "/products/new?family=loans"
   },
   [ProductTypeId.GOLD_LOANS]: {
     productTypeId: ProductTypeId.GOLD_LOANS,
-    listPath: "/products/gold-loans",
+    listPath: "/products/loans/gold-loan",
     legacyListPath: "/loans?view=gold",
     detailPathTemplate: "/products/gold-loans/{id}",
     legacyDetailPathTemplate: "/loans/{id}",
-    newPathTemplate: "/products/gold-loans/new"
+    newPathTemplate: "/products/loans/gold-loan/new"
   },
   [ProductTypeId.CHITS]: {
     productTypeId: ProductTypeId.CHITS,
-    listPath: "/products/chits",
+    listPath: "/products/community-finance/chit",
     legacyListPath: "/chits",
     detailPathTemplate: "/products/chits/{id}",
     legacyDetailPathTemplate: "/chits/{id}",
-    newPathTemplate: "/products/chits/new"
+    newPathTemplate: "/products/community-finance/chit/new"
   },
   [ProductTypeId.INVESTMENTS]: {
     productTypeId: ProductTypeId.INVESTMENTS,
@@ -87,22 +87,22 @@ export const PRODUCT_ROUTE_CONFIG: Record<ProductTypeIdValue, ProductRouteConfig
   },
   [ProductTypeId.FIXED_DEPOSITS]: {
     productTypeId: ProductTypeId.FIXED_DEPOSITS,
-    listPath: "/products/fixed-deposits",
+    listPath: "/products/savings",
     detailPathTemplate: "/products/fixed-deposits/{id}"
   },
   [ProductTypeId.RECURRING_DEPOSITS]: {
     productTypeId: ProductTypeId.RECURRING_DEPOSITS,
-    listPath: "/products/recurring-deposits",
+    listPath: "/products/savings",
     detailPathTemplate: "/products/recurring-deposits/{id}"
   },
   [ProductTypeId.PPF]: {
     productTypeId: ProductTypeId.PPF,
-    listPath: "/products/ppf",
+    listPath: "/products/savings",
     detailPathTemplate: "/products/ppf/{id}"
   },
   [ProductTypeId.NPS]: {
     productTypeId: ProductTypeId.NPS,
-    listPath: "/products/nps",
+    listPath: "/products/savings",
     detailPathTemplate: "/products/nps/{id}"
   },
   [ProductTypeId.INSURANCE]: {

@@ -71,14 +71,14 @@ describe("FCC V2 domain model", () => {
 });
 
 describe("FCC V2 product registry", () => {
-  it("registers active and coming-soon product types", () => {
+  it("registers active and coming-soon product types for storage compatibility", () => {
     expect(isActiveProductType(ProductTypeId.LOANS)).toBe(true);
     expect(isActiveProductType(ProductTypeId.CHITS)).toBe(true);
     expect(isComingSoonProductType(ProductTypeId.INVESTMENTS)).toBe(true);
     expect(isComingSoonProductType(ProductTypeId.INSURANCE)).toBe(true);
   });
 
-  it("includes architecture placeholders for future products", () => {
+  it("keeps architecture placeholders for future savings products", () => {
     const comingSoon = PRODUCT_TYPE_CATALOG.filter((entry) => entry.availability === "coming-soon");
     expect(comingSoon.map((entry) => entry.productTypeId)).toEqual([
       ProductTypeId.INVESTMENTS,
@@ -90,7 +90,7 @@ describe("FCC V2 product registry", () => {
     ]);
   });
 
-  it("validates product type path segments", () => {
+  it("validates legacy product type path segments", () => {
     expect(isKnownProductTypeId("loans")).toBe(true);
     expect(isKnownProductTypeId("gold-loans")).toBe(true);
     expect(isKnownProductTypeId("invalid")).toBe(false);
@@ -101,6 +101,8 @@ describe("FCC V2 navigation", () => {
   it("highlights Products for legacy loan and chit routes", () => {
     expect(getActiveNavDomain("/products")).toBe(VisibleDomain.PRODUCTS);
     expect(getActiveNavDomain("/products/loans")).toBe(VisibleDomain.PRODUCTS);
+    expect(getActiveNavDomain("/products/loans/home-loan")).toBe(VisibleDomain.PRODUCTS);
+    expect(getActiveNavDomain("/products/savings")).toBe(VisibleDomain.PRODUCTS);
     expect(getActiveNavDomain("/loans")).toBe(VisibleDomain.PRODUCTS);
     expect(getActiveNavDomain("/chits")).toBe(VisibleDomain.PRODUCTS);
   });

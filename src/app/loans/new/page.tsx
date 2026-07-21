@@ -1,10 +1,15 @@
 import { MobileShell } from "@/components/layout/mobile-shell";
-import { AddLoanScreen } from "@/features/loans/add-loan-screen";
+import { ProductFormScreen } from "@/features/products/product-form-screen";
+import { FinancialFamilyId } from "@/products/families";
 
 export default function AddLoanPage() {
   return (
     <MobileShell>
-      <AddLoanScreen />
+      <ProductFormScreen
+        mode="create"
+        familyFilter={FinancialFamilyId.LOANS}
+        backHref="/loans"
+      />
     </MobileShell>
   );
 }
