@@ -15,7 +15,6 @@ import {
   getAddFinancialProductPath,
   getFamilyProductTypePath,
   getFinancialFamilyDefinition,
-  getFinancialFamilyPath,
   type FamilyProductTypeSummary,
   type FinancialFamilyIdValue
 } from "@/products/families";

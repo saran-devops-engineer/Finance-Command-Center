@@ -21,7 +21,6 @@ interface ProductTypeListScreenProps {
 }
 
 export function ProductTypeListScreen({ familyId, creationTypeId }: ProductTypeListScreenProps) {
-  const family = getFinancialFamilyDefinition(familyId);
   const productType = getFamilyProductTypeDefinition(creationTypeId);
   const hasTrackedTypeOpen = useRef(false);
 
@@ -51,18 +50,16 @@ export function ProductTypeListScreen({ familyId, creationTypeId }: ProductTypeL
     <LoansScreen
       familyId={familyId}
       creationTypeId={creationTypeId}
-      familyLabel={family?.label}
       productTypeLabel={productType.label}
     />
   );
 }
 
 export function ProductTypeListHeader({
-  familyId,
-  productTypeLabel
+  familyId
 }: {
   familyId: FinancialFamilyIdValue;
-  productTypeLabel: string;
+  productTypeLabel?: string;
 }) {
   const family = getFinancialFamilyDefinition(familyId);
 

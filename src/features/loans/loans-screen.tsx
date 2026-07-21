@@ -26,7 +26,6 @@ import type { Loan } from "@/shared/domain/finance";
 import type { ProductCreationTypeIdValue } from "@/products/creation";
 import {
   getFamilyProductTypeNewPath,
-  getFinancialFamilyPath,
   loanMatchesCreationType,
   type FinancialFamilyIdValue
 } from "@/products/families";
@@ -41,7 +40,6 @@ interface LoansScreenProps {
   variant?: LoansScreenVariant;
   familyId?: FinancialFamilyIdValue;
   creationTypeId?: ProductCreationTypeIdValue;
-  familyLabel?: string;
   productTypeLabel?: string;
 }
 
@@ -137,7 +135,6 @@ export function LoansScreen({
   variant = "all",
   familyId,
   creationTypeId,
-  familyLabel,
   productTypeLabel
 }: LoansScreenProps) {
   const router = useRouter();

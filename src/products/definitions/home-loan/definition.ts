@@ -169,7 +169,7 @@ const homeLoanDefinition: ProductCreationDefinition = {
     return validateHomeLoanForm(toHomeLoanFormState(form));
   },
   onFieldChange(field, form, previous) {
-    let next = { ...form };
+    const next = { ...form };
 
     if (field === "lenderPick" || field === "lenderCustom") {
       next.lender = resolveLenderValue(next.lenderPick ?? "", next.lenderCustom ?? "");

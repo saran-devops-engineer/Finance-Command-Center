@@ -145,6 +145,10 @@ export function ProductFormScreen({
     }
 
     void bootstrap();
+
+    return () => {
+      mounted = false;
+    };
   }, [mode, loanId, chitId, router, initialCreationTypeId]);
 
   const selectCreationType = useCallback((nextType: ProductCreationTypeIdValue) => {

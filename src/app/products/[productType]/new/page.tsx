@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { ProductFormScreen } from "@/features/products/product-form-screen";
-import { ProductCreationTypeId } from "@/products/creation";
 import {
   isFinancialFamilyId,
   resolveLegacyProductTypeNewRedirect
