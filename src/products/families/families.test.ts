@@ -80,9 +80,13 @@ describe("Financial Families IA", () => {
     const summaries = buildFinancialFamilySummaries([], []);
     const investments = summaries.find((entry) => entry.familyId === FinancialFamilyId.INVESTMENTS);
     const insurance = summaries.find((entry) => entry.familyId === FinancialFamilyId.INSURANCE);
+    const loans = summaries.find((entry) => entry.familyId === FinancialFamilyId.LOANS);
 
     expect(investments?.countLabel).toBe("Coming Soon");
     expect(insurance?.countLabel).toBe("Coming Soon");
+    expect(investments?.isNavigable).toBe(false);
+    expect(insurance?.isNavigable).toBe(false);
+    expect(loans?.isNavigable).toBe(true);
   });
 
   it("redirects legacy product type routes to family navigation", () => {
@@ -93,6 +97,8 @@ describe("Financial Families IA", () => {
       "/products/community-finance/chit"
     );
     expect(resolveLegacyProductTypeRedirect(ProductTypeId.FIXED_DEPOSITS)).toBe("/products/savings");
+    expect(resolveLegacyProductTypeRedirect(ProductTypeId.LOANS)).toBeNull();
+    expect(resolveLegacyProductTypeRedirect(ProductTypeId.INVESTMENTS)).toBeNull();
   });
 
   it("parses family product type routes", () => {

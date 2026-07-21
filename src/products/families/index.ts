@@ -32,6 +32,7 @@ export {
   getFamilyProductTypeNewPath,
   getAddFinancialProductPath,
   resolveLegacyProductTypeRedirect,
+  resolveLegacyProductTypeRedirectIfNeeded,
   resolveLegacyProductTypeNewRedirect,
   parseFamilyRouteSegment,
   parseFamilyProductTypeRoute

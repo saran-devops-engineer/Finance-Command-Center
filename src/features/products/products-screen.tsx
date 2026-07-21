@@ -107,9 +107,16 @@ export function ProductsScreen() {
 
 function FinancialFamilyCard({ summary }: { summary: FinancialFamilySummary }) {
   const href = getFinancialFamilyPath(summary.familyId);
+  const isComingSoon = !summary.isNavigable;
 
   const content = (
-    <Card className={cn("flex items-center justify-between gap-4", card.paddingCompact)}>
+    <Card
+      className={cn(
+        "flex items-center justify-between gap-4",
+        card.paddingCompact,
+        isComingSoon && "opacity-70"
+      )}
+    >
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-semibold">{summary.label}</h2>
@@ -117,9 +124,19 @@ function FinancialFamilyCard({ summary }: { summary: FinancialFamilySummary }) {
         </div>
         <p className="text-sm leading-6 text-muted-foreground">{summary.description}</p>
       </div>
-      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      {!isComingSoon ? (
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      ) : null}
     </Card>
   );
+
+  if (isComingSoon) {
+    return (
+      <div aria-label={`${summary.label}, coming soon`} aria-disabled="true">
+        {content}
+      </div>
+    );
+  }
 
   return (
     <Link

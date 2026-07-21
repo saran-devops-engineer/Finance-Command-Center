@@ -88,7 +88,7 @@ export function buildFinancialFamilySummaries(
       hubCountMode: family.hubCountMode,
       activeProductCount,
       countLabel: formatCountLabel(activeProductCount, family.hubCountMode),
-      isNavigable: true
+      isNavigable: family.hubCountMode === "active" || activeProductCount > 0
     };
   });
 }

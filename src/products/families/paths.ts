@@ -34,15 +34,12 @@ export function getAddFinancialProductPath(familyId?: FinancialFamilyIdValue | n
 
 /** Legacy product-type list paths → V3 family navigation. */
 const LEGACY_PRODUCT_TYPE_REDIRECTS: Record<string, string> = {
-  [ProductTypeId.LOANS]: getFinancialFamilyPath("loans"),
   [ProductTypeId.GOLD_LOANS]: getFamilyProductTypePath("loans", "gold-loan"),
   [ProductTypeId.CHITS]: getFamilyProductTypePath("community-finance", "chit"),
-  [ProductTypeId.INVESTMENTS]: getFinancialFamilyPath("investments"),
   [ProductTypeId.FIXED_DEPOSITS]: getFinancialFamilyPath("savings"),
   [ProductTypeId.RECURRING_DEPOSITS]: getFinancialFamilyPath("savings"),
   [ProductTypeId.PPF]: getFinancialFamilyPath("savings"),
-  [ProductTypeId.NPS]: getFinancialFamilyPath("savings"),
-  [ProductTypeId.INSURANCE]: getFinancialFamilyPath("insurance")
+  [ProductTypeId.NPS]: getFinancialFamilyPath("savings")
 };
 
 const LEGACY_PRODUCT_TYPE_NEW_REDIRECTS: Record<string, string> = {
@@ -53,6 +50,19 @@ const LEGACY_PRODUCT_TYPE_NEW_REDIRECTS: Record<string, string> = {
 
 export function resolveLegacyProductTypeRedirect(segment: string): string | null {
   return LEGACY_PRODUCT_TYPE_REDIRECTS[segment] ?? null;
+}
+
+/** Redirect only when the legacy target differs from the current path. */
+export function resolveLegacyProductTypeRedirectIfNeeded(
+  segment: string,
+  currentPath: string
+): string | null {
+  const target = resolveLegacyProductTypeRedirect(segment);
+  if (!target || target === currentPath) {
+    return null;
+  }
+
+  return target;
 }
 
 export function resolveLegacyProductTypeNewRedirect(segment: string): string | null {
