@@ -1,5 +1,6 @@
 import type { ConfigurationProvider } from "@/core/configuration/configuration-provider.interface";
 import type { AppConfiguration } from "@/core/configuration/types";
+import { areDeveloperToolsEnabled as isDevToolsEnv } from "@/core/configuration/environment";
 
 export class ConfigurationService {
   constructor(private readonly provider: ConfigurationProvider) {}
@@ -38,6 +39,10 @@ export class ConfigurationService {
 
   isFeatureEnabled(featureKey: string) {
     return Boolean(this.getFeatureFlags()[featureKey]);
+  }
+
+  areDeveloperToolsEnabled() {
+    return isDevToolsEnv(this.getEnvironment());
   }
 }
 

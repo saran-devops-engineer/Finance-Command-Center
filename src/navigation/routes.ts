@@ -17,6 +17,7 @@ export const AppRoute = {
   INSIGHTS: "/insights",
   PROFILE: "/profile",
   NOTIFICATIONS: "/notifications",
+  PROFILE_DEVELOPER_NOTIFICATION_TESTING: "/profile/developer/notification-testing",
   ONBOARDING: "/onboarding",
 
   /** Legacy routes — preserved for backward compatibility. */

@@ -9,4 +9,5 @@ export * from "@/notifications/scheduler/delivery-scheduler";
 export * from "@/notifications/providers";
 export * from "@/notifications/center/notification-center";
 export * from "@/notifications/history/notification-history";
-export * from "@/notifications/services/timeline-sync-service";
+export * from "@/notifications/manager/platform-detection";
+export * from "@/notifications/manager/provider-manager";

@@ -312,6 +312,11 @@ describe("Financial Notification System orchestration", () => {
 
     const settings = {
       ...DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS,
+      enabled: true,
+      capabilities: {
+        ...DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS.capabilities,
+        deviceNotifications: true
+      },
       quietHours: { enabled: true, startHour: 22, endHour: 7, allowCriticalOverride: true }
     };
 
@@ -374,7 +379,7 @@ describe("Financial Notification System orchestration", () => {
       timelines: [sampleTimeline()],
       events: [sampleEvent()],
       referenceDate: "2026-07-04",
-      settings: DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS,
+      settings: { ...DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS, enabled: true },
       existingQueue: [],
       history: [],
       nowIso: NOW
@@ -382,6 +387,21 @@ describe("Financial Notification System orchestration", () => {
 
     expect(processed.candidatesGenerated).toBeGreaterThan(0);
     expect(processed.queue.length).toBeGreaterThan(0);
+  });
+
+  it("skips reminder generation when notifications are disabled", () => {
+    const processed = processFinancialNotifications({
+      timelines: [sampleTimeline()],
+      events: [sampleEvent()],
+      referenceDate: "2026-07-04",
+      settings: { ...DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS, enabled: false },
+      existingQueue: [],
+      history: [],
+      nowIso: NOW
+    });
+
+    expect(processed.candidatesGenerated).toBe(0);
+    expect(processed.queue).toHaveLength(0);
   });
 });
 
@@ -440,7 +460,7 @@ describe("Financial Notification System performance", () => {
       timelines: [sampleTimeline()],
       events,
       referenceDate: "2026-07-04",
-      settings: DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS,
+      settings: { ...DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS, enabled: true },
       existingQueue: [],
       history: [],
       nowIso: NOW

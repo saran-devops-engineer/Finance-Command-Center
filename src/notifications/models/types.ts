@@ -72,18 +72,34 @@ export type NotificationActionTypeValue =
   (typeof NotificationActionType)[keyof typeof NotificationActionType];
 
 export const NotificationProviderId = {
-  BROWSER: "browser",
+  NATIVE_MOBILE: "native_mobile",
   WEB_PUSH: "web_push",
+  BROWSER: "browser",
+  IN_APP_CENTER: "in_app_center",
   EMAIL: "email",
   SMS: "sms",
-  WHATSAPP: "whatsapp",
-  NATIVE_MOBILE: "native_mobile"
+  WHATSAPP: "whatsapp"
 } as const;
 
 export type NotificationProviderIdValue =
   (typeof NotificationProviderId)[keyof typeof NotificationProviderId];
 
 export const NOTIFICATION_SETTINGS_ID = "primary" as const;
+
+/** User-visible capability flags — never expose provider names. */
+export interface NotificationCapabilityState {
+  inAppReminders: boolean;
+  notificationCenter: boolean;
+  deviceNotifications: boolean;
+  deviceNotificationsSupported: boolean;
+}
+
+export const NotificationDeliveryMode = {
+  AUTOMATIC: "automatic"
+} as const;
+
+export type NotificationDeliveryModeValue =
+  (typeof NotificationDeliveryMode)[keyof typeof NotificationDeliveryMode];
 
 /** Output of the Rules Engine — not yet in the queue. */
 export interface NotificationCandidate {
@@ -155,15 +171,20 @@ export interface QuietHoursConfig {
 export interface FinancialNotificationSettings {
   id: typeof NOTIFICATION_SETTINGS_ID;
   enabled: boolean;
-  defaultProviderId: NotificationProviderIdValue;
+  /** Always automatic — users never choose a provider. */
+  deliveryMode: NotificationDeliveryModeValue;
   privacyLevel: NotificationPrivacyLevelValue;
   groupingEnabled: boolean;
   quietHours: QuietHoursConfig;
   defaultSnoozeMinutes: number;
-  soundEnabled: boolean;
   categoryEnabled: Record<NotificationTypeValue, boolean>;
   reminderOffsetsDays: number[];
+  capabilities: NotificationCapabilityState;
+  /** Internal — resolved by Provider Manager. Never shown in UI. */
+  activeProviderId: NotificationProviderIdValue;
   updatedAt: string;
+  /** @deprecated Legacy field — migrated to activeProviderId on read. */
+  defaultProviderId?: NotificationProviderIdValue;
 }
 
 export interface NotificationGroup {

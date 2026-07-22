@@ -1,21 +1,12 @@
 import type { ConfigurationProvider } from "@/core/configuration/configuration-provider.interface";
-import type { AppConfiguration, Environment } from "@/core/configuration/types";
+import type { AppConfiguration } from "@/core/configuration/types";
+import { resolveAppEnvironment } from "@/core/configuration/environment";
 
 const APPLICATION_VERSION = "0.1.0";
 const MINIMUM_SUPPORTED_VERSION = "0.1.0";
 
-function resolveEnvironment(): Environment {
-  const nodeEnv = process.env.NODE_ENV;
-
-  if (nodeEnv === "production") {
-    return "production";
-  }
-
-  if (nodeEnv === "test") {
-    return "test";
-  }
-
-  return "development";
+function resolveEnvironment() {
+  return resolveAppEnvironment();
 }
 
 function resolvePostHogKey() {

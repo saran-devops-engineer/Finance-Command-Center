@@ -5,12 +5,14 @@ import type {
   NotificationHistoryEntry
 } from "@/notifications/models";
 import { NOTIFICATION_SETTINGS_ID } from "@/notifications/models";
-import { DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS } from "@/notifications/settings/defaults";
 import {
-  deliverDueNotifications,
+  DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS,
+  normalizeNotificationSettings
+} from "@/notifications/settings/defaults";
+import {
+  deliverDeviceNotificationsViaManager,
   processFinancialNotifications
 } from "@/notifications/core/financial-notification-system";
-import { createDefaultProviderRegistry } from "@/notifications/providers";
 import { trimNotificationHistory } from "@/notifications/history/notification-history";
 
 export interface SyncFinancialNotificationsResult {
@@ -36,10 +38,12 @@ export async function syncFinancialNotificationsFromTimeline(
     repository.listNotificationHistory()
   ]);
 
-  const settings = settingsRecord ?? {
-    ...DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS,
-    updatedAt: now
-  };
+  const settings = normalizeNotificationSettings(
+    settingsRecord ?? {
+      ...DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS,
+      updatedAt: now
+    }
+  );
 
   const events = (
     await Promise.all(timelines.map((timeline) => repository.listTimelineEvents(timeline.id)))
@@ -55,31 +59,19 @@ export async function syncFinancialNotificationsFromTimeline(
     nowIso: now
   });
 
-  const registry = createDefaultProviderRegistry();
-  const provider = registry.get(settings.defaultProviderId) ?? registry.get("browser");
-
-  const delivered = provider
-    ? deliverDueNotifications({
-        queue: processed.queue,
-        history: processed.history,
-        settings,
-        provider,
-        referenceIso: now
-      })
-    : {
-        queue: processed.queue,
-        history: processed.history,
-        deliveredCount: 0,
-        deferredCount: 0,
-        failedCount: 0
-      };
+  const delivered = deliverDeviceNotificationsViaManager({
+    queue: processed.queue,
+    history: processed.history,
+    settings,
+    referenceIso: now
+  });
 
   const trimmedHistory = trimNotificationHistory(delivered.history, 5000);
 
   await Promise.all([
     repository.saveNotificationQueue(delivered.queue),
     repository.saveNotificationHistory(trimmedHistory),
-    settingsRecord ? Promise.resolve() : repository.saveNotificationSettings(settings)
+    repository.saveNotificationSettings(settings)
   ]);
 
   return {
@@ -95,7 +87,7 @@ export async function loadNotificationSettings(
   repository: FinanceRepository
 ): Promise<FinancialNotificationSettings> {
   const settings = await repository.getNotificationSettings();
-  return settings ?? DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS;
+  return normalizeNotificationSettings(settings);
 }
 
 export async function ensureNotificationSettings(
@@ -103,13 +95,13 @@ export async function ensureNotificationSettings(
 ): Promise<FinancialNotificationSettings> {
   const existing = await repository.getNotificationSettings();
   if (existing) {
-    return existing;
+    return normalizeNotificationSettings(existing);
   }
 
-  const settings = {
+  const settings = normalizeNotificationSettings({
     ...DEFAULT_FINANCIAL_NOTIFICATION_SETTINGS,
     updatedAt: new Date().toISOString()
-  };
+  });
   await repository.saveNotificationSettings(settings);
   return settings;
 }

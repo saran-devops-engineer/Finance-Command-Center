@@ -1,276 +1,346 @@
-# Financial Notification System (FNS) Architecture
+# Financial Notification System — Experience V1 (Architecture Freeze)
 
-**Status:** Foundational domain — V1 (Data Schema V4)  
-**Principle:** FNS never calculates financial schedules. It consumes Expected Financial Events from Financial Timeline only.
-
----
-
-## 1. Responsibility Matrix
-
-| Layer | Responsibility | Must NOT |
-|-------|----------------|----------|
-| **Products** | Financial information | Generate reminders |
-| **Financial Timeline** | Expected events, activity, confirmation state | Deliver notifications |
-| **Notification Rules Engine** | Transform events → reminder candidates | Calculate due dates |
-| **Notification Queue** | Schedule, dedupe, retry, cancel obsolete | Format UI or deliver |
-| **Financial Notification System** | Lifecycle, preferences, grouping, orchestration | Modify product state |
-| **Notification Providers** | Platform delivery (browser, push, email…) | Business logic |
+**Status:** Frozen — Notification Experience V1  
+**Schema:** Data Schema V4  
+**Principle:** Notifications are a **product feature**. Providers are **infrastructure details**. Users never choose delivery technology.
 
 ---
 
-## 2. Architecture Flow
+## 1. Core Philosophy
+
+| User sees | System manages |
+|-----------|----------------|
+| Enable Notifications | Provider selection |
+| Delivery: Automatic | Browser / Web Push / Native Push |
+| In-App Reminders | Rules engine + queue |
+| Device Notifications | Permission + platform detection |
+| Notification Center | Single source of truth for reminders |
+
+FNS never calculates financial schedules. It consumes Expected Financial Events from Financial Timeline only.
+
+---
+
+## 2. Architecture Diagram
 
 ```mermaid
 flowchart TB
-  P[Product]
+  FP[Financial Products]
   FT[Financial Timeline]
-  EE[Expected Financial Events]
+  EFE[Expected Financial Events]
   RE[Notification Rules Engine]
   NQ[Notification Queue]
   FNS[Financial Notification System]
+  NPM[Notification Provider Manager]
   NP[Notification Providers]
-  D[User Device]
+  UD[User Device]
   NC[Notification Center]
 
-  P --> FT
-  FT --> EE
-  EE --> RE
+  FP --> FT
+  FT --> EFE
+  EFE --> RE
   RE --> NQ
   NQ --> FNS
-  FNS --> NP
-  NP --> D
   FNS --> NC
+  FNS --> NPM
+  NPM --> NP
+  NP --> UD
+```
+
+**Mandatory chain:** Timeline → Rules → Queue → FNS → Provider Manager → Provider → Device.
+
+Notification Center is **not** a fallback — every reminder exists there regardless of device delivery.
+
+---
+
+## 3. Notification Flow Diagram
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant FNS as Financial Notification System
+  participant PM as Provider Manager
+  participant Q as Notification Queue
+  participant NC as Notification Center
+  participant BP as Browser Provider
+
+  User->>FNS: Enable Notifications
+  FNS->>PM: enableNotifications()
+  PM->>PM: detectPlatform()
+  PM->>PM: selectBestProvider()
+  PM->>BP: requestPermission() (if browser)
+  PM-->>FNS: settings + capabilities
+  FNS-->>User: Friendly message if unsupported
+
+  Note over FNS,Q: Background sync (deferred from bootstrap)
+  FNS->>Q: Rules engine merges candidates
+  FNS->>NC: Queue always updated (offline)
+  FNS->>PM: deliverDeviceNotification()
+  PM->>BP: deliver() if granted + quiet hours allow
+  BP-->>User: OS notification (enhancement)
 ```
 
 ---
 
-## 3. Folder Structure
+## 4. Provider Manager Design
 
-```
-src/notifications/
-├── models/              # Domain types
-├── rules/               # Reminder rules engine
-├── queue/               # Queue management
-├── core/                # FNS orchestrator, privacy, grouping
-├── scheduler/           # Quiet hours, delivery timing
-├── providers/           # Provider pattern + browser impl
-├── center/              # Notification Center queries
-├── history/             # Delivery history helpers
-├── settings/            # Default preferences
-├── services/            # Timeline sync service
-├── hooks/               # React hooks
-├── components/          # Notification Center + Settings UI
-└── index.ts
-```
+**Location:** `src/notifications/manager/`
 
-`src/core/notifications/` remains the low-level browser utility used by the FNS browser provider adapter.
+| Module | Responsibility |
+|--------|----------------|
+| `platform-detection.ts` | **Only** place for platform detection |
+| `provider-manager.ts` | Provider selection, enable/disable flow, device delivery |
 
----
+### Platform detection
 
-## 4. Queue Design
+- Notification API availability
+- Push API (detected, not used in V1)
+- Service worker support
+- Installed PWA (`display-mode: standalone`)
+- Permission status
 
-### States
+### Provider priority (internal)
 
-`generated → queued → scheduled → delivered → opened | dismissed | snoozed | expired | failed | cancelled`
+1. Native Push — stub (future)
+2. Web Push — stub (future, **skipped in V1**)
+3. Browser Notification Provider — V1 implementation
+4. In-App Notification Center — always available
 
-### Responsibilities
+First supported provider wins. Web Push is explicitly excluded from selection in V1.
 
-- **Fingerprint deduplication** — `${eventId}:${type}:${offset}`
-- **Priority ordering** — critical > high > normal > low
-- **Obsolete cancellation** — when timeline events become confirmed/skipped
-- **Retry** — failed items re-queue up to max retries
-- **Snooze** — re-deliver after `snoozedUntil`
-
-### IndexedDB Store
-
-`notificationQueue` — indexed by status, scheduled delivery, timeline ID
-
----
-
-## 5. Rules Engine Design
-
-`generateNotificationCandidates()` reads:
-
-- Timeline events (status, dueDate, amount, eventType)
-- Timeline metadata (product label from last confirmed snapshot)
-- User reminder offsets (30, 15, 7, 3, 1, 0 days)
-- Category enablement from settings
-
-Generates notification types:
-
-- Upcoming Due, Due Tomorrow, Due Today, Overdue
-- Pending Confirmation, Missed Confirmation
-- Extensible types for insurance, SIP, RD, subscriptions
-
-**Never recalculates schedules** — due dates come from Financial Timeline only.
-
----
-
-## 6. Provider Design
+### Key APIs
 
 ```typescript
-interface FinancialNotificationProvider {
-  id: string;
-  isSupported(): boolean;
-  requestPermission(): Promise<NotificationPermission | "unsupported">;
-  deliver(payload: NotificationDeliveryPayload): Promise<void>;
+class NotificationProviderManager {
+  detectPlatform(): PlatformCapabilities;
+  selectBestProvider(): FinancialNotificationProvider;
+  selectDeviceProvider(): FinancialNotificationProvider | null;
+  resolveCapabilities(settings): NotificationCapabilityState;
+  enableNotifications(settings): Promise<EnableNotificationsResult>;
+  disableNotifications(settings): Promise<FinancialNotificationSettings>;
+  deliverDeviceNotification(payload, settings): Promise<boolean>;
 }
 ```
 
-### V1 Implementations
+---
 
-| Provider | Status |
-|----------|--------|
-| Browser | ✅ Implemented |
-| Web Push | Stub (future) |
-| Email | Stub |
-| SMS | Stub |
-| WhatsApp | Stub |
-| Native Mobile | Stub |
+## 5. Notification Center Design
 
-Register via `createProviderRegistry()` — future cloud push plugs in without FNS changes.
+**Route:** `/notifications`  
+**Store:** `notificationQueue` (IndexedDB)
+
+| Feature | Status |
+|---------|--------|
+| Unread / All / Snoozed / History | ✅ |
+| Search | ✅ |
+| Summary metrics | ✅ |
+| Categories (via notification types) | ✅ |
+| Actions (Snooze, Dismiss, Open Product) | ✅ |
+| Offline | ✅ |
+
+Every queued reminder appears in Notification Center even when device notifications fail or are denied.
+
+**Settings route:** `/notifications/settings` — user-facing preferences only (no provider names).
 
 ---
 
-## 7. Notification Center
+## 6. Settings UI
 
-Route: `/notifications`
+### Profile (`/profile`)
 
-Features:
+Single **Notifications** section:
 
-- Unread / All / Snoozed / History filters
-- Search
-- Summary metrics (unread, today, overdue, snoozed)
-- Actions: Snooze, Dismiss, Open Product
-- Works fully offline from IndexedDB queue
+- **Status:** Enabled / Disabled
+- **Delivery:** Automatic
+- **Capabilities:** In-App Reminders, Notification Center, Device Notifications
+- One action: **Enable Notifications** / **Disable**
 
-Settings route: `/notifications/settings`
+Component: `ProfileNotificationsSection`
 
----
+### Notification Settings (`/notifications/settings`)
 
-## 8. Settings Architecture
+| Setting | Exposed |
+|---------|---------|
+| Enable Notifications | ✅ |
+| Quiet Hours | ✅ |
+| Reminder Rules (offsets summary) | ✅ |
+| Privacy Level | ✅ |
+| Grouping | ✅ |
+| Snooze Duration | ✅ |
+| Provider selection | ❌ Never |
+| Browser / Web Push labels | ❌ Never |
 
-`FinancialNotificationSettings` (store: `notificationSettings`)
+`FinancialNotificationSettings` fields:
 
-- Enable/disable notifications
-- Privacy level (Private / Balanced / Detailed)
-- Grouping on/off
-- Quiet hours (22:00–07:00 default, critical override)
-- Default provider
-- Category toggles
-- Reminder offset days
-- Snooze duration
-
----
-
-## 9. Privacy Design
-
-| Level | Title Example | Body Example |
-|-------|---------------|--------------|
-| **Private** | Financial Reminder | Due Today |
-| **Balanced** | EMI Due Today | HDFC Bank |
-| **Detailed** | HDFC Bank EMI | ₹18,450 · Due Today · 2026-07-21 |
-
-User consent required for detailed financial exposure.
+- `enabled`, `deliveryMode: "automatic"`, `capabilities`, `activeProviderId` (internal)
+- Legacy `defaultProviderId` migrated on read via `normalizeNotificationSettings()`
 
 ---
 
-## 10. Timeline Integration
+## 7. Permission Flow
+
+```mermaid
+flowchart TD
+  A[User taps Enable Notifications] --> B[Provider Manager]
+  B --> C{Device provider available?}
+  C -->|Browser| D[Request Notification permission]
+  C -->|None| E[In-app only]
+  D --> F{Permission?}
+  F -->|granted| G[capabilities.deviceNotifications = true]
+  F -->|denied| H[In-app only, no error]
+  F -->|unsupported| I[Friendly unsupported message]
+  E --> J[Save settings, enable reminders]
+  G --> J
+  H --> J
+  I --> J
+```
+
+Unsupported message (never an error):
+
+> Your device doesn't support device notifications. You'll continue receiving reminders inside Finance Command Center.
+
+---
+
+## 8. Offline Behaviour
+
+Without internet, FCC continues to:
+
+1. Generate reminders from local Financial Timeline
+2. Merge into Notification Queue (dedupe, cancel obsolete)
+3. Display Notification Center
+4. Show dashboard / timeline in-app reminders
+5. Attempt browser notifications where permission was previously granted
+
+No cloud infrastructure required. Bootstrap defers notification sync so startup never blocks.
+
+---
+
+## 9. Browser Notification Implementation
+
+**Location:** `src/notifications/providers/browser-notification-provider.ts`
+
+- Requests permission via Provider Manager (not UI)
+- Shows notifications when supported and permitted
+- Click actions open FCC and navigate to related product
+- Gracefully no-ops when unsupported
+
+Device delivery is gated by:
+
+- `settings.enabled`
+- `settings.capabilities.deviceNotifications`
+- Quiet hours (non-critical deferred)
+- Provider Manager permission check
+
+---
+
+## 10. Unsupported Device Behaviour
+
+- No errors, no technical language in UI
+- Capabilities show Device Notifications as unavailable
+- In-App Reminders and Notification Center remain ✔
+- Positive copy explains continued in-app reminders
+
+---
+
+## 11. Folder Structure
+
+```
+src/notifications/
+├── models/
+├── rules/               # Notification Rules Engine
+├── queue/               # Notification Queue
+├── core/                # FNS orchestrator
+├── manager/             # Provider Manager + platform detection
+├── providers/           # Isolated providers (browser, stubs)
+├── center/              # Notification Center queries
+├── history/
+├── settings/
+├── scheduler/           # Quiet hours
+├── services/            # Timeline sync
+├── hooks/
+├── components/          # Center, Settings, Profile section
+└── index.ts
+```
+
+---
+
+## 12. Actions & Timeline Integration
+
+Supported actions: Mark Paid, Open Product, Open Timeline, Snooze, Dismiss.
+
+Actions return `NotificationActionResult` — FNS never mutates product state directly. Callers create Timeline Activities.
 
 `syncFinancialNotificationsFromTimeline()`:
 
-1. Loads timelines + events from repository
-2. Runs Rules Engine → Queue merge
-3. Cancels obsolete reminders
-4. Delivers due items via selected provider
-5. Persists queue + history
-
-Called on app bootstrap after schema migration and finance preload.
-
-**Action flow:**
-
-```
-Notification Action → NotificationActionResult → Timeline Activity (caller) → Product State
-```
-
-FNS returns action descriptors; it never writes to timeline or product stores directly.
+1. Load timelines + events
+2. Normalize settings
+3. Process via Rules Engine → Queue (skipped when disabled)
+4. Deliver device notifications via Provider Manager
+5. Persist queue + history
 
 ---
 
-## 11. Platform Compatibility Matrix
+## 13. Testing Report
 
-| Platform | Notification Center | Browser Notifications | Offline Queue |
-|----------|--------------------|-----------------------|---------------|
-| Desktop Browser | ✅ | ✅ (with permission) | ✅ |
-| Installed PWA | ✅ | ✅ (with permission) | ✅ |
-| Android PWA | ✅ | ✅ (OS dependent) | ✅ |
-| iOS Home Screen | ✅ | ⚠️ Limited / degraded | ✅ |
+| Area | Tests |
+|------|-------|
+| Permission granted | Provider Manager enable flow |
+| Permission denied | In-app continues, no device flag |
+| Unsupported browser | Friendly message, in-app center selected |
+| Installed PWA detection | Platform detection unit coverage |
+| Browser notifications | Provider isolation + deliver mock |
+| Notification Center | Queue, filters, hooks |
+| Offline mode | Local timeline → queue without network |
+| Queue dedupe / priority | Existing FNS tests |
+| Grouping | Same-day group test |
+| Timeline integration | End-to-end process test |
+| Actions | Mark paid result descriptor |
+| Migration | V3→V4 idempotency |
+| Performance | 1000 events < 3s |
+| Regression | 211 tests passing |
 
-Platform limitations handled inside providers only.
-
----
-
-## 12. Data Model (Schema V4)
-
-| Store | Purpose |
-|-------|---------|
-| `notificationQueue` | Active notification items |
-| `notificationHistory` | Delivery/action audit trail |
-| `notificationSettings` | Global FNS preferences |
-
-Backup format: optional additive fields (backward compatible with locked V1.0 backup envelope).
+Run: `npm test`
 
 ---
 
-## 13. Automated Test Coverage
+## 14. Performance Review
 
-- Rules engine from timeline events
-- Duplicate prevention
-- Queue priority ordering
-- Privacy formatting
-- Smart grouping
-- Quiet hours deferral
-- Action results without timeline mutation
-- Provider isolation
-- V3→V4 migration idempotency
-- Performance with 1000 events
-
----
-
-## 14. Performance Analysis
-
-- Rules engine: O(events × offsets) — typically small
-- Queue merge: O(n) with fingerprint Set dedupe
+- Rules engine: O(events × offsets)
+- Queue merge: O(n) fingerprint dedupe
 - History trimmed to 5000 entries
-- IndexedDB indexes for status and delivery time
+- Provider Manager singleton — no repeated registry allocation
+- Notification sync deferred from bootstrap (non-blocking)
+- IndexedDB indexes on status and scheduled delivery
 
 ---
 
-## 15. Security Analysis
+## 15. Future Push Architecture
 
-- All data local (IndexedDB)
-- Privacy levels prevent unsolicited financial exposure
-- No external notification services in V1
-- Actions require explicit user interaction
-- History append-only for audit
+V1 explicitly does **not** implement Web Push (no VAPID, no subscriptions, no backend).
+
+Future integration points:
+
+| Provider | Integration |
+|----------|-------------|
+| Web Push | Register in `createInternalProviderRegistry()`, remove V1 skip in `selectBestProvider()` |
+| Native Push | Implement stub in `providers/`, wins priority when `isSupported()` |
+| Email / SMS / WhatsApp | Provider stubs already registered |
+
+Provider Manager remains the single selection point. FNS and UI unchanged.
+
+```mermaid
+flowchart LR
+  FNS[Financial Notification System] --> PM[Provider Manager]
+  PM --> NP[Native Push]
+  PM --> WP[Web Push + SW + VAPID]
+  PM --> BR[Browser]
+  PM --> IC[In-App Center]
+```
+
+Cloud sync (optional future) extends backup snapshot fields — reminders still originate from local Timeline.
 
 ---
 
-## 16. Future Extension Strategy
-
-| Extension | Integration Point |
-|-----------|-------------------|
-| Cloud push | Register `WebPushProvider` |
-| Multi-device sync | Extend backup snapshot fields |
-| AI grouping | Replace `groupNotifications()` strategy |
-| Per-product rules | Extend Rules Engine inputs |
-| Email/SMS/WhatsApp | Register provider stubs |
-
-No architectural redesign required — plug in providers and optional cloud sync.
-
----
-
-## 17. Related Documents
+## 16. Related Documents
 
 - `docs/FINANCIAL_TIMELINE_ARCHITECTURE.md`
 - `docs/ARCHITECTURE.md`

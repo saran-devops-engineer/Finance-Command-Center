@@ -89,6 +89,7 @@ export interface FinanceRepository {
   getFinancialTimeline(id: string): Promise<FinancialTimeline | null>;
   getFinancialTimelineByProduct(productTypeId: string, productId: string): Promise<FinancialTimeline | null>;
   saveFinancialTimeline(value: FinancialTimeline): Promise<void>;
+  deleteFinancialTimelineCascade(timelineId: string): Promise<void>;
 
   listTimelineEvents(timelineId: string): Promise<TimelineEvent[]>;
   saveTimelineEvents(events: TimelineEvent[]): Promise<void>;

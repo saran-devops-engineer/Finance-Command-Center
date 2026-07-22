@@ -565,7 +565,7 @@ function isNotificationSettings(value: unknown): value is FinancialNotificationS
     isRecord(value) &&
     value.id === NOTIFICATION_SETTINGS_ID &&
     typeof value.enabled === "boolean" &&
-    typeof value.defaultProviderId === "string" &&
+    (typeof value.activeProviderId === "string" || typeof value.defaultProviderId === "string") &&
     typeof value.privacyLevel === "string" &&
     typeof value.updatedAt === "string"
   );

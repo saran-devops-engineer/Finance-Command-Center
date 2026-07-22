@@ -1,6 +1,5 @@
 import {
   NotificationActionType,
-  NotificationProviderId,
   NotificationQueueStatus,
   type FinancialNotification,
   type FinancialNotificationSettings,
@@ -33,6 +32,7 @@ import {
 } from "@/notifications/scheduler/delivery-scheduler";
 import type { NotificationRulesInput } from "@/notifications/rules/reminder-rules";
 import type { FinancialNotificationProvider } from "@/notifications/providers/provider.interface";
+import { getNotificationProviderManager } from "@/notifications/manager/provider-manager";
 
 export interface ProcessFinancialNotificationsInput extends NotificationRulesInput {
   existingQueue: FinancialNotification[];
@@ -52,7 +52,7 @@ export interface DeliverNotificationsInput {
   queue: FinancialNotification[];
   history: NotificationHistoryEntry[];
   settings: FinancialNotificationSettings;
-  provider: FinancialNotificationProvider;
+  provider: FinancialNotificationProvider | null;
   referenceIso: string;
 }
 
@@ -89,7 +89,7 @@ function buildNotificationFromCandidate(
     priority: candidate.priority,
     scheduledDeliveryAt: `${candidate.scheduledDeliveryDate}T08:00:00.000Z`,
     retryCount: 0,
-    providerId: settings.defaultProviderId,
+    providerId: settings.activeProviderId,
     actions: defaultNotificationActions(),
     createdAt: nowIso,
     updatedAt: nowIso
@@ -99,6 +99,16 @@ function buildNotificationFromCandidate(
 export function processFinancialNotifications(
   input: ProcessFinancialNotificationsInput
 ): ProcessFinancialNotificationsResult {
+  if (!input.settings.enabled) {
+    return {
+      queue: input.existingQueue,
+      history: input.history,
+      groups: [],
+      candidatesGenerated: 0,
+      newlyQueued: 0
+    };
+  }
+
   const candidates = generateNotificationCandidates(input);
   const beforeCount = input.existingQueue.length;
 
@@ -161,6 +171,11 @@ export function deliverDueNotifications(
       withinQuietHours &&
       !canDeliverDuringQuietHours(notification.priority, input.settings)
     ) {
+      deferredCount += 1;
+      continue;
+    }
+
+    if (!input.provider || !input.settings.capabilities.deviceNotifications) {
       deferredCount += 1;
       continue;
     }
@@ -376,6 +391,14 @@ export function buildNotificationCenterSummary(
   };
 }
 
-export function createDefaultBrowserProviderId(): typeof NotificationProviderId.BROWSER {
-  return NotificationProviderId.BROWSER;
+export function deliverDeviceNotificationsViaManager(
+  input: Omit<DeliverNotificationsInput, "provider">
+): DeliverNotificationsResult {
+  const manager = getNotificationProviderManager();
+  const deviceProvider = manager.selectDeviceProvider();
+
+  return deliverDueNotifications({
+    ...input,
+    provider: deviceProvider
+  });
 }

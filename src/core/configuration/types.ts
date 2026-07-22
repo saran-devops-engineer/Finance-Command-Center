@@ -2,11 +2,14 @@
  * Core Architecture — centralized application configuration.
  */
 
-export type Environment = "development" | "production" | "test";
+import type { AppEnvironmentValue } from "@/core/configuration/environment";
+
+/** @deprecated Use AppEnvironmentValue from environment.ts */
+export type Environment = AppEnvironmentValue;
 
 export interface AppConfiguration {
   apiBaseUrl: string;
-  environment: Environment;
+  environment: AppEnvironmentValue;
   applicationVersion: string;
   minimumSupportedVersion: string;
   analyticsEnabled: boolean;

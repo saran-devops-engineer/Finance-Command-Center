@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { financeRepository, type BackupPreview } from "@/repositories";
 import { AppEvent, ScreenName, trackApplicationEvent, trackScreenViewed } from "@/core/analytics";
 import { notifyFinanceDataRestored } from "@/lib/finance-data-events";
+import { ProfileNotificationsSection } from "@/notifications/components/profile-notifications-section";
+import { ProfileDeveloperToolsSection } from "@/notifications/components/profile-developer-tools-section";
 import type { UserProfile } from "@/shared/domain/finance";
 
 const preferences = (profile: UserProfile | null) =>
@@ -209,25 +211,9 @@ export default function ProfilePage() {
           </Card>
         </section>
 
-        <section className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Reminders
-          </p>
-          <Card className="divide-y divide-border/70 p-0">
-            <Link
-              href="/notifications"
-              className="flex items-center justify-between gap-4 p-5 transition hover:bg-white/30"
-            >
-              <div>
-                <p className="font-medium">Notification Center</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Timeline-based reminders that work offline
-                </p>
-              </div>
-              <span className="text-sm text-muted-foreground">Open</span>
-            </Link>
-          </Card>
-        </section>
+        <ProfileNotificationsSection />
+
+        <ProfileDeveloperToolsSection />
 
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">

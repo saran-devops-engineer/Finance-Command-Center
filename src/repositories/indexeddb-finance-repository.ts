@@ -623,6 +623,24 @@ export const indexedDbFinanceRepository: FinanceRepository = {
     await database.put("financialTimelines", value);
   },
 
+  async deleteFinancialTimelineCascade(timelineId: string) {
+    invalidateFinanceBootstrapCache();
+    const database = await getFinanceDatabase();
+    const events = await database.getAllFromIndex("timelineEvents", "by-timeline-id", timelineId);
+    const activities = await database.getAllFromIndex("timelineActivities", "by-timeline-id", timelineId);
+    const transaction = database.transaction(
+      ["financialTimelines", "timelineEvents", "timelineActivities"],
+      "readwrite"
+    );
+
+    await transaction.objectStore("financialTimelines").delete(timelineId);
+    await Promise.all(events.map((event) => transaction.objectStore("timelineEvents").delete(event.id)));
+    await Promise.all(
+      activities.map((activity) => transaction.objectStore("timelineActivities").delete(activity.id))
+    );
+    await transaction.done;
+  },
+
   async listTimelineEvents(timelineId: string) {
     const database = await getFinanceDatabase();
     return database.getAllFromIndex("timelineEvents", "by-timeline-id", timelineId);
