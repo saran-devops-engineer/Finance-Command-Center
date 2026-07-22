@@ -66,6 +66,20 @@ export function resolveAppEnvironment(): AppEnvironmentValue {
     return explicit;
   }
 
+  // Vercel preview deployments (e.g. develop branch) use NODE_ENV=production but are not
+  // user-facing production — expose via next.config env at build time.
+  const vercelEnv =
+    process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ??
+    process.env.VERCEL_ENV?.trim().toLowerCase();
+
+  if (vercelEnv === "preview") {
+    return AppEnvironment.DEVELOPMENT;
+  }
+
+  if (vercelEnv === "development") {
+    return AppEnvironment.DEVELOPMENT;
+  }
+
   const nodeEnv = process.env.NODE_ENV;
 
   if (nodeEnv === "production") {

@@ -30,6 +30,22 @@ describe("application environment", () => {
     expect(areDeveloperToolsEnabled()).toBe(true);
   });
 
+  it("enables developer tools on Vercel preview deployments", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "preview");
+    expect(resolveAppEnvironment()).toBe(AppEnvironment.DEVELOPMENT);
+    expect(areDeveloperToolsEnabled()).toBe(true);
+  });
+
+  it("hides developer tools on Vercel production deployments", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "production");
+    expect(resolveAppEnvironment()).toBe(AppEnvironment.PRODUCTION);
+    expect(areDeveloperToolsEnabled()).toBe(false);
+  });
+
   it("normalizes common aliases", () => {
     expect(normalizeAppEnvironment("dev")).toBe(AppEnvironment.DEVELOPMENT);
     expect(normalizeAppEnvironment("preprod")).toBe(AppEnvironment.PRE_PRODUCTION);

@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  env: {
+    /** Baked at build time — "preview" on Vercel branch deployments, "production" on prod. */
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? ""
+  },
   async headers() {
     return [
       {
